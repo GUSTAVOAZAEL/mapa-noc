@@ -12,6 +12,23 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Formas de los equipos
+
+Cada tipo de equipo tiene una forma en el diagrama, que eliges en **Equipos → Tipos → Editar**:
+
+| Forma | Uso sugerido |
+|---|---|
+| Rectángulo | Switches, OLT, firewalls, equipos en general |
+| Caja chica | Mufla / caja de empalme, splitter, ODF |
+| Vertical 3:4 | Servidores, racks |
+| Círculo | Routers |
+| Nube | ISP, internet, proveedor externo, nube |
+| Anillo | Anillo o malla de red (metro, MPLS, backbone) |
+| Hexágono | Núcleos o elementos lógicos |
+| Solo ícono | Usuarios, teléfonos, cámaras, torres |
+
+Si en un diagrama quieres otra forma para un equipo en particular, selecciónalo y cámbiala en **Forma en este diagrama**.
+
 ## Redes: voz, transporte y datos
 
 Cada equipo puede pertenecer a una o varias redes (**Voz**, **Transporte**, **Datos**). Se marca al editar el equipo o con la columna `red` del CSV.
@@ -89,6 +106,8 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - Si la IP o el nombre ya existe, el equipo se actualiza en lugar de duplicarse. Acepta separador `,` o `;`.
 
 ## Atajos
+
+- Los botones **+ Equipo**, **+ Texto** y **+ Grupo** están arriba del panel derecho (en celular, en la barra del diagrama).
 
 - Rueda del mouse: zoom. Arrastrar el fondo: mover la vista.
 - `Supr`: quita del diagrama lo seleccionado.
