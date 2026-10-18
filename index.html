@@ -92,7 +92,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .tree>li,.mtree>li{background:color-mix(in srgb,var(--cc,var(--accent)) 6%,transparent);border:1px solid color-mix(in srgb,var(--cc,var(--accent)) 20%,transparent);border-left:3px solid var(--cc,var(--accent));border-radius:8px;padding:3px 4px 5px;margin-bottom:7px}
 .tree>li>.row,.mtree>li>.mrow{background:color-mix(in srgb,var(--cc,var(--accent)) 15%,transparent);font-weight:600}
 .tree>li>.row.on{background:var(--accent-soft)}
-.row{display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 4px;cursor:pointer;min-width:0}
+.row{position:relative;display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 4px;cursor:pointer;min-width:0;min-height:28px;box-sizing:border-box}
 .row:hover{background:var(--panel-2)}
 .row.on{background:var(--accent-soft)}
 .row .car{width:18px;height:18px;border:0;background:none;padding:0;cursor:pointer;color:var(--muted);flex:none;display:grid;place-items:center}
@@ -101,14 +101,15 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .kind{font:500 9.5px/1 var(--f-mono);text-transform:uppercase;padding:3px 4px;border-radius:3px;border:1px solid var(--line);color:var(--muted);flex:none}
 .kind.cliente{color:var(--accent);border-color:var(--accent)}
 .row .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;opacity:.75}
-.row .ra{display:none;gap:2px}
+.row .ra{display:none;gap:1px;position:absolute;right:3px;top:50%;transform:translateY(-50%);background:var(--panel-2);border-radius:5px;padding:0 1px;box-shadow:-8px 0 8px -4px var(--panel-2)}
+.row.on .ra{background:var(--accent-soft);box-shadow:-8px 0 8px -4px var(--accent-soft)}
 .row .cmpk{margin:0 2px 0 0;flex:none;cursor:pointer}
 .treeTools{display:flex;gap:6px;align-items:center;margin:-2px 0 8px}
 .treeTools .btn{display:inline-flex;align-items:center;gap:5px}
 .cmpBar{display:grid;gap:6px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
 .cmpBar .bb{display:flex;gap:6px;flex-wrap:wrap}
 .row:hover .ra,.row.on .ra{display:flex}
-.ra button{width:24px;height:24px;border:0;background:none;border-radius:4px;cursor:pointer;color:var(--muted)}
+.ra button{width:22px;height:22px;padding:0;display:inline-grid;place-items:center;border:0;background:none;border-radius:4px;cursor:pointer;color:var(--muted)}
 .ra button:hover{background:var(--panel);color:var(--ink)}
 .row[draggable=true]{-webkit-user-drag:element}
 .row.dragging{opacity:.45}
@@ -395,6 +396,8 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 .mrow .dotc{width:10px;height:10px;border-radius:3px;flex:none}
 .mrow .open{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px}
 .mrow .open:hover{color:var(--accent)}
+.shareDet summary{cursor:pointer;font-size:13px;padding:4px 2px;list-style-position:inside}
+.shareDet summary b{color:var(--accent)}
 .shareBox{background:var(--accent-soft);border-radius:8px;padding:10px;display:grid;gap:6px;font-size:13px}
 .shareBox b.big{font:600 22px/1 var(--f-cond);color:var(--accent)}
 .shareBox.none{background:var(--panel-2)}
@@ -1616,9 +1619,9 @@ function mapPanelHTML(){const all=diagFids(),sel=new Set(mapSel());
   const cls=new Set(mapSel().map(f=>clientOf(f)?.id));
   let box;
   if(sel.size<2)box=`<div class="shareBox none"><span>${sel.size?'Marca otro cliente, sitio o servicio':'Marca en el árbol los clientes, sitios o servicios'} para ver qué equipos comparten.</span></div>`;
-  else if(!shared.length)box=`<div class="shareBox none"><b>No comparten ningún equipo.</b><span class="mapNote">Los ${sel.size} diagramas seleccionados son independientes.</span></div>`;
-  else box=`<div class="shareBox"><span><b class="big">${shared.length}</b> equipo${shared.length===1?'':'s'} compartido${shared.length===1?'':'s'} entre ${sel.size} diagramas de ${cls.size} cliente${cls.size===1?'':'s'}</span>
-    ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div>`;
+  else if(!shared.length)box=`<div class="shareBox none"><b>No comparten ningún equipo.</b></div>`;
+  else box=`<details class="shareDet"${ui.shareOpen?' open':''}><summary><b>${shared.length}</b> equipo${shared.length===1?'':'s'} compartido${shared.length===1?'':'s'} · ${sel.size} diagramas de ${cls.size} cliente${cls.size===1?'':'s'}</summary><div class="shareBox" style="margin-top:6px">
+    ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div></details>`;
   return `<div class="cmpBar"><div style="display:flex;gap:6px;align-items:center"><b class="grow" style="flex:1">${MAPICO} Mapa: ${sel.size} de ${all.length} diagramas</b><button class="btn sm" data-act="mapAll">Todos</button><button class="btn sm" data-act="mapNone">Ninguno</button></div>
     <span style="color:var(--muted)">Marca o desmarca en el árbol lo que quieres ver junto.</span>
     ${box}
@@ -2813,6 +2816,7 @@ document.addEventListener('click',e=>{
   }
 });
 $('#pane').addEventListener('input',e=>{if(e.target.id==='incQ'){ui.incQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#incQ');i.focus();i.setSelectionRange(p,p);return;}if(e.target.id==='devQ'){ui.devQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#devQ');i.focus();i.setSelectionRange(p,p);}});
+$('#pane').addEventListener('toggle',e=>{if(e.target.classList?.contains('shareDet'))ui.shareOpen=e.target.open;},true);
 $('#pane').addEventListener('change',e=>{
   if(e.target.matches('[data-mapf]')){const all=diagFids(),sel=new Set(mapSel()),ds=subtree(e.target.dataset.mapf).filter(x=>all.includes(x));
     if(e.target.checked)ds.forEach(x=>sel.add(x));else ds.forEach(x=>sel.delete(x));S.meta.mapSel=[...sel];save(false);refreshMap(false);return;}
