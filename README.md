@@ -65,6 +65,23 @@ En el árbol de la izquierda arrastra cualquier elemento y suéltalo sobre otro 
 - El menú del **+** también tiene **Ver impacto** y **Registrar incidencia**. El resumen del impacto aparece en una tarjeta junto al equipo, con **Ver lista** y **Ocultar impacto**.
 - **Nombres únicos**: no se puede guardar un equipo con un nombre que ya existe (sin importar mayúsculas). Mientras escribes te avisa y te ofrece **Agregar el existente**. Si la IP ya la tiene otro equipo, te avisa y te pide confirmar.
 
+## Elementos sin inventario
+
+Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme, splitter, ODF, poste, registro, un proveedor externo…) usa **+ Elemento** (panel derecho) o **Elemento conectado** en el menú **+** de un equipo.
+
+- No se agregan al inventario ni cuentan en el análisis de impacto o el mapa general.
+- Puedes poner **varios en el mismo diagrama** (botón **Duplicar**), con nombre, texto debajo (hilos, poste…), forma, ícono, color y notas.
+- Se conectan con líneas como cualquier equipo; en sus extremos puedes escribir libremente (por ejemplo *Hilos 1-6*).
+
+## Líneas privadas entre sitios
+
+- Al editar un servicio (lápiz o ⋯), en **Línea privada: también llega a** marca los otros sitios del cliente por los que pasa. El servicio aparece en la página del cliente bajo cada sitio con la marca **↔ Línea privada con…**, y en el árbol con **↔**.
+- En las líneas del diagrama hay un medio nuevo, **Línea privada (L2L)**, que se dibuja con trazo de raya y punto.
+
+## Equipos en cada sitio
+
+En la página de un cliente (vista **Clientes**), cada sitio tiene **Equipos en este sitio**: agrégalos con **+ Equipo** (también aparecen solos los equipos cuyo campo *Ubicación* coincide con el nombre del sitio). **Toca un equipo para copiar su IP.**
+
 ## Formas de los equipos
 
 Cada tipo de equipo tiene una forma en el diagrama, que eliges en **Equipos → Tipos → Editar**:
