@@ -43,6 +43,10 @@ Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio ›
 - El campo de texto libre del equipo ahora se llama *Referencia / nodo*.
 - Tus grupos anteriores se convirtieron solos al catálogo la primera vez que abres esta versión.
 
+## Equipos en tabla
+
+En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tabla editas directo en cada celda (nombre, IP, tipo, marca, modelo, referencia, acceso, puertos/IPs, notas); el cambio se guarda al salir de la celda (**Enter** baja a la fila siguiente, **Esc** deshace). Las redes **V / T / D** se activan con un clic, **📍** abre el catálogo de ubicaciones, y clic en el título de una columna ordena. El acceso se escribe como `ssh, telnet:2323, web:8443`. **＋ Fila nueva** agrega un equipo en blanco. Los filtros de red, búsqueda y "solo con incidencia" también aplican a la tabla, y se recuerda la vista que elegiste.
+
 ## Mapa general
 
 El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:

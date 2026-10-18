@@ -441,6 +441,32 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cvSec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:600 15px var(--f-cond)}
 .cvSec i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .cvSec .n{font:500 12px var(--f-ui);color:var(--muted)}
+.dtWrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);max-height:calc(100vh - 210px)}
+.dtab{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;min-width:1250px}
+.dtab th{position:sticky;top:0;z-index:2;background:var(--panel-2,var(--bg));text-align:left;font:600 11px var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+.dtab th.nos{cursor:default}
+.dtab th .ar{color:var(--accent)}
+.dtab td{border-bottom:1px solid var(--line);padding:2px 3px;vertical-align:middle}
+.dtab tr:hover td{background:var(--accent-soft)}
+.dtab td.first{position:sticky;left:0;background:var(--panel);z-index:1}
+.dtab tr:hover td.first{background:var(--accent-soft)}
+.dtab input.c,.dtab select.c,.dtab textarea.c{width:100%;border:1px solid transparent;background:transparent;color:var(--ink);font:inherit;padding:5px 6px;border-radius:5px;min-width:0}
+.dtab textarea.c{resize:vertical;min-height:30px;height:30px;font-size:12.5px}
+.dtab .c:hover{border-color:var(--line)}
+.dtab .c:focus{outline:none;border-color:var(--accent);background:var(--panel)}
+.dtab .c.mono{font-family:var(--f-mono);font-size:12.5px}
+.dtab .c.bad{border-color:var(--danger)}
+.dtab .secs{display:flex;gap:3px;flex-wrap:nowrap;min-width:78px}
+.dtab .secs button{border:1px solid var(--line);background:transparent;color:var(--muted);font:600 10.5px var(--f-ui);border-radius:4px;padding:3px 5px;cursor:pointer}
+.dtab .secs button.on{color:#fff;border-color:transparent}
+.dtab .plc{display:flex;align-items:center;gap:4px;border:1px solid transparent;background:transparent;color:var(--ink);font:inherit;font-size:12.5px;text-align:left;padding:5px 6px;border-radius:5px;cursor:pointer;width:100%}
+.dtab .plc:hover{border-color:var(--line)}
+.dtab .plc.none{color:var(--muted)}
+.dtab .ico{display:flex;gap:2px;justify-content:flex-end}
+.dtab .ico button{border:0;background:transparent;cursor:pointer;color:var(--muted);padding:4px 6px;border-radius:4px;font-size:13px}
+.dtab .ico button:hover{background:var(--line);color:var(--ink)}
+.dtab .num{color:var(--muted);text-align:center;font-family:var(--f-mono);font-size:12px}
+.dtFoot{display:flex;gap:10px;align-items:center;margin-top:10px;color:var(--muted);font-size:12.5px}
 .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .cgrid.cli{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
 .cgrid.cli .ccard{padding:20px 16px 16px;gap:8px}
@@ -1681,16 +1707,51 @@ function deviceCards(){
   const sec=(k,label,color)=>{const l=inSec(k);if(!l.length&&!f)return'';
     return `<div class="cvSec"><i style="background:${color}"></i>${label}<span class="n">${l.length} equipo${l.length===1?'':'s'}</span></div>${l.length?`<div class="cgrid">${l.map(devCard).join('')}</div>`:'<p class="emptyNote">Sin equipos.</p>'}`;};
   const tabs=[['','Todas'],['voz','Voz'],['transporte','Transporte'],['datos','Datos'],['none','Sin red']];
+  const asT=S.meta.devLayout==='table';
   let body;
-  if(!f)body=SEC_ORDER.map(k=>sec(k,'Red de '+SECTIONS[k].l.toLowerCase(),SECTIONS[k].c)).join('')+sec('none','Sin red asignada','var(--muted)');
+  if(asT)body=deviceTable(f?(f==='none'?all.filter(d=>!(d.sections||[]).length):all.filter(d=>(d.sections||[]).includes(f))):all);
+  else if(!f)body=SEC_ORDER.map(k=>sec(k,'Red de '+SECTIONS[k].l.toLowerCase(),SECTIONS[k].c)).join('')+sec('none','Sin red asignada','var(--muted)');
   else body=f==='none'?sec('none','Sin red asignada','var(--muted)'):sec(f,'Red de '+SECTIONS[f].l.toLowerCase(),SECTIONS[f].c);
   return `<div class="cvHead"><h2>Equipos</h2><span class="grow"></span>
     <input class="inp" id="cvQ" type="search" placeholder="Buscar por nombre, IP, puerto…" value="${esc(ui.cvQ||'')}">
+    <div class="seg" style="margin:0"><button data-dlay="cards" class="${asT?'':'on'}" title="Ver como tarjetas">▦ Tarjetas</button><button data-dlay="table" class="${asT?'on':''}" title="Ver y editar como tabla">☰ Tabla</button></div>
     <div class="seg" style="margin:0">${tabs.map(([k,l])=>`<button data-dsec="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>
     <label class="chk" style="font-size:13px"><input type="checkbox" id="devIncOnly"${onlyInc?' checked':''}> Solo con incidencia</label>
     <button class="btn pri" data-act="newDev">+ Equipo</button></div>
     ${body||`<p class="emptyNote">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</p>`}`;
 }
+const DT_COLS=[['name','Nombre'],['ip','IP de gestión'],['type','Tipo'],['brand','Marca'],['model','Modelo'],['sections','Red'],['place','Ubicación física'],['location','Referencia'],['access','Acceso'],['ports','Puertos / IPs'],['notes','Notas'],['use','Diagramas']];
+function accStr(d){return (d.access||[]).map(a=>a.p+(a.port?':'+a.port:'')).join(', ');}
+function parseAcc(v){return String(v||'').split(/[,;\s]+/).map(x=>x.trim().toLowerCase()).filter(Boolean).map(x=>{const [p,port]=x.split(':');return{p,port:port||''};}).filter(a=>['ssh','telnet','web'].includes(a.p)).filter((a,i,arr)=>arr.findIndex(b=>b.p===a.p)===i);}
+function deviceTable(list){const so=ui.dtSort||{k:'name',dir:1};
+  const val=(d,k)=>k==='place'?placePath(d.place):k==='sections'?(d.sections||[]).join(','):k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):k==='use'?usage(d.id):(d[k]||'');
+  const L=[...list].sort((a,b)=>{const x=val(a,so.k),y=val(b,so.k);return (typeof x==='number'?x-y:ncmp(String(x),String(y)))*so.dir||ncmp(a.name,b.name);});
+  const types=S.types.map(t=>t.name).sort(ncmp);
+  const row=d=>{const ty=types.some(t=>norm(t)===norm(d.type))?types:[d.type,...types];const ic=devIncCount(d.id);
+    return `<tr data-drow="${d.id}">
+    <td class="first"><input class="c" data-dt="name" value="${esc(d.name)}" style="font-weight:600;min-width:150px${ic?';color:var(--danger)':''}" title="${ic?'Con incidencia activa':''}"></td>
+    <td><input class="c mono" data-dt="ip" value="${esc(d.ip||'')}" style="min-width:115px"></td>
+    <td><select class="c" data-dt="type" style="min-width:120px">${ty.map(t=>`<option${norm(t)===norm(d.type)?' selected':''}>${esc(t)}</option>`).join('')}</select></td>
+    <td><input class="c" data-dt="brand" value="${esc(d.brand||'')}" style="min-width:80px"></td>
+    <td><input class="c" data-dt="model" value="${esc(d.model||'')}" style="min-width:90px"></td>
+    <td><div class="secs">${SEC_ORDER.map(k=>{const on=(d.sections||[]).includes(k);return `<button type="button" data-dtsec="${k}" class="${on?'on':''}" style="${on?'background:'+SECTIONS[k].c:''}" title="${SECTIONS[k].l}">${SECTIONS[k].l[0]}</button>`;}).join('')}</div></td>
+    <td><button type="button" class="plc${d.place?'':' none'}" data-dtplace="${d.id}" title="${esc(placePath(d.place)||'Asignar ubicación')}" style="min-width:190px">📍 ${esc(placePath(d.place)||'Asignar…')}</button></td>
+    <td><input class="c" data-dt="location" value="${esc(d.location||'')}" style="min-width:110px"></td>
+    <td><input class="c mono" data-dt="access" value="${esc(accStr(d))}" placeholder="ssh, web:8443" style="min-width:120px"></td>
+    <td><textarea class="c mono" data-dt="ports" style="min-width:200px" placeholder="Gi0/1, Te1/1/1">${esc((d.ports||[]).join(', '))}</textarea></td>
+    <td><textarea class="c" data-dt="notes" style="min-width:170px">${esc(d.notes||'')}</textarea></td>
+    <td class="num">${usage(d.id)}</td>
+    <td><div class="ico"><button type="button" data-dcard="${d.id}" title="Ver ficha">🗂</button><button type="button" data-dtcopy="${d.id}" title="Copiar IP">⧉</button><button type="button" data-dtdel="${d.id}" title="Eliminar equipo">🗑</button></div></td></tr>`;};
+  return `<div class="dtWrap"><table class="dtab"><thead><tr>${DT_COLS.map(([k,l])=>`<th data-dtsort="${k}"${k==='name'?' class="first" style="left:0;z-index:3"':''}>${l}${so.k===k?` <span class="ar">${so.dir>0?'▲':'▼'}</span>`:''}</th>`).join('')}<th class="nos"></th></tr></thead>
+    <tbody>${L.map(row).join('')||`<tr><td colspan="13" style="padding:16px;color:var(--muted)">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</td></tr>`}</tbody></table></div>
+    <div class="dtFoot"><button class="btn sm" data-act="dtAdd">＋ Fila nueva</button><span>${L.length} equipo${L.length===1?'':'s'} · Los cambios se guardan al salir de cada celda · Acceso: <span class="mono">ssh, telnet:2323, web:8443</span> · Puertos separados por coma</span></div>`;}
+function dtCommit(inp){const tr=inp.closest('[data-drow]'),d=tr&&devById(tr.dataset.drow);if(!d)return;const k=inp.dataset.dt,v=inp.value.trim();inp.classList.remove('bad');
+  if(k==='name'){if(!v){inp.value=d.name;toast('El nombre es obligatorio');return;}const dup=S.devices.find(x=>x.id!==d.id&&norm(x.name)===norm(v));if(dup){inp.classList.add('bad');toast(`Ya existe un equipo llamado ${dup.name}`);return;}d.name=v;}
+  else if(k==='ip'){const dup=v&&S.devices.find(x=>x.id!==d.id&&x.ip===v);d.ip=v;if(dup)toast(`Aviso: la IP ${v} también la tiene ${dup.name}`);}
+  else if(k==='access'){d.access=parseAcc(v);inp.value=accStr(d);}
+  else if(k==='ports'){d.ports=[...new Set(v.split(/\n|,/).map(x=>x.trim()).filter(Boolean))];inp.value=d.ports.join(', ');}
+  else d[k]=v;
+  save();rc();}
 function deviceSheet(id){
   const d=devById(id);if(!d)return;
   const fids=Object.entries(S.diagrams).filter(([f,D])=>folById(f)&&D.nodes.some(n=>n.deviceId===id)).map(([f])=>f);
@@ -2425,6 +2486,12 @@ document.addEventListener('click',e=>{
   const cpg=t.closest('[data-cpage]');if(cpg){ui.cliPage=cpg.dataset.cpage;renderView();$('#cardsView').scrollTop=0;return;}
   const dcd=t.closest('[data-dcard]');if(dcd){deviceSheet(dcd.dataset.dcard);return;}
   const clf=t.closest('[data-clif]');if(clf){ui.cliFilter=clf.dataset.clif;renderView();return;}
+  const dly=t.closest('[data-dlay]');if(dly){S.meta.devLayout=dly.dataset.dlay;save(false);renderView();return;}
+  const dts=t.closest('[data-dtsort]');if(dts){const k=dts.dataset.dtsort,so=ui.dtSort||{k:'name',dir:1};ui.dtSort={k,dir:so.k===k?-so.dir:1};renderView();return;}
+  const dtsec=t.closest('[data-dtsec]');if(dtsec){const d=devById(dtsec.closest('[data-drow]').dataset.drow);const k=dtsec.dataset.dtsec;d.sections=d.sections||[];d.sections=d.sections.includes(k)?d.sections.filter(x=>x!==k):[...d.sections,k];save();renderView();rc();return;}
+  const dtp=t.closest('[data-dtplace]');if(dtp){placePicker(dtp.dataset.dtplace);return;}
+  const dtc=t.closest('[data-dtcopy]');if(dtc){copyIp(devById(dtc.dataset.dtcopy));return;}
+  const dtd=t.closest('[data-dtdel]');if(dtd){delDevModal(dtd.dataset.dtdel);return;}
   const dsc2=t.closest('[data-dsec]');if(dsc2){ui.devCardSec=dsc2.dataset.dsec;renderView();return;}
   const dcl=t.closest('[data-dcol]');if(dcl&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=dcl.dataset.dcol;save();renderAll();deviceSheet(d.id);}return;}
   const asite=t.closest('[data-addsite]');if(asite){folderModal(null,asite.dataset.addsite,'sitio');return;}
@@ -2483,6 +2550,8 @@ document.addEventListener('click',e=>{
     case 'addGrp':groupFromSelection('edificio');break;
     case 'pinAuto':{const D=getDiag(ui.folder),g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){const ng={id:uid('g'),kind:g.kind,label:g.label,placeId:g.placeId,color:g.color||'',x:Math.round(g.x/8)*8,y:Math.round(g.y/8)*8,w:Math.round(g.w/8)*8+8,h:Math.round(g.h/8)*8+8};D.groups.push(ng);ui.sel={t:'group',id:ng.id};save();renderInsp();rc();toast('Grupo fijado: ahora puedes moverlo y cambiar su tamaño');}break;}
     case 'autoLocOff':S.meta.autoLoc=false;ui.sel=null;save(false);renderAll();toast('Ubicaciones automáticas ocultas (botón 📍 para volver a verlas)');break;
+    case 'dtAdd':{let i=1;while(S.devices.some(x=>norm(x.name)===norm('NUEVO-'+i)))i++;const nd={id:uid('d'),name:'NUEVO-'+i,ip:'',type:ui.lastType||S.types[0]?.name||'Router',access:[],sections:ui.devCardSec&&ui.devCardSec!=='none'?[ui.devCardSec]:[],ports:[]};S.devices.push(nd);ui.cvQ='';save();renderAll();
+      requestAnimationFrame(()=>{const r=document.querySelector(`[data-drow="${nd.id}"] [data-dt="name"]`);if(r){r.scrollIntoView({block:'center'});r.focus();r.select();}});break;}
     case 'mkGroup':groupFromSelection($('#mKind').value);break;
     case 'incFromImp':incModal(null,[{dev:ui.impact.dev,port:ui.impact.port||''}]);break;
     case 'incFromNode':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
@@ -2523,7 +2592,10 @@ document.addEventListener('keydown',e=>{
 });
 
 $('#cardsView').addEventListener('input',e=>{if(e.target.id==='cvQ'){ui.cvQ=e.target.value;ui.cvFocus=true;renderView();}});
-$('#cardsView').addEventListener('change',e=>{if(e.target.id==='devIncOnly'){ui.devInc=e.target.checked;renderView();}});
+$('#cardsView').addEventListener('change',e=>{if(e.target.id==='devIncOnly'){ui.devInc=e.target.checked;renderView();return;}if(e.target.dataset.dt)dtCommit(e.target);});
+$('#cardsView').addEventListener('keydown',e=>{const t=e.target;if(!t.dataset||!t.dataset.dt)return;
+  if(e.key==='Escape'){const d=devById(t.closest('[data-drow]').dataset.drow);const k=t.dataset.dt;t.value=k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):(d[k]||'');t.blur();return;}
+  if(e.key==='Enter'&&t.tagName==='INPUT'){e.preventDefault();const td=t.closest('td'),ci=[...td.parentNode.children].indexOf(td),nx=t.closest('tr').nextElementSibling;const n=nx&&nx.children[ci]&&nx.children[ci].querySelector('.c');t.blur();if(n)n.focus();}});
 $('#cardsView').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cpage],[data-dcard],.svrow')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-dcol-custom]')&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=e.target.value;save();renderView();}}});
 $('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
