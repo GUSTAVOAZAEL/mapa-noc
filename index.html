@@ -651,6 +651,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
         <button class="btn sm mOnly" data-act="addTxt">+ Texto</button>
         <button class="btn sm mOnly" data-act="addEl">+ Elemento</button>
         <button class="btn sm mOnly" data-act="addGrp">+ Grupo</button>
+        <button class="btn sm" id="bUndo" title="Deshacer (Ctrl+Z)" disabled>↶</button><button class="btn sm" id="bRedo" title="Rehacer (Ctrl+Y)" disabled>↷</button>
         <button class="btn sm" id="tFit">Ajustar vista</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
         <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
@@ -952,8 +953,20 @@ function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r)
 var S_READY=false;
 let S=ensureTypes(load()||sample());
 let saveT=null,saveOk=true;
+const UNDO={past:[],future:[],last:null,t:0,busy:false};
+function undoTrack(){if(UNDO.busy)return;let cur;try{cur=JSON.stringify(S);}catch(e){return;}
+  if(UNDO.last&&cur!==UNDO.last){const now=Date.now();if(now-UNDO.t>800||!UNDO.past.length){UNDO.past.push(UNDO.last);if(UNDO.past.length>60)UNDO.past.shift();}UNDO.t=now;UNDO.future=[];}
+  UNDO.last=cur;undoBtns();}
+function undoBtns(){const u=$('#bUndo'),r=$('#bRedo');if(u)u.disabled=!UNDO.past.length;if(r)r.disabled=!UNDO.future.length;}
+function undoApply(dir){const from=dir<0?UNDO.past:UNDO.future,to=dir<0?UNDO.future:UNDO.past;if(!from.length){toast(dir<0?'No hay nada que deshacer':'No hay nada que rehacer');return;}
+  const ae=document.activeElement;if(ae&&ae.blur&&ae.closest&&ae.closest('#insp,#inEd'))ae.blur();
+  to.push(JSON.stringify(S));const snap=from.pop();UNDO.busy=true;S=ensureTypes(JSON.parse(snap));UNDO.last=snap;UNDO.t=0;
+  if(ui.folder&&ui.folder!==MAP&&!folById(ui.folder))ui.folder=null;ui.sel=null;ui.multi=new Set();
+  if(ui.folder===MAP)ui.mapD=buildMap();
+  try{localStorage.setItem(LS,snap);}catch(e){}UNDO.busy=false;renderAll();undoBtns();toast(dir<0?'Cambio deshecho':'Cambio rehecho');}
 function save(markDirty=true){
   if(markDirty)S.meta.dirty=(S.meta.dirty||0)+1;
+  if(markDirty)undoTrack();
   clearTimeout(saveT);
   saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(S));saveOk=true;}catch(e){saveOk=false;}renderStatus();},250);
   renderStatus();
@@ -2720,7 +2733,10 @@ function delSel(){
   else D.edges=D.edges.filter(e=>e.id!==ui.sel.id);
   ui.sel=null;save();renderAll();
 }
+$('#bUndo').onclick=()=>undoApply(-1);$('#bRedo').onclick=()=>undoApply(1);
 document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.target.closest('input,textarea,select,[contenteditable]')&&$('#modal').hidden){const k=e.key.toLowerCase();
+    if(k==='z'&&!e.shiftKey){e.preventDefault();undoApply(-1);return;}if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();undoApply(1);return;}}
   if(e.key==='Escape'){if(!$('#modal').hidden)closeModal();else if(ui.sel){ui.sel=null;ui.multi=new Set();renderInsp();rc();}document.body.classList.remove('showSide');}
   if((e.key==='Delete'||e.key==='Backspace')&&ui.sel&&!e.target.closest('input,textarea,select')&&$('#modal').hidden){e.preventDefault();delSel();}
 });
@@ -2766,7 +2782,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>

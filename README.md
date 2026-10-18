@@ -212,6 +212,7 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - Rueda del mouse: zoom. Arrastrar el fondo: mover la vista.
 - `Supr`: quita del diagrama lo seleccionado.
 - Doble clic sobre el recuadro de un equipo (en su nombre o IP, no en el punto de conexión ni en el +): copia su IP. También está el botón **Copiar IP** junto a la IP en el panel derecho. Para editarlo usa el botón **Editar equipo** del panel derecho.
+- **Deshacer / Rehacer**: botones **↶ ↷** en la barra del diagrama, o **Ctrl+Z** y **Ctrl+Y** (también Ctrl+Shift+Z). Guarda hasta 60 pasos de la sesión: borrar equipos, líneas o grupos, moverlos, cambios en el panel, en la tabla de equipos, etc.
 - Doble clic en una **parte vacía** del diagrama: aparece un menú para agregar **Equipo, Elemento, Texto o Grupo** justo en ese punto.
 - Doble clic sobre un **texto** del diagrama: lo editas ahí mismo (Enter hace un salto de línea; **Ctrl+Enter** o clic fuera guarda; **Esc** cancela). En un **elemento** (caja de empalme, etc.) el doble clic edita su nombre (Enter guarda).
 - `Esc`: cerrar ventanas o quitar la selección.
