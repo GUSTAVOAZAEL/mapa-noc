@@ -49,7 +49,7 @@ Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio ›
 
 En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tabla editas directo en cada celda (nombre, IP, tipo, marca, modelo, referencia, acceso, puertos/IPs, notas); el cambio se guarda al salir de la celda (**Enter** baja a la fila siguiente, **Esc** deshace). Las redes **V / T / D** se activan con un clic. La ubicación va en columnas **Ciudad, Edificio, Sitio, Piso, Sala, Gabinete y Rack**: escribe o elige de la lista (solo muestra lo que existe dentro del nivel de arriba); si capturas directo un nivel bajo que ya existe, los de arriba se llenan solos, y si llenas un nivel intermedio que faltaba, queda insertado para todos los equipos de ese lugar. **📍** abre el catálogo, y clic en el título de una columna ordena. El acceso se escribe como `ssh, telnet:2323, web:8443`. **＋ Fila nueva** agrega un equipo en blanco. Los filtros de red, búsqueda y "solo con incidencia" también aplican a la tabla, y se recuerda la vista que elegiste.
 
-En el panel de **Clientes** (y en la lista del mapa general) cada cliente va en un bloque sombreado con su color, para ver fácil dónde empieza y dónde termina.
+En el panel de **Clientes** (y en la lista del mapa general) cada cliente va en un bloque sombreado con su color, para ver fácil dónde empieza y dónde termina. Los botones **⊟** y **⊞** junto a *+ Cliente* compactan o despliegan todo el árbol.
 
 ## Mapa general
 
@@ -212,5 +212,6 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - Rueda del mouse: zoom. Arrastrar el fondo: mover la vista.
 - `Supr`: quita del diagrama lo seleccionado.
 - Doble clic sobre el recuadro de un equipo (en su nombre o IP, no en el punto de conexión ni en el +): copia su IP. También está el botón **Copiar IP** junto a la IP en el panel derecho. Para editarlo usa el botón **Editar equipo** del panel derecho.
+- Doble clic en una **parte vacía** del diagrama: aparece un menú para agregar **Equipo, Elemento, Texto o Grupo** justo en ese punto.
 - Doble clic sobre un **texto** del diagrama: lo editas ahí mismo (Enter hace un salto de línea; **Ctrl+Enter** o clic fuera guarda; **Esc** cancela). En un **elemento** (caja de empalme, etc.) el doble clic edita su nombre (Enter guarda).
 - `Esc`: cerrar ventanas o quitar la selección.

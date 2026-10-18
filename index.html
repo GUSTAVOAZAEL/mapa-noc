@@ -1045,7 +1045,7 @@ function sideClients(){
         <span class="ra"><button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button></span>
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
   const tree=branch(null);
-  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="newClient">+ Cliente</button></div>`+
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="treeCollapse" title="Compactar todo el árbol">⊟</button><button class="btn sm" data-act="treeExpand" title="Desplegar todo el árbol">⊞</button><button class="btn sm" data-act="newClient">+ Cliente</button></div>`+
     (tree?tree+`<div class="dropRoot" data-froot="1" ${ui.dragF?'':'hidden'}>Suelta aquí para dejarlo en el nivel principal</div>`:'')+(tree?'':`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
 }
 function sideDevices(){
@@ -1267,6 +1267,7 @@ svg.addEventListener('pointerdown',e=>{
     ui.drag={kind:'node',sx:pt.x,sy:pt.y,orig:[...nodes,...grps],moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();return;}
   if(e.shiftKey){ui.multi=new Set();ui.drag={kind:'box',x0:pt.x,y0:pt.y,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);return;}
   if(ui.sel||ui.multi?.size){ui.sel=null;ui.multi=new Set();renderInsp();rc();}
+  {const now=Date.now(),lb=ui.lastBlank;if(ui.folder!==MAP&&lb&&now-lb.t<450&&Math.hypot(e.clientX-lb.x,e.clientY-lb.y)<8){ui.lastBlank=null;blankMenu(e,pt);return;}ui.lastBlank={t:now,x:e.clientX,y:e.clientY};}
   const vp=getVp();ui.drag={kind:'pan',sx:e.clientX,sy:e.clientY,vx:vp.x,vy:vp.y};svg.classList.add('panning');svg.setPointerCapture(e.pointerId);
 });
 svg.addEventListener('pointermove',e=>{
@@ -1350,7 +1351,13 @@ $('#autoLocTog').onclick=e=>{e.stopPropagation();let p=$('#locPop');if(p){p.remo
 document.addEventListener('click',e=>{const p=$('#locPop');if(p&&!p.contains(e.target)&&e.target.id!=='autoLocTog')p.remove();},true);
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
-function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
+function blankMenu(e,pt){const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();ui.blankAt={x:pt.x,y:pt.y};
+  m.innerHTML=`<button data-act="blankDev">${gsvg('Router')}<span>Equipo<small>Del inventario o uno nuevo</small></span></button>
+    <button data-act="blankEl">${gsvg('Mufla')}<span>Elemento<small>Caja de empalme, splitter, poste…</small></span></button>
+    <button data-act="blankTxt"><span style="width:18px;text-align:center;font-weight:700">T</span><span>Texto<small>Nota o etiqueta libre</small></span></button>
+    <button data-act="blankGrp"><span style="width:18px;text-align:center">▭</span><span>Grupo<small>Ciudad, edificio, sitio, sala, rack…</small></span></button>`;
+  m.hidden=false;const x=e.clientX-wr.left,y=e.clientY-wr.top;m.style.left=Math.min(x,wr.width-m.offsetWidth-8)+'px';m.style.top=Math.min(y,wr.height-m.offsetHeight-8)+'px';}
+function centerPt(){if(ui.dropAt){const p=ui.dropAt;ui.dropAt=null;return p;}const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
 
 const elPresets=()=>[...EL_PRESETS.map(([l,ic,sh])=>({l,ic,sh,c:''})),...(S.elTypes||[]).map(t=>({l:t.name,ic:t.icon,sh:t.shape,c:t.color||'',id:t.id}))];
 const EL_PRESETS=[['Caja de empalme','Mufla','small'],['Splitter','Splitter','small'],['ODF','ODF','small'],['Poste','Torre','icon'],['Registro / pozo','Rack','small'],['Proveedor / ISP','Nube','cloud'],['Anillo','Anillo','ring'],['Otro','Otro','small']];
@@ -2653,7 +2660,11 @@ document.addEventListener('click',e=>{
     case 'mapAll':S.meta.mapSel=null;save(false);refreshMap(true);break;
     case 'mapNone':S.meta.mapSel=[];save(false);refreshMap(false);break;
     case 'mapRelayout':{const D=getDiag(MAP);S.mapPos=S.mapPos||{};D.nodes.forEach(n=>delete S.mapPos[n.deviceId]);save(false);refreshMap(true);break;}
-    case 'addDev':ui.addFrom=null;pickDevModal();break;
+    case 'addDev':ui.addFrom=null;ui.dropAt=null;pickDevModal();break;
+    case 'blankDev':$('#plusMenu').hidden=true;ui.addFrom=null;ui.dropAt=ui.blankAt;pickDevModal();break;
+    case 'blankEl':$('#plusMenu').hidden=true;ui.dropAt=ui.blankAt;addElement(null);break;
+    case 'blankTxt':{$('#plusMenu').hidden=true;ui.dropAt=ui.blankAt;addText();const n=getDiag(ui.folder).nodes.at(-1);setTimeout(()=>inlineEdit(n),60);break;}
+    case 'blankGrp':$('#plusMenu').hidden=true;ui.dropAt=ui.blankAt;ui.multi=new Set();ui.sel=null;groupFromSelection('edificio');break;
     case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
     case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
       const t={id:uid('t'),text:'Nota',x:n.x,y:n.y+G.h+18};D.nodes.push(t);ui.multi=new Set([t.id]);ui.sel={t:'node',id:t.id};save();renderAll();setTimeout(()=>{const i=$('#nTxt');if(i){i.focus();i.select();}},30);break;}
@@ -2664,11 +2675,13 @@ document.addEventListener('click',e=>{
     case 'addPort':{const d=devById(a.dataset.devid),i=$('#nPortAdd'),v=i?.value.trim();if(!d||!v)break;
       if(d.ports.some(p=>norm(p)===norm(v))){toast('Ya está registrado');break;}d.ports.push(v);save();renderInsp();renderSide();toast('Agregado a '+d.name);break;}
     case 'plusGrp':$('#plusMenu').hidden=true;groupFromSelection('edificio');break;
-    case 'addTxt':addText();break;
-    case 'addEl':addElement(null);break;
+    case 'treeCollapse':S.folders.forEach(f=>{if(kids(f.id).length)ui.collapsed.add(f.id);});renderSide();break;
+    case 'treeExpand':ui.collapsed.clear();renderSide();break;
+    case 'addTxt':ui.dropAt=null;addText();break;
+    case 'addEl':ui.dropAt=null;addElement(null);break;
     case 'plusEl':$('#plusMenu').hidden=true;addElement(ui.plusNode);break;
     case 'dupEl':{const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.sel?.id);if(!n)break;const c={...n,id:uid('x'),x:n.x+32,y:n.y+32};D.nodes.push(c);ui.multi=new Set([c.id]);ui.sel={t:'node',id:c.id};save();renderAll();break;}
-    case 'addGrp':groupFromSelection('edificio');break;
+    case 'addGrp':ui.dropAt=null;groupFromSelection('edificio');break;
     case 'pinAuto':{const D=getDiag(ui.folder),g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){const ng={id:uid('g'),kind:g.kind,label:g.label,placeId:g.placeId,color:g.color||'',x:Math.round(g.x/8)*8,y:Math.round(g.y/8)*8,w:Math.round(g.w/8)*8+8,h:Math.round(g.h/8)*8+8};D.groups.push(ng);ui.sel={t:'group',id:ng.id};save();renderInsp();rc();toast('Grupo fijado: ahora puedes moverlo y cambiar su tamaño');}break;}
     case 'autoLocOff':{const g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){setLocHide([...(S.meta.locHide||[]),g.kind]);toast(`Nivel ${GKINDS[g.kind]} oculto (📍 Ubicaciones para volver a verlo)`);}break;}
     case 'dtAdd':{let i=1;while(S.devices.some(x=>norm(x.name)===norm('NUEVO-'+i)))i++;const nd={id:uid('d'),name:'NUEVO-'+i,ip:'',type:ui.lastType||S.types[0]?.name||'Router',access:[],sections:ui.devCardSec&&ui.devCardSec!=='none'?[ui.devCardSec]:[],ports:[]};S.devices.push(nd);ui.cvQ='';save();renderAll();
