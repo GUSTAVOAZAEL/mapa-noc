@@ -12,6 +12,15 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Tipos de equipo
+
+En **Equipos → Tipos** (o en el engrane ⚙) puedes crear y editar tipos como *CIENA*, *Switch Huawei*, *Firewall Fortinet* o *CPE Cliente*. Cada tipo tiene:
+
+- Un ícono de la galería (router, switch, OLT, óptico, firewall, radio, CPE, edificio, nube…) con el color que elijas, **o**
+- Una imagen propia (PNG, JPG o SVG). Se reduce automáticamente a 96×96 px y viaja dentro del JSON exportado, así que tus compañeros también la ven al importar.
+
+Si renombras un tipo, sus equipos se actualizan. Si lo eliminas, eliges a qué tipo pasan sus equipos. En el CSV, un tipo que no existe se crea solo con un ícono sugerido.
+
 ## Dónde se guardan los datos
 
 Los datos **no se suben a GitHub ni a ningún servidor**. Se guardan en el navegador de cada persona (`localStorage`).

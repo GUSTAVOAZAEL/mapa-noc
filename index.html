@@ -216,6 +216,28 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 #toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:6px;font-size:13px;z-index:60;max-width:calc(100% - 32px)}
 .scrim{display:none}
 
+
+/* tipos de equipo */
+.ticon{flex:none;object-fit:contain;display:block}
+.trows{display:grid}
+.trow{display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line)}
+.trow .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.trow .tc{font:12px var(--f-mono);color:var(--muted)}
+.tbox{width:34px;height:34px;border-radius:7px;background:var(--panel-2);display:grid;place-items:center}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px}
+.igrid button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 2px 6px;display:grid;justify-items:center;gap:5px;font-size:10.5px;color:var(--muted);cursor:pointer}
+.igrid button svg{color:var(--ink)}
+.igrid button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.sw{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.sw button{width:26px;height:26px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw button.on{box-shadow:0 0 0 2px var(--ink)}
+.sw input[type=color]{width:34px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:2px;cursor:pointer}
+.imgRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.imgPrev{width:56px;height:56px;border-radius:8px;border:1px dashed var(--line);display:grid;place-items:center;background:var(--panel-2)}
+.imgPrev img{max-width:48px;max-height:48px}
+.tprev{display:flex;justify-content:center;padding:12px;background:var(--panel-2);border-radius:8px;margin-bottom:12px}
+.tprev svg{max-width:100%}
+
 @media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
 @media (max-width:860px){
   #app{grid-template-columns:minmax(0,1fr)}
@@ -304,13 +326,13 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 <div class="modal" id="modal" hidden><div class="mbox" role="dialog" aria-modal="true"><header id="mT"></header><div class="mb" id="mB"></div><footer id="mF"></footer></div></div>
 <div id="toast" hidden></div>
 <input type="file" id="fileJson" accept=".json,application/json" hidden>
+<input type="file" id="fileImg" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" hidden>
 <input type="file" id="fileCsv" accept=".csv,.txt,text/csv" hidden>
 
 <script>
 "use strict";
 /* ---------- utilidades ---------- */
 const LS='mapa-noc-v1';
-const TYPES=['Router','Switch','OLT','Firewall','Servidor','Radio','CPE','Otro'];
 const MEDIA={fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radioenlace',d:'8 5'},logico:{l:'Lógico / VPN',d:'2 4'}};
 const KINDS={cliente:'Cliente',sitio:'Sitio',servicio:'Servicio',carpeta:'Carpeta'};
 const CHILD_KIND={cliente:'sitio',sitio:'servicio',servicio:'carpeta',carpeta:'carpeta'};
@@ -322,35 +344,60 @@ const fold=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(
 const ncmp=(a,b)=>String(a).localeCompare(String(b),'es',{numeric:true,sensitivity:'base'});
 const today=()=>new Date().toISOString().slice(0,10);
 
-function glyph(type){
-  const p={
-    Router:'<circle cx="9" cy="9" r="7.5"/><path d="M9 3.5v11M3.5 9h11M7 5.5 9 3.5l2 2M7 12.5l2 2 2-2M5.5 7 3.5 9l2 2M12.5 7l2 2-2 2"/>',
-    Switch:'<rect x="1" y="4" width="16" height="10" rx="1.5"/><path d="M4 7.5h8m-2-2 2 2-2 2M14 10.5H6m2-2-2 2 2 2"/>',
-    OLT:'<rect x="1" y="2" width="16" height="7" rx="1.2"/><path d="M4 5.5h1M7 5.5h1M10 5.5h1M9 9v3M9 12 4 16M9 12v4M9 12l5 4"/>',
-    Firewall:'<rect x="1" y="2" width="16" height="14" rx="1"/><path d="M1 6.7h16M1 11.3h16M6 2v4.7M12 2v4.7M9 6.7v4.6M4 11.3V16M14 11.3V16"/>',
-    Servidor:'<rect x="2" y="1.5" width="14" height="6" rx="1"/><rect x="2" y="10.5" width="14" height="6" rx="1"/><path d="M5 4.5h1M5 13.5h1M10 4.5h3M10 13.5h3"/>',
-    Radio:'<path d="M9 8v9M6 17h6M9 8 7 17M9 8l2 9"/><circle cx="9" cy="6" r="1.4"/><path d="M5.5 2.5a5 5 0 0 0 0 7M12.5 2.5a5 5 0 0 1 0 7M3 1a8 8 0 0 0 0 10M15 1a8 8 0 0 1 0 10"/>',
-    CPE:'<path d="M2 9 9 2.5 16 9M4 7.5V16h10V7.5"/><rect x="7" y="10.5" width="4" height="5.5"/>',
-    Otro:'<circle cx="9" cy="9" r="7.5"/><circle cx="9" cy="9" r="2"/>'
-  };
-  return `<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${p[type]||p.Otro}</g>`;
+const GLYPHS={
+  Router:'<circle cx="9" cy="9" r="7.5"/><path d="M9 3.5v11M3.5 9h11M7 5.5 9 3.5l2 2M7 12.5l2 2 2-2M5.5 7 3.5 9l2 2M12.5 7l2 2-2 2"/>',
+  Switch:'<rect x="1" y="4" width="16" height="10" rx="1.5"/><path d="M4 7.5h8m-2-2 2 2-2 2M14 10.5H6m2-2-2 2 2 2"/>',
+  OLT:'<rect x="1" y="2" width="16" height="7" rx="1.2"/><path d="M4 5.5h1M7 5.5h1M10 5.5h1M9 9v3M9 12 4 16M9 12v4M9 12l5 4"/>',
+  Optico:'<rect x="1" y="3.5" width="16" height="11" rx="1.5"/><path d="M3.5 9c1.2-2.6 2.4-2.6 3.6 0s2.4 2.6 3.6 0 2.4-2.6 3.8 0"/>',
+  Firewall:'<rect x="1" y="2" width="16" height="14" rx="1"/><path d="M1 6.7h16M1 11.3h16M6 2v4.7M12 2v4.7M9 6.7v4.6M4 11.3V16M14 11.3V16"/>',
+  Servidor:'<rect x="2" y="1.5" width="14" height="6" rx="1"/><rect x="2" y="10.5" width="14" height="6" rx="1"/><path d="M5 4.5h1M5 13.5h1M10 4.5h3M10 13.5h3"/>',
+  Radio:'<path d="M9 8v9M6 17h6M9 8 7 17M9 8l2 9"/><circle cx="9" cy="6" r="1.4"/><path d="M5.5 2.5a5 5 0 0 0 0 7M12.5 2.5a5 5 0 0 1 0 7M3 1a8 8 0 0 0 0 10M15 1a8 8 0 0 1 0 10"/>',
+  WiFi:'<path d="M2.5 7.5a9 9 0 0 1 13 0M5 10a5.5 5.5 0 0 1 8 0M7.3 12.4a2.3 2.3 0 0 1 3.4 0"/><circle cx="9" cy="15" r="1"/>',
+  CPE:'<path d="M2 9 9 2.5 16 9M4 7.5V16h10V7.5"/><rect x="7" y="10.5" width="4" height="5.5"/>',
+  Edificio:'<path d="M3 16.5V2.5h8v14M11 7h4v9.5M1.5 16.5h15M5.5 5.5h1M8 5.5h1M5.5 8.5h1M8 8.5h1M5.5 11.5h1M8 11.5h1"/>',
+  PC:'<rect x="1.5" y="2.5" width="15" height="10" rx="1"/><path d="M6 16h6M9 12.5V16"/>',
+  Nube:'<path d="M5 14.5h8.5a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 4.3 8.6 3 3 0 0 0 5 14.5z"/>',
+  Otro:'<circle cx="9" cy="9" r="7.5"/><circle cx="9" cy="9" r="2"/>'
+};
+const GLYPH_NAMES={Router:'Router',Switch:'Switch',OLT:'OLT',Optico:'Óptico',Firewall:'Firewall',Servidor:'Servidor',Radio:'Radio',WiFi:'WiFi / AP',CPE:'CPE',Edificio:'Edificio',PC:'PC',Nube:'Nube',Otro:'Genérico'};
+const TYPE_COLORS=['','#2F6FD6','#7A4FC9','#C2367A','#C7432A','#B86A00','#3C8A3E','#0F8A80','#5A6978'];
+const DEFAULT_TYPES=[['Router','Router'],['Switch','Switch'],['OLT','OLT'],['Equipo óptico','Optico'],['Firewall','Firewall'],['Servidor','Servidor'],['Radio','Radio'],['CPE','CPE'],['Otro','Otro']];
+const mkTypes=list=>list.map(([name,icon,color])=>({name,icon,color:color||'',img:''}));
+function guessIcon(name){const n=fold(name);
+  const r=[[/router|core|asr|mx\d/,'Router'],[/switch|agg|sw\b/,'Switch'],[/olt|gpon|ont/,'OLT'],[/ciena|dwdm|optic|transport|sdh|ptn/,'Optico'],[/firewall|forti|\bfw\b|palo|asa/,'Firewall'],
+    [/serv|vm|host/,'Servidor'],[/radio|ptp|ptmp|antena|airfiber|enlace/,'Radio'],[/wifi|wireless|\bap\b/,'WiFi'],[/cpe|cliente/,'CPE'],[/sitio|edificio|nodo/,'Edificio'],[/pc|laptop/,'PC'],[/nube|cloud|internet/,'Nube']];
+  const m=r.find(([re])=>re.test(n));return m?m[1]:'Otro';}
+function glyph(key){return `<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[key]||GLYPHS.Otro}</g>`;}
+function typeOf(name){return ((typeof S!=='undefined'&&S.types)||[]).find(t=>norm(t.name)===norm(name))||{name:name||'Otro',icon:guessIcon(name),color:'',img:''};}
+function iconHTML(t,s=18){
+  if(t.img)return `<img class="ticon" src="${esc(t.img)}" width="${s}" height="${s}" alt="">`;
+  return `<svg class="ticon" width="${s}" height="${s}" viewBox="0 0 18 18" style="color:${t.color||'var(--accent)'}">${glyph(t.icon)}</svg>`;
 }
-const gsvg=(t,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 18 18">${glyph(t)}</svg>`;
+const gsvg=(name,s=18)=>iconHTML(typeOf(name),s);
+function nodeIcon(name){const t=typeOf(name);
+  if(t.img)return `<image href="${esc(t.img)}" x="7" y="14" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+  return `<g transform="translate(11,20)" style="color:${t.color||'var(--accent)'}">${glyph(t.icon)}</g>`;}
+function ensureTypes(d){
+  if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
+  (d.devices||[]).forEach(x=>{if(x.type&&!d.types.some(t=>norm(t.name)===norm(x.type)))d.types.push({name:x.type,icon:guessIcon(x.type),color:'',img:''});});
+  return d;
+}
 
 /* ---------- datos ---------- */
-function emptyData(){return {app:'mapa-noc',version:1,meta:{owner:'',lastExport:null,dirty:0,example:false},devices:[],folders:[],diagrams:{}};}
+function emptyData(){return {app:'mapa-noc',version:1,meta:{owner:'',lastExport:null,dirty:0,example:false},devices:[],folders:[],diagrams:{},types:mkTypes(DEFAULT_TYPES)};}
 function sample(){
   const d=emptyData(); d.meta.example=true;
+  d.types=mkTypes([['Router','Router'],['Switch Huawei','Switch','#C7432A'],['OLT Huawei','OLT','#C7432A'],['CIENA','Optico','#7A4FC9'],['Firewall Fortinet','Firewall','#B86A00'],['Radio','Radio'],['CPE Cliente','CPE','#3C8A3E'],['Servidor','Servidor'],['Otro','Otro']]);
   const dev=(id,name,ip,type,brand,model,access,ports,location)=>({id,name,ip,type,brand,model,access,ports,location,notes:''});
   d.devices=[
     dev('dCORE','CORE-MTY-01','10.0.0.1','Router','Cisco','ASR 9001',[{p:'ssh',port:''}],['Te0/0/0/0','Te0/0/0/1','Te0/0/0/2','Te0/0/0/3'],'DC Monterrey'),
-    dev('dFW','FW-DC-01','10.0.0.5','Firewall','Fortinet','FG-200F',[{p:'web',port:'443'},{p:'ssh',port:''}],['port1','port2','port3','port4'],'DC Monterrey'),
-    dev('dAGG','AGG-GPE-02','10.0.1.2','Switch','Huawei','S6730-H',[{p:'ssh',port:''},{p:'telnet',port:''}],['XGE0/0/1','XGE0/0/2','XGE0/0/5','XGE0/0/7'],'Nodo Guadalupe'),
-    dev('dOLT','OLT-GPE-01','10.0.2.10','OLT','Huawei','MA5800-X7',[{p:'ssh',port:''},{p:'web',port:'443'}],['0/1/0','0/1/2','0/1/3','0/9/0'],'Nodo Guadalupe'),
+    dev('dFW','FW-DC-01','10.0.0.5','Firewall Fortinet','Fortinet','FG-200F',[{p:'web',port:'443'},{p:'ssh',port:''}],['port1','port2','port3','port4'],'DC Monterrey'),
+    dev('dAGG','AGG-GPE-02','10.0.1.2','Switch Huawei','Huawei','S6730-H',[{p:'ssh',port:''},{p:'telnet',port:''}],['XGE0/0/1','XGE0/0/2','XGE0/0/5','XGE0/0/7'],'Nodo Guadalupe'),
+    dev('dOLT','OLT-GPE-01','10.0.2.10','OLT Huawei','Huawei','MA5800-X7',[{p:'ssh',port:''},{p:'web',port:'443'}],['0/1/0','0/1/2','0/1/3','0/9/0'],'Nodo Guadalupe'),
     dev('dPTP','PTP-CUMBRES-01','10.0.3.20','Radio','Ubiquiti','AF-5XHD',[{p:'web',port:'443'}],['eth0','air'],'Torre Cumbres'),
-    dev('dC1','CPE-ACME-PLANTA','172.16.10.2','CPE','MikroTik','RB4011',[{p:'ssh',port:'2222'},{p:'web',port:'80'}],['ether1','ether2'],'Planta Apodaca'),
-    dev('dC2','CPE-ACME-CEDIS','172.16.10.6','CPE','MikroTik','hEX S',[{p:'ssh',port:''}],['ether1'],'CEDIS Guadalupe'),
-    dev('dC3','CPE-FARMA-SUC12','172.16.20.2','CPE','Cisco','ISR 1111',[{p:'ssh',port:''}],['Gi0/0/0'],'Sucursal 12')
+    dev('dC1','CPE-ACME-PLANTA','172.16.10.2','CPE Cliente','MikroTik','RB4011',[{p:'ssh',port:'2222'},{p:'web',port:'80'}],['ether1','ether2'],'Planta Apodaca'),
+    dev('dC2','CPE-ACME-CEDIS','172.16.10.6','CPE Cliente','MikroTik','hEX S',[{p:'ssh',port:''}],['ether1'],'CEDIS Guadalupe'),
+    dev('dC3','CPE-FARMA-SUC12','172.16.20.2','CPE Cliente','Cisco','ISR 1111',[{p:'ssh',port:''}],['Gi0/0/0'],'Sucursal 12')
   ];
   const f=(id,name,kind,parentId)=>({id,name,kind,parentId});
   d.folders=[
@@ -374,7 +421,7 @@ function sample(){
   return d;
 }
 function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);if(d&&d.devices)return d;}}catch(e){}return null;}
-let S=load()||sample();
+let S=ensureTypes(load()||sample());
 let saveT=null,saveOk=true;
 function save(markDirty=true){
   if(markDirty)S.meta.dirty=(S.meta.dirty||0)+1;
@@ -461,9 +508,9 @@ function sideClients(){
 function sideDevices(){
   const q=fold(ui.devQ);
   const list=S.devices.filter(d=>!q||fold([d.name,d.ip,d.brand,d.model,d.type,d.location].join(' ')).includes(q)).sort((a,b)=>ncmp(a.name,b.name));
-  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.devices.length} equipos</span><button class="btn sm" data-act="csv">CSV</button><button class="btn sm" data-act="newDev">+ Equipo</button></div>
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.devices.length} equipos</span><button class="btn sm" data-act="types">Tipos</button><button class="btn sm" data-act="csv">CSV</button><button class="btn sm" data-act="newDev">+ Equipo</button></div>
   <input class="inp" id="devQ" type="search" placeholder="Filtrar por nombre, IP, marca…" style="margin-bottom:8px">
-  <div class="dlist">${list.map(d=>{const u=usage(d.id);return `<button class="drow" data-dev="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)}</div><div class="ip">${esc(d.ip||'sin IP')} · ${esc([d.brand,d.model].filter(Boolean).join(' ')||d.type)}</div></div><span class="use" title="Servicios que lo usan">${u}</span></button>`;}).join('')||'<p class="sub">Sin resultados.</p>'}</div>`;
+  <div class="dlist">${list.map(d=>{const u=usage(d.id);return `<button class="drow" data-dev="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)}</div><div class="ip">${esc(d.ip||'sin IP')} · ${esc(d.type)}</div></div><span class="use" title="Servicios que lo usan">${u}</span></button>`;}).join('')||'<p class="sub">Sin resultados.</p>'}</div>`;
 }
 function sideImpact(){
   const devs=[...S.devices].sort((a,b)=>ncmp(a.name,b.name));
@@ -544,7 +591,7 @@ function renderCanvas(){
     const cls='node'+(n.deviceId?'':' txt')+(sel?' sel':'')+(hn?' hit':'')+(hit&&!hn&&n.deviceId?' dim':'');
     let s=`<g class="${cls}" data-node="${n.id}" transform="translate(${n.x},${n.y})">`;
     if(n.deviceId){const d=devById(n.deviceId)||{name:'(equipo eliminado)',ip:'',type:'Otro'};
-      s+=`<rect class="nb" width="${w}" height="${h}" rx="7"/><g class="gl" transform="translate(11,20)">${glyph(d.type)}</g>
+      s+=`<rect class="nb" width="${w}" height="${h}" rx="7"/>${nodeIcon(d.type)}
       <text class="nm" x="40" y="25">${esc(trunc(d.name,19))}</text><text class="ipt" x="40" y="43">${esc(trunc(d.ip||d.type,22))}</text>`;
     }else{
       s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0">${String(n.text||'').split('\n').map((l,i)=>`<tspan x="5" dy="${i?18:18}">${esc(l)||' '}</tspan>`).join('')}</text>`;
@@ -695,7 +742,7 @@ $('#insp').addEventListener('change',e=>{
 
 /* ---------- modales ---------- */
 function modal(title,body,actions){
-  $('#mT').textContent=title;$('#mB').innerHTML=body;
+  $("#mT").textContent=title;$("#mB").onclick=null;$("#mB").innerHTML=body;
   const f=$('#mF');f.innerHTML='';
   actions.forEach(a=>{const b=document.createElement('button');b.className='btn '+(a.k||'');b.textContent=a.l;b.onclick=a.f||closeModal;f.appendChild(b);});
   $('#modal').hidden=false;setTimeout(()=>{const i=$('#mB').querySelector('input:not([type=checkbox]),select,textarea');if(i&&matchMedia('(min-width:861px)').matches)i.focus();},20);
@@ -729,7 +776,7 @@ function devModal(id){
   modal(d?'Editar equipo':'Nuevo equipo',`
     <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||'')}" placeholder="AGG-GPE-02"></div>
     <div class="fld"><span class="lbl">IP de gestión</span><input id="dIp" class="mono" value="${esc(d?.ip||'')}" placeholder="10.0.1.2"></div></div>
-    <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${TYPES.map(t=>`<option${(d?.type||'Switch')===t?' selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${(()=>{const names=S.types.map(t=>t.name).sort(ncmp);if(d?.type&&!names.some(n=>norm(n)===norm(d.type)))names.unshift(d.type);const cur=d?.type||ui.lastType||names[0];return names.map(t=>`<option${norm(cur)===norm(t)?' selected':''}>${esc(t)}</option>`).join('');})()}</select></div>
     <div class="fld"><span class="lbl">Ubicación / nodo</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Marca</span><input id="dBrand" value="${esc(d?.brand||'')}"></div>
     <div class="fld"><span class="lbl">Modelo</span><input id="dModel" value="${esc(d?.model||'')}"></div></div>
@@ -811,7 +858,7 @@ function askMerge(inc){
     <div class="choice"><button data-m="merge"><b>Combinar con lo mío</b><span>Los equipos se empatan por IP o nombre. Agrega carpetas, diagramas y conexiones que no tengas; lo tuyo no se borra.</span></button>
     <button data-m="replace"><b>Reemplazar todo</b><span>Tu información actual se sustituye por la del archivo. Exporta un respaldo antes.</span></button></div>`,[{l:'Cancelar'}]);
   $('#mB').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;
-    if(b.dataset.m==='replace'){const owner=S.meta.owner;S={...emptyData(),...inc,meta:{...emptyData().meta,owner,lastExport:S.meta.lastExport}};S.diagrams=S.diagrams||{};ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save();closeModal();renderAll();requestAnimationFrame(fit);toast('Datos reemplazados');}
+    if(b.dataset.m==='replace'){const owner=S.meta.owner;S={...emptyData(),...inc,meta:{...emptyData().meta,owner,lastExport:S.meta.lastExport}};S.diagrams=S.diagrams||{};ensureTypes(S);ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save();closeModal();renderAll();requestAnimationFrame(fit);toast('Datos reemplazados');}
     else{const r=mergeData(inc);closeModal();renderAll();modal('Combinación lista',`<dl class="kv"><dt>Equipos nuevos</dt><dd>${r.dev}</dd><dt>Equipos empatados</dt><dd>${r.devMatch}</dd><dt>Carpetas nuevas</dt><dd>${r.fol}</dd><dt>Conexiones nuevas</dt><dd>${r.edges}</dd></dl>`,[{l:'Listo',k:'pri'}]);}
   };
 }
@@ -826,6 +873,7 @@ function mergeData(inc){
       (d.access||[]).forEach(a=>{if(!(m.access||[]).some(x=>x.p===a.p))(m.access=m.access||[]).push(a);});}
     else{const nd={...d,ports:[...(d.ports||[])],access:[...(d.access||[])]};if(devById(nd.id))nd.id=uid('d');S.devices.push(nd);dm[d.id]=nd.id;r.dev++;}
   });
+  (inc.types||[]).forEach(t=>{const m=S.types.find(x=>norm(x.name)===norm(t.name));if(!m)S.types.push({...t});else if(!m.img&&t.img&&m.icon===guessIcon(m.name)&&!m.color)Object.assign(m,{img:t.img});});
   const pending=[...inc.folders];let guard=0;
   while(pending.length&&guard++<5000){
     const f=pending.shift();
@@ -847,7 +895,7 @@ function mergeData(inc){
       const dup=D.edges.some(x=>((x.from===a&&x.to===b&&norm(x.fp)===norm(e.fp)&&norm(x.tp)===norm(e.tp))||(x.from===b&&x.to===a&&norm(x.fp)===norm(e.tp)&&norm(x.tp)===norm(e.fp))));
       if(!dup){D.edges.push({...e,id:D.edges.some(x=>x.id===e.id)?uid('e'):e.id,from:a,to:b});r.edges++;}});
   });
-  S.meta.example=S.meta.example&&!r.dev&&!r.fol;
+  S.meta.example=S.meta.example&&!r.dev&&!r.fol;ensureTypes(S);
   if(!ui.folder)ui.folder=firstLeaf();
   save();return r;
 }
@@ -872,7 +920,7 @@ function csvRows(text){
   if(idx.name==null&&idx.ip==null)return{err:'No encontré columnas de nombre o IP. Revisa los encabezados.'};
   const g=(r,k)=>idx[k]!=null?(r[idx[k]]||'').trim():'';
   const list=rows.slice(1).map(r=>{
-    const t=g(r,'type'),type=TYPES.find(x=>fold(t).startsWith(fold(x).slice(0,4)))||(t?'Otro':'Switch');
+    const t=g(r,'type'),type=t?(S.types.find(x=>fold(x.name)===fold(t))?.name||t):'Otro';
     const accTxt=fold(g(r,'access')),aport=g(r,'aport');
     const access=['ssh','telnet','web'].filter(p=>accTxt.includes(p)||(p==='web'&&/http/.test(accTxt))).map(p=>({p,port:aport}));
     return{name:g(r,'name')||g(r,'ip'),ip:g(r,'ip'),type,brand:g(r,'brand'),model:g(r,'model'),access,location:g(r,'location'),
@@ -884,7 +932,7 @@ function csvModal(){
   modal('Importar inventario CSV',`<p>Exporta tu Excel como CSV. La primera fila debe tener encabezados; reconozco estos (en español o inglés):</p>
     <pre class="code">nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,puertos,notas
 AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,</pre>
-    <p class="sub" style="color:var(--muted)">Tipo: ${TYPES.join(', ')}. Acceso: ssh, telnet y/o web. Puertos separados con <span class="mono">|</span>. Si la IP o el nombre ya existe, se actualiza en lugar de duplicarse.</p>
+    <p class="sub" style="color:var(--muted)">Tipo: cualquiera de tus tipos de equipo; si no existe, se crea con un ícono sugerido que luego puedes cambiar. Acceso: ssh, telnet y/o web. Puertos separados con <span class="mono">|</span>. Si la IP o el nombre ya existe, se actualiza en lugar de duplicarse.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="csvPick">Elegir archivo CSV</button><button class="btn ghost" id="csvCopy">Copiar plantilla</button></div><div id="csvOut" style="margin-top:12px"></div>`,[{l:'Cerrar'}]);
   $('#csvPick').onclick=()=>{$('#fileCsv').value='';$('#fileCsv').click();};
   $('#csvCopy').onclick=()=>copyText('nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,puertos,notas\n');
@@ -897,17 +945,86 @@ $('#fileCsv').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new F
   out.innerHTML=`<p><b>${res.list.length}</b> equipos encontrados: ${nNew} nuevos y ${res.list.length-nNew} que ya existen y se actualizarán.</p><div class="pick">${res.list.slice(0,60).map(d=>`<button disabled>${gsvg(d.type)}<span>${esc(d.name)} <span class="mono" style="font-size:12px">${esc(d.ip)}</span></span><span style="font-size:11.5px">${match(d)?'actualizar':'nuevo'}</span></button>`).join('')}</div>`;
   const f=$('#mF');f.innerHTML='';const c=document.createElement('button');c.className='btn';c.textContent='Cancelar';c.onclick=closeModal;
   const ok=document.createElement('button');ok.className='btn pri';ok.textContent=`Importar ${res.list.length} equipos`;
-  ok.onclick=()=>{res.list.forEach(d=>{const m=match(d);if(m){m.ports=[...new Set([...(m.ports||[]),...d.ports])];['ip','brand','model','location','notes'].forEach(k=>{if(d[k])m[k]=d[k];});if(d.type)m.type=d.type;d.access.forEach(a=>{if(!m.access.some(x=>x.p===a.p))m.access.push(a);});}else S.devices.push({id:uid('d'),...d});});
+  ok.onclick=()=>{res.list.forEach(d=>{if(!S.types.some(t=>norm(t.name)===norm(d.type)))S.types.push({name:d.type,icon:guessIcon(d.type),color:'',img:''});const m=match(d);if(m){m.ports=[...new Set([...(m.ports||[]),...d.ports])];['ip','brand','model','location','notes'].forEach(k=>{if(d[k])m[k]=d[k];});if(d.type)m.type=d.type;d.access.forEach(a=>{if(!m.access.some(x=>x.p===a.p))m.access.push(a);});}else S.devices.push({id:uid('d'),...d});});
     save();closeModal();ui.tab='equipos';renderAll();toast(`${res.list.length} equipos importados`);};
   f.append(c,ok);
 };rd.readAsText(f);};
 
+
+/* ---------- tipos de equipo ---------- */
+const typeCount=name=>S.devices.filter(d=>norm(d.type)===norm(name)).length;
+function typesModal(){
+  const rows=[...S.types].sort((a,b)=>ncmp(a.name,b.name)).map(t=>{const c=typeCount(t.name);
+    return `<div class="trow"><span class="tbox">${iconHTML(t,22)}</span><span class="tn" title="${esc(t.name)}">${esc(t.name)}</span><span class="tc">${c} equipo${c===1?'':'s'}</span><button class="btn sm" data-tedit="${esc(t.name)}">Editar</button></div>`;}).join('');
+  modal('Tipos de equipo',`<p class="sub" style="color:var(--muted)">Cada tipo tiene su ícono (de la galería o una imagen tuya) y se usa en los diagramas y listas. Por ejemplo: <i>CIENA</i>, <i>Switch Huawei</i>, <i>Firewall Fortinet</i>, <i>CPE Cliente</i>.</p><div class="trows">${rows}</div>`,
+    [{l:'Cerrar'},{l:'+ Nuevo tipo',k:'pri',f:()=>typeEditModal(null)}]);
+  $('#mB').onclick=e=>{const b=e.target.closest('[data-tedit]');if(b)typeEditModal(b.dataset.tedit);};
+}
+let tDraft=null;
+function typeEditModal(name){
+  const t=name?S.types.find(x=>x.name===name):null;
+  tDraft=t?{...t,orig:t.name}:{name:'',icon:'Switch',color:'',img:'',orig:null};
+  const cnt=t?typeCount(t.name):0;
+  modal(t?'Editar tipo':'Nuevo tipo','<div id="teBody"></div>',[
+    ...(t?[{l:'Eliminar',k:'dan',f:()=>typeDeleteModal(t.name)}]:[]),
+    {l:'Volver',f:typesModal},
+    {l:'Guardar',k:'pri',f:()=>{
+      const nm=tDraft.name.trim(),err=$('#teErr');
+      if(!nm){err.textContent='Escribe un nombre para el tipo.';return;}
+      if(S.types.some(x=>x!==t&&norm(x.name)===norm(nm))){err.textContent='Ya existe un tipo con ese nombre.';return;}
+      const obj={name:nm,icon:tDraft.icon,color:tDraft.color,img:tDraft.img};
+      if(t){if(t.name!==nm)S.devices.forEach(d=>{if(norm(d.type)===norm(t.name))d.type=nm;});Object.assign(t,obj);}else S.types.push(obj);
+      save();renderAll();typesModal();toast(t?'Tipo actualizado':'Tipo creado');}}]);
+  drawTE(cnt);
+}
+function drawTE(cnt){
+  const d=tDraft,body=$('#teBody');if(!body)return;
+  const prev=`<svg width="200" height="74" viewBox="0 0 200 74"><g transform="translate(11,8)"><rect width="178" height="58" rx="7" style="fill:var(--node);stroke:var(--line)" stroke-width="1.2"/>${d.img?`<image href="${esc(d.img)}" x="7" y="14" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`:`<g transform="translate(11,20)" style="color:${d.color||'var(--accent)'}">${glyph(d.icon)}</g>`}<text x="40" y="25" style="font:600 13px var(--f-cond);fill:var(--ink)">EQUIPO-01</text><text x="40" y="43" style="font:11px var(--f-mono);fill:var(--muted)">${esc(trunc(d.name||'Tipo',22))}</text></g></svg>`;
+  body.innerHTML=`<div class="tprev">${prev}</div>
+    <div class="fld"><span class="lbl">Nombre del tipo</span><input id="teName" value="${esc(d.name)}" placeholder="CIENA, Switch Huawei, CPE Cliente…"></div>
+    ${cnt?`<p class="sub" style="color:var(--muted);margin:-4px 0 10px">${cnt} equipo${cnt===1?' usa':'s usan'} este tipo; si lo renombras se actualizan.</p>`:''}
+    <div class="fld"><span class="lbl">Imagen propia (PNG, JPG o SVG)</span><div class="imgRow"><span class="imgPrev">${d.img?`<img src="${esc(d.img)}" alt="">`:'<span style="color:var(--muted);font-size:11px">sin imagen</span>'}</span>
+      <button class="btn sm" id="teUp">${d.img?'Cambiar imagen':'Subir imagen'}</button>${d.img?'<button class="btn sm ghost" id="teRm">Quitar imagen</button>':''}</div>
+      <span class="sub" style="color:var(--muted);font-size:12px">Funciona mejor un logo o ícono cuadrado con fondo transparente. La imagen reemplaza al ícono de la galería.</span></div>
+    <div class="fld" ${d.img?'style="opacity:.45"':''}><span class="lbl">Ícono de la galería</span><div class="igrid">${Object.keys(GLYPHS).map(k=>`<button data-gl="${k}" class="${k===d.icon?'on':''}"><svg width="22" height="22" viewBox="0 0 18 18">${glyph(k)}</svg>${GLYPH_NAMES[k]}</button>`).join('')}</div></div>
+    <div class="fld" ${d.img?'style="opacity:.45"':''}><span class="lbl">Color del ícono</span><div class="sw">${TYPE_COLORS.map(c=>`<button data-col="${c}" class="${c===d.color?'on':''}" style="background:${c||'var(--accent)'}" aria-label="${c||'Color por defecto'}"></button>`).join('')}<input type="color" id="teCol" value="${d.color||'#0a6c87'}" title="Otro color"></div></div>
+    <div class="err" id="teErr"></div>`;
+  $('#teName').oninput=e=>{d.name=e.target.value;const tx=body.querySelectorAll('.tprev text')[1];if(tx)tx.textContent=trunc(d.name||'Tipo',22);};
+  body.querySelectorAll('[data-gl]').forEach(b=>b.onclick=()=>{d.icon=b.dataset.gl;drawTE(cnt);});
+  body.querySelectorAll('[data-col]').forEach(b=>b.onclick=()=>{d.color=b.dataset.col;drawTE(cnt);});
+  $('#teCol').onchange=e=>{d.color=e.target.value;drawTE(cnt);};
+  $('#teUp').onclick=()=>{$('#fileImg').value='';$('#fileImg').click();};
+  if($('#teRm'))$('#teRm').onclick=()=>{d.img='';drawTE(cnt);};
+  drawTE.cnt=cnt;
+}
+$('#fileImg').onchange=e=>{
+  const f=e.target.files[0];if(!f||!tDraft)return;
+  if(f.size>3*1024*1024){toast('La imagen pesa más de 3 MB; usa una más ligera');return;}
+  const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const S2=96,c=document.createElement('canvas');c.width=S2;c.height=S2;const x=c.getContext('2d');
+    const w=im.naturalWidth||im.width||S2,h=im.naturalHeight||im.height||S2,k=Math.min(S2/w,S2/h);
+    x.drawImage(im,(S2-w*k)/2,(S2-h*k)/2,w*k,h*k);
+    try{tDraft.img=c.toDataURL('image/png');}catch(err){tDraft.img=rd.result;}
+    drawTE(drawTE.cnt||0);};
+    im.onerror=()=>toast('No se pudo leer la imagen');im.src=rd.result;};
+  rd.readAsDataURL(f);
+};
+function typeDeleteModal(name){
+  const cnt=typeCount(name),others=S.types.filter(t=>t.name!==name).map(t=>t.name).sort(ncmp);
+  if(!others.length){toast('Debe existir al menos un tipo');return;}
+  modal('Eliminar tipo '+name,cnt?`<p>${cnt} equipo${cnt===1?' usa':'s usan'} este tipo. ¿A qué tipo los paso?</p><div class="fld"><select id="tdTo">${others.map(o=>`<option${o==='Otro'?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`:'<p>Ningún equipo usa este tipo.</p>',
+    [{l:'Cancelar',f:()=>typeEditModal(name)},{l:'Eliminar tipo',k:'dan pri',f:()=>{
+      const to=cnt?$('#tdTo').value:null;if(to)S.devices.forEach(d=>{if(norm(d.type)===norm(name))d.type=to;});
+      S.types=S.types.filter(t=>t.name!==name);save();renderAll();typesModal();toast('Tipo eliminado');}}]);
+}
+
 function settingsModal(){
   modal('Ajustes',`<div class="fld"><span class="lbl">Tu nombre</span><input id="sOwner" value="${esc(S.meta.owner||'')}" placeholder="Se usa en el nombre del archivo exportado"></div>
     <p class="sub" style="color:var(--muted)">Tu información vive solo en este navegador. Si borras los datos del sitio o cambias de equipo, la recuperas importando tu último JSON exportado.</p>
-    <hr class="sep"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn dan" id="sWipe">Borrar todo y empezar vacío</button><button class="btn" id="sSample">Cargar datos de ejemplo</button></div>`,
+    <hr class="sep"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" id="sTypes">Tipos de equipo</button><button class="btn dan" id="sWipe">Borrar todo y empezar vacío</button><button class="btn" id="sSample">Cargar datos de ejemplo</button></div>`,
     [{l:'Cerrar'},{l:'Guardar',k:'pri',f:()=>{S.meta.owner=$('#sOwner').value.trim();save(false);closeModal();toast('Ajustes guardados');}}]);
-  $('#sWipe').onclick=()=>wipeModal();
+  $('#sWipe').onclick=()=>wipeModal();$('#sTypes').onclick=()=>typesModal();
   $('#sSample').onclick=()=>modal('Cargar ejemplo','<p>Se reemplazará lo que tienes por los datos de ejemplo. Exporta un respaldo antes si lo necesitas.</p>',[{l:'Cancelar'},{l:'Cargar ejemplo',k:'pri',f:()=>{const o=S.meta.owner;S=sample();S.meta.owner=o;ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save(false);closeModal();renderAll();requestAnimationFrame(fit);}}]);
 }
 function wipeModal(){
@@ -953,6 +1070,7 @@ document.addEventListener('click',e=>{
     case 'newClient':folderModal(null,null,'cliente');break;
     case 'newDev':ui.addAfterCreate=false;devModal(null);break;
     case 'csv':csvModal();break;
+    case 'types':typesModal();break;
     case 'wipe':wipeModal();break;
     case 'clearImp':ui.impact=null;renderAll();break;
     case 'showImp':ui.tab='impacto';document.body.classList.add('showSide');renderSide();break;
