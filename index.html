@@ -1067,7 +1067,9 @@ svg.addEventListener('pointerdown',e=>{
   const gr=e.target.closest('[data-gresize]');
   if(gr){const g=D.groups.find(x=>x.id===gr.dataset.gresize);ui.sel={t:'group',id:g.id};ui.multi=new Set();ui.drag={kind:'gresize',id:g.id,moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();e.preventDefault();return;}
   const n=e.target.closest('[data-node]');
-  if(n){const id=n.dataset.node;ui.lastDown={id,t:Date.now()};
+  if(n){const id=n.dataset.node,now=Date.now();
+    if(!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&ui.lastDown&&ui.lastDown.id===id&&now-ui.lastDown.t<500&&Math.hypot(e.clientX-ui.lastDown.x,e.clientY-ui.lastDown.y)<8){ui.lastDown=null;nodeDouble(id);return;}
+    ui.lastDown={id,t:now,x:e.clientX,y:e.clientY};
     if(!ui.multi)ui.multi=new Set();
     if(e.shiftKey||e.ctrlKey||e.metaKey){if(ui.sel?.t==='node')ui.multi.add(ui.sel.id);ui.multi.has(id)?ui.multi.delete(id):ui.multi.add(id);}
     else if(!(ui.multi.size>1&&ui.multi.has(id)))ui.multi=new Set([id]);
@@ -1122,7 +1124,9 @@ function endDrag(e){
 }
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 svg.addEventListener('wheel',e=>{if(!ui.folder)return;e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
-svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');const nid=n?n.dataset.node:(ui.lastDown&&Date.now()-ui.lastDown.t<700?ui.lastDown.id:null);if(!nid)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===nid);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd){const d=devById(nd.deviceId);if(!d)return;if(!d.ip){toast(`${d.name} no tiene IP registrada; agrégala con Editar equipo`);return;}copyIp(d);}});
+function nodeDouble(nid){const nd=getDiag(ui.folder).nodes.find(x=>x.id===nid);if(!nd)return;
+  if(!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);return;}
+  const d=devById(nd.deviceId);if(!d)return;if(!d.ip){toast(`${d.name} no tiene IP registrada; agrégala con Editar equipo`);return;}copyIp(d);}
 function copyIp(d){const ok=()=>toast(`IP de ${d.name} copiada: ${d.ip}`);
   try{navigator.clipboard.writeText(d.ip).then(ok,fb);}catch(e){fb();}
   function fb(){const ta=document.createElement('textarea');ta.value=d.ip;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){toast('No se pudo copiar: '+d.ip);}ta.remove();}}
@@ -1572,7 +1576,7 @@ function renderInsp(){
     const mapInfo=ui.folder===MAP?`<div class="acc"><span class="lbl">Aparece en ${n.svcList.length} diagrama${n.svcList.length===1?'':'s'}</span>${svcChips(n.svcList)}</div>`:'';
     const conns=D.edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>{const mine=e.from===n.id?e.fp:e.tp,other=D.nodes.find(x=>x.id===(e.from===n.id?e.to:e.from)),od=other?.deviceId?devById(other.deviceId)?.name:'texto';return{e,mine,od};});
     const u=usage(d.id);
-    el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0"><h3>${esc(d.name)}</h3><div class="sub mono">${esc(d.ip||'sin IP')}</div></div></div>
+    el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0;flex:1"><h3>${esc(d.name)}</h3><div class="sub mono" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${esc(d.ip||'sin IP')}${d.ip?`<button class="btn sm" data-copyip="${d.id}" title="Copiar IP (también con doble clic sobre el equipo)">Copiar IP</button>`:''}</div></div></div>
       <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${(d.sections||[]).length?`<dt>Red</dt><dd>${secChips(d)}</dd>`:''}${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}${d.location?`<dt>Ubicación</dt><dd>${esc(d.location)}</dd>`:''}<dt>Usado en</dt><dd>${u} diagrama${u===1?'':'s'}</dd></dl>
       ${(()=>{const ps=devicePorts(d.id),used=new Set(conns.map(c=>norm(c.mine)).filter(Boolean));
         return `<div class="portBox"><div class="head"><b>Puertos / IPs</b><span class="endHint">${ps.length} registrado${ps.length===1?'':'s'}</span></div>
@@ -2106,6 +2110,7 @@ function openFolder(fid){ui.view='diagram';if(!$('#modal').hidden)closeModal();i
 function setImpact(dev,port){ui.view='diagram';if(!$('#modal').hidden)closeModal();ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
 document.addEventListener('click',e=>{
   const t=e.target;
+  const cip=t.closest('[data-copyip]');if(cip){const d=devById(cip.dataset.copyip);if(d)copyIp(d);return;}
   const vw=t.closest('[data-view]');if(vw){setView(vw.dataset.view);return;}
   const ce=t.closest('[data-cedit]');if(ce){e.stopPropagation();clientModal(ce.dataset.cedit);return;}
   const dco=t.closest('[data-dcol-open]');if(dco){deviceSheet(dco.dataset.dcolOpen);return;}
