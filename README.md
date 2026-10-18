@@ -66,6 +66,10 @@ En el árbol de la izquierda arrastra cualquier elemento y suéltalo sobre otro 
 - El menú del **+** también tiene **Ver impacto** y **Registrar incidencia**. El resumen del impacto aparece en una tarjeta junto al equipo, con **Ver lista** y **Ocultar impacto**.
 - **Nombres únicos**: no se puede guardar un equipo con un nombre que ya existe (sin importar mayúsculas). Mientras escribes te avisa y te ofrece **Agregar el existente**. Si la IP ya la tiene otro equipo, te avisa y te pide confirmar.
 
+## Equipos sugeridos del mismo cliente
+
+Mientras dibujas un diagrama, el panel derecho (sin nada seleccionado) y la ventana **+ Equipo** muestran los equipos que ya usaste en otros diagramas del mismo cliente y que aún no están en este, ordenados por **Transporte, Datos, Voz** y *Sin red*. Un clic los agrega.
+
 ## Elementos sin inventario
 
 Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme, splitter, ODF, poste, registro, un proveedor externo…) usa **+ Elemento** (panel derecho) o **Elemento conectado** en el menú **+** de un equipo.
@@ -77,7 +81,7 @@ Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme,
 ## Líneas privadas entre sitios
 
 - Al editar un servicio (lápiz o ⋯), en **Línea privada: también llega a** marca los otros sitios del cliente por los que pasa. El servicio aparece en la página del cliente bajo cada sitio con la marca **↔ Línea privada con…**, y en el árbol con **↔**.
-- En la página del cliente, el mismo servicio en dos sitios se marca con la etiqueta **L2L**, fondo amarillo y una **línea amarilla con dos puntos** que une ambos sitios.
+- En la página del cliente, el mismo servicio en dos sitios se marca con la etiqueta **L2L**, fondo amarillo y una **línea amarilla con dos puntos** que une ambos sitios, rodeando las tarjetas por los espacios entre ellas.
 - En las líneas del diagrama hay un medio nuevo, **Línea privada (L2L)**, que se dibuja con trazo de raya y punto.
 
 ## Equipos en cada sitio
