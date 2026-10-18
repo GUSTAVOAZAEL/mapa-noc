@@ -65,7 +65,7 @@ El mapa general se maneja desde el mismo árbol de clientes, sin cambiar el pane
 - **Resaltar solo lo compartido** atenúa todo lo demás.
 - **Mostrar ubicaciones** dibuja los edificios, salas, gabinetes y racks que capturaste en tus diagramas, unidos y anidados igual que en *Ubicación física*. Tocar el título de una ubicación abre su detalle.
 - Al seleccionar un equipo ves en qué diagramas aparece y puedes abrirlos. Impacto e incidencias también se marcan en el mapa.
-- Puedes arrastrar los equipos para acomodar el mapa; esa posición se guarda aparte y no cambia tus diagramas. **Reacomodar automáticamente** lo vuelve a ordenar.
+- Puedes arrastrar los equipos para acomodar el mapa; esa posición se guarda aparte y no cambia tus diagramas.
 - El mapa es de solo lectura: para agregar o cambiar conexiones, abre el diagrama del servicio.
 
 ## Mover clientes, sitios y servicios
