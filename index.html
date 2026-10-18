@@ -489,6 +489,21 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .tsRow input[type=range]{width:100%}
 .svrow .m{font-size:12px;color:var(--muted);grid-column:1}
 .svrow{position:relative}
+.plist{display:grid;gap:4px;max-height:220px;overflow:auto;margin-top:6px}
+.pitem{display:grid;gap:1px;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;cursor:pointer;color:var(--ink)}
+.pitem span{font-size:11.5px;color:var(--muted)}
+.pitem:hover{border-color:var(--accent)}
+.pitem.on{border-color:var(--accent);background:var(--accent-soft)}
+.pnew{display:grid;gap:6px;border:1px dashed var(--accent);border-radius:6px;padding:8px;font-size:12.5px}
+.pathBox,.locBox{background:var(--panel-2);border-radius:8px;padding:10px;display:grid;gap:6px}
+.locBox .head{display:flex;align-items:center;gap:6px}.locBox .head b{flex:1;font:600 13px var(--f-cond)}
+.prow,.lrow{display:flex;gap:8px;align-items:baseline;font-size:13px}
+.prow .k,.lrow .k{font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);min-width:64px}
+.lrows{display:grid;gap:3px;border-left:2px solid var(--accent);padding-left:8px}
+.pathTxt{font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.locBox.flash{animation:flash 1.2s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.pick button.on{background:var(--accent-soft)}
 .sugBox{display:grid;gap:6px;background:var(--panel-2);border-radius:8px;padding:10px}
 .sugG{display:grid;gap:3px}
 .sugT{font:600 10.5px var(--f-ui);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
@@ -652,8 +667,9 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 const LS='mapa-noc-v1';
 const MEDIA={privada:{l:'Línea privada (L2L)',d:'12 4 2 4'},fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radioenlace',d:'8 5'},logico:{l:'Lógico / VPN',d:'2 4'}};
 const SECTIONS={voz:{l:'Voz',k:'V',c:'#8A45C9'},transporte:{l:'Transporte',k:'T',c:'#2F6FD6'},datos:{l:'Datos',k:'D',c:'#23875A'}};
-const GKINDS={edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',zona:'Zona'};
-const GDASH={edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',zona:'2 5'};
+const PKINDS=['ciudad','edificio','piso','sala','gabinete','rack'];
+const GKINDS={ciudad:'Ciudad',edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',zona:'Zona'};
+const GDASH={ciudad:'14 6',edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',zona:'2 5'};
 const COLORS=['','#C2361F','#B86A00','#23875A','#0F8A80','#2F6FD6','#7A4FC9','#C2367A','#5A6978','#15212C'];
 const swatches=(attr,cur,def)=>`<div class="sw">${COLORS.map(c=>`<button type="button" ${attr}="${c}" class="${c===(cur||'')?'on':''}" style="background:${c||def}" aria-label="${c||'Color por defecto'}"></button>`).join('')}<input type="color" ${attr}-custom value="${cur||'#2f6fd6'}" title="Otro color"></div>`;
 const secChips=d=>(d.sections||[]).filter(k=>SECTIONS[k]).length?`<span class="secs">${d.sections.filter(k=>SECTIONS[k]).map(k=>`<span class="sec" style="background:${SECTIONS[k].c}">${SECTIONS[k].l}</span>`).join('')}</span>`:'';
@@ -752,11 +768,35 @@ const gsvg=(name,s=18)=>iconHTML(typeOf(name),s);
 function nodeIcon(name){const t=typeOf(name);
   if(t.img)return `<image href="${esc(t.img)}" x="7" y="14" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
   return `<g transform="translate(11,20)" style="color:${t.color||'var(--accent)'}">${glyph(t.icon)}</g>`;}
+function migratePlaces(d){
+  if(!Array.isArray(d.places))d.places=[];d.meta=d.meta||{};if(d.meta.placesMig)return;
+  const rk=k=>PKINDS.indexOf(k);
+  for(const D of Object.values(d.diagrams||{})){
+    (D.groups||[]).filter(g=>PKINDS.includes(g.kind)&&!g.placeId&&g.label).sort((a,b)=>rk(a.kind)-rk(b.kind)).forEach(g=>{
+      const cont=(D.groups||[]).filter(o=>o!==g&&o.placeId&&rk(o.kind)<rk(g.kind)&&o.x<=g.x&&o.y<=g.y&&o.x+o.w>=g.x+g.w&&o.y+o.h>=g.y+g.h).sort((a,b)=>rk(b.kind)-rk(a.kind));
+      const pid=cont[0]?.placeId||null;
+      let pl=d.places.find(x=>x.kind===g.kind&&fold(x.name)===fold(g.label)&&(x.parentId||null)===pid)||(!pid&&d.places.find(x=>x.kind===g.kind&&fold(x.name)===fold(g.label)));
+      if(!pl){pl={id:uid('p'),kind:g.kind,name:g.label,parentId:pid};d.places.push(pl);}
+      g.placeId=pl.id;});
+    applyGroupPlaces(D,d);
+  }
+  d.meta.placesMig=1;
+}
+function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x.id===id);
+  const under=(id,anc)=>{let x=P(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=P(x.parentId);}return false;};
+  (D.nodes||[]).forEach(n=>{if(!n.deviceId)return;const dev=data.devices.find(x=>x.id===n.deviceId);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
+    const gs=(D.groups||[]).filter(g=>g.placeId&&P(g.placeId)&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h).sort((a,b)=>PKINDS.indexOf(P(b.placeId).kind)-PKINDS.indexOf(P(a.placeId).kind)||a.w*a.h-b.w*b.h);
+    if(!gs.length)return;const pid=gs[0].placeId;if(dev.place&&(dev.place===pid||under(dev.place,pid)))return;dev.place=pid;});}
+const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
+function placeChain(id){const out=[];let x=placeById(id),gd=0;while(x&&gd++<20){out.unshift(x);x=placeById(x.parentId);}return out;}
+const placePath=id=>placeChain(id).map(x=>x.name).join(' › ');
+function placeUnder(id,anc){let x=placeById(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=placeById(x.parentId);}return false;}
 function ensureTypes(d){
   if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
   if(!Array.isArray(d.incidents))d.incidents=[];
   d.types.forEach(t=>{if(t.shape===undefined)t.shape=guessShape(t.icon);});
   (d.devices||[]).forEach(x=>{if(x.type&&!d.types.some(t=>norm(t.name)===norm(x.type)))d.types.push({name:x.type,icon:guessIcon(x.type),color:'',img:'',shape:guessShape(guessIcon(x.type))});});
+  if(typeof S_READY!=='undefined'&&S_READY)migratePlaces(d);
   return d;
 }
 
@@ -804,6 +844,14 @@ function sample(){
   d.diagrams.fB1a={nodes:[N('n1','dCORE',54,150),N('n2','dFW',290,160),N('n3','dAGG',540,160),N('n4','dOLT',790,160),N('n5','dC3',790,330),T('t1','VPN IPsec hacia FW-DC-01',300,60)],
     edges:[E('e1','n1','n2','Te0/0/0/2','port1'),E('e2','n2','n3','port3','XGE0/0/2'),E('e3','n3','n4','XGE0/0/5','0/9/0'),E('e4','n4','n5','0/1/3','Gi0/0/0','fibra','ONT 2'),E('e5','n5','n2','','', 'logico','IPsec','both')],
     groups:[{id:'g1',kind:'edificio',label:'DC Monterrey',x:12,y:92,w:488,h:214,color:''},{id:'g2',kind:'rack',label:'R03 · Sala A, piso 2',x:26,y:120,w:206,h:174,color:'#2F6FD6'},{id:'g3',kind:'gabinete',label:'GAB-07 · Sala B, piso 3',x:276,y:120,w:210,h:174,color:'#B86A00'}]};
+  d.places=[{id:'p1',kind:'ciudad',name:'Monterrey',parentId:null},{id:'p2',kind:'ciudad',name:'Guadalupe',parentId:null},
+    {id:'p3',kind:'edificio',name:'DC Monterrey',parentId:'p1'},{id:'p4',kind:'piso',name:'Piso 2',parentId:'p3'},{id:'p5',kind:'sala',name:'Sala A',parentId:'p4'},{id:'p6',kind:'rack',name:'R03',parentId:'p5'},
+    {id:'p7',kind:'piso',name:'Piso 3',parentId:'p3'},{id:'p8',kind:'sala',name:'Sala B',parentId:'p7'},{id:'p9',kind:'gabinete',name:'GAB-07',parentId:'p8'},
+    {id:'p10',kind:'edificio',name:'Nodo Guadalupe',parentId:'p2'},{id:'p11',kind:'sala',name:'Sala de equipos',parentId:'p10'},{id:'p12',kind:'gabinete',name:'GAB-03',parentId:'p11'}];
+  const gp={g1:'p3',g2:'p6',g3:'p9',gA1:'p10',gA2:'p12'};
+  Object.values(d.diagrams).forEach(D=>(D.groups||[]).forEach(g=>{if(gp[g.id]){g.placeId=gp[g.id];const pl=d.places.find(x=>x.id===gp[g.id]);g.label=pl.name;g.kind=pl.kind;}}));
+  ({dCORE:'p6',dFW:'p9',dAGG:'p12',dOLT:'p10'});Object.entries({dCORE:'p6',dFW:'p9',dAGG:'p12',dOLT:'p10'}).forEach(([k,v])=>{const x=d.devices.find(y=>y.id===k);if(x)x.place=v;});
+  d.meta.placesMig=1;
   const ago=m=>localDT(new Date(Date.now()-m*60000));
   d.incidents=[
     {id:'i1',title:'Corte de fibra tramo Guadalupe → OLT',ticket:'NOC-24871',vendorTicket:'',cause:'Corte de fibra',severity:'critica',start:ago(95),end:'',notes:'Cuadrilla en camino. Sin tráfico en XGE0/0/5 desde las alarmas de LOS.',scope:[{dev:'dAGG',port:'XGE0/0/5'}]},
@@ -814,6 +862,7 @@ function sample(){
   return d;
 }
 function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);if(d&&d.devices)return d;}}catch(e){}return null;}
+var S_READY=false;
 let S=ensureTypes(load()||sample());
 let saveT=null,saveOk=true;
 function save(markDirty=true){
@@ -1009,10 +1058,11 @@ function renderCanvas(){
   [...D.groups].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
     const col=g.color||'var(--muted)',sel=ui.sel?.t==='group'&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
-    const dash=GDASH[g.kind]||'';
-    out+=`<g class="grp${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${g.kind==='rack'||g.kind==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
+    const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.label||'');
+    const dash=GDASH[gk]||'';
+    out+=`<g class="grp${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${gk==='rack'||gk==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
       <rect class="gh" data-ghead="${g.id}" x="${g.x}" y="${g.y}" width="${g.w}" height="26"/>
-      <text class="gt" x="${g.x+10}" y="${g.y+17}" style="fill:${col}"><tspan class="k">${esc(GKINDS[g.kind]||'Grupo')}</tspan><tspan dx="6" style="fill:var(--ink)">${esc(trunc(g.label,Math.max(6,Math.floor(g.w/7.2)-8)))}</tspan></text>
+      <text class="gt" x="${g.x+10}" y="${g.y+17}" style="fill:${col}"><tspan class="k">${esc(GKINDS[gk]||'Grupo')}</tspan><tspan dx="6" style="fill:var(--ink)">${esc(trunc(gl,Math.max(6,Math.floor(g.w/7.2)-8)))}</tspan>${g.placeId?`<title>${esc(placePath(g.placeId))}</title>`:''}</text>
       ${g.ro?'':`<rect class="gr" data-gresize="${g.id}" x="${g.x+g.w-11}" y="${g.y+g.h-11}" width="13" height="13" rx="2"/>`}</g>`;
   });
   // aristas paralelas
@@ -1119,7 +1169,7 @@ svg.addEventListener('pointerdown',e=>{
   if(ed){ui.multi=new Set();ui.sel={t:'edge',id:ed.dataset.edge};renderInsp();rc();return;}
   const gh=e.target.closest('[data-ghead]');
   if(gh&&ui.folder===MAP){const g=getDiag(MAP).groups.find(x=>x.id===gh.dataset.ghead);if(g){locState={dev:null,q:g.label};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}return;}
-  if(gh&&!e.shiftKey){const g=D.groups.find(x=>x.id===gh.dataset.ghead);ui.multi=new Set();ui.sel={t:'group',id:g.id};
+  if(gh&&!e.shiftKey){const g=D.groups.find(x=>x.id===gh.dataset.ghead);ui.multi=new Set();ui.gq='';ui.sel={t:'group',id:g.id};
     const inG=(o,w,h)=>o.x+w/2>=g.x&&o.x+w/2<=g.x+g.w&&o.y+h/2>=g.y&&o.y+h/2<=g.y+g.h;
     const nodes=D.nodes.filter(x=>{const d=dims(x);return inG(x,d.w,d.h);}).map(x=>[x,x.x,x.y]);
     const grps=D.groups.filter(o=>o===g||(o.x>=g.x&&o.y>=g.y&&o.x+o.w<=g.x+g.w&&o.y+o.h<=g.y+g.h)).map(o=>[o,o.x,o.y]);
@@ -1140,7 +1190,7 @@ svg.addEventListener('pointermove',e=>{
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved)save();
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){applyGroupPlaces(getDiag(ui.folder));save();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1204,7 +1254,7 @@ function groupFromSelection(kind){
     g={x:x0-20,y:y0-40,w:x1-x0+40,h:y1-y0+60};}
   else{const c=centerPt();g={x:Math.round((c.x-170)/8)*8,y:Math.round((c.y-110)/8)*8,w:340,h:220};}
   const ng={id:uid('g'),kind,label:'',color:'',...g};D.groups.push(ng);
-  ui.multi=new Set();ui.sel={t:'group',id:ng.id};save();renderCanvas();renderInsp();setTimeout(()=>{const i=$('#gLabel');if(i&&matchMedia('(min-width:861px)').matches)i.focus();},30);
+  ui.multi=new Set();ui.gq='';ui.sel={t:'group',id:ng.id};save();renderCanvas();renderInsp();setTimeout(()=>{const i=$('#gLabel');if(i&&matchMedia('(min-width:861px)').matches)i.focus();},30);
 }
 
 
@@ -1403,31 +1453,11 @@ function mapInspector(){
 }
 
 /* ---------- ubicaciones físicas ---------- */
-const GRANK={edificio:0,zona:1,piso:2,sala:3,gabinete:4,rack:5};
+const GRANK={ciudad:0,edificio:1,zona:1.5,piso:2,sala:3,gabinete:4,rack:5};
 function collectLocations(){
-  const L=new Map();
-  for(const [fid,D] of Object.entries(S.diagrams)){
-    if(!folById(fid)||!D.groups?.length)continue;
-    const inG=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
-    const key=g=>g.kind+'|'+fold(g.label||('(sin nombre '+g.id+')'));
-    D.groups.forEach(g=>{const k=key(g);
-      if(!L.has(k))L.set(k,{key:k,kind:g.kind,label:g.label||'(sin nombre)',color:g.color,notes:g.notes||'',devs:new Set(),fids:new Set(),parents:new Map()});
-      const l=L.get(k);l.fids.add(fid);if(!l.color&&g.color)l.color=g.color;if(!l.notes&&g.notes)l.notes=g.notes;
-      D.nodes.forEach(n=>{if(n.deviceId&&inG(g,n))l.devs.add(n.deviceId);});
-      D.groups.forEach(o=>{if(o!==g&&o.x<=g.x&&o.y<=g.y&&o.x+o.w>=g.x+g.w&&o.y+o.h>=g.y+g.h&&o.w*o.h>g.w*g.h){const pk=key(o);l.parents.set(pk,(l.parents.get(pk)||0)+1);}});
-    });
-  }
-  // padre: contención explícita, si no, por jerarquía con equipos en común
-  const arr=[...L.values()];
-  arr.forEach(l=>{
-    let best=null;
-    l.parents.forEach((c,pk)=>{const p=L.get(pk);if(!p)return;const sc=c*10+(GRANK[p.kind]??0);if(!best||sc>best.sc)best={k:pk,sc};});
-    if(!best){arr.forEach(p=>{if(p===l||(GRANK[p.kind]??9)>=(GRANK[l.kind]??9))return;let common=0;l.devs.forEach(d=>{if(p.devs.has(d))common++;});
-      if(!common)return;const sc=(GRANK[p.kind]??0)*100+common;if(!best||sc>best.sc)best={k:p.key,sc};});}
-    l.parent=best?best.k:null;
-  });
-  // romper ciclos
-  arr.forEach(l=>{const seen=new Set([l.key]);let p=l.parent;while(p){if(seen.has(p)){l.parent=null;break;}seen.add(p);p=L.get(p)?.parent;}});
+  const L=new Map();(S.places||[]).forEach(x=>L.set(x.id,{key:x.id,kind:x.kind,label:x.name,color:'',notes:'',devs:new Set(),fids:new Set(),parent:x.parentId||null}));
+  S.devices.forEach(d=>{if(d.place&&L.has(d.place))L.get(d.place).devs.add(d.id);});
+  for(const [fid,D] of Object.entries(S.diagrams)){if(!folById(fid))continue;(D.groups||[]).forEach(g=>{const l=g.placeId&&L.get(g.placeId);if(l){l.fids.add(fid);if(!l.color&&g.color)l.color=g.color;if(!l.notes&&g.notes)l.notes=g.notes;}});}
   return L;
 }
 let locState={dev:null,q:''};
@@ -1465,7 +1495,7 @@ function drawLoc(){
     ${warn}
     ${!L.size?`<p class="mapNote">Aún no has englobado equipos. En un diagrama selecciona varios equipos (Shift+clic) y crea un grupo de tipo Edificio, Piso, Sala, Gabinete o Rack. Aquí se juntan las ubicaciones de todos tus diagramas.</p>`:
       roots.length?`<div class="locList">${roots.map(box).join('')}</div>`:`<p class="mapNote">${dev?`${esc(dev.name)} no está dentro de ningún grupo en tus diagramas.`:'Sin coincidencias.'}</p>`}
-    <p class="mapNote" style="margin-top:10px">Se juntan los grupos que tienen el mismo tipo y nombre en distintos diagramas. Si un gabinete estaba dentro de un edificio en algún diagrama, o comparte equipos con él, se muestra dentro. Toca un equipo para ver su ubicación y un diagrama para abrirlo.</p>`;
+    <p class="mapNote" style="margin-top:10px">Ubicaciones en orden ciudad › edificio › piso › sala › gabinete › rack. Se arman con los grupos de tus diagramas y con la ubicación asignada a cada equipo. Toca un equipo para ver su ubicación y un diagrama para abrirlo.</p>`;
   $('#locDev').onchange=e=>{locState.dev=e.target.value||null;drawLoc();};
   const qi=$('#locQ');if(qi)qi.oninput=e=>{locState.q=e.target.value;const p=e.target.selectionStart;drawLoc();const i=$('#locQ');i.focus();i.setSelectionRange(p,p);};
   body.onclick=e=>{const f=e.target.closest('[data-locfocus]');if(f){locState.dev=f.dataset.locfocus;drawLoc();return;}
@@ -1611,7 +1641,7 @@ function clientModal(id){
 function devCard(d){const n=devIncCount(d.id),u=usage(d.id),col=d.color||'';
   return `<div class="ccard${n?' inc':''}" role="button" tabindex="0" data-dcard="${d.id}" style="--cc:${col||typeOf(d.type).color||'var(--accent)'}">
     <span class="cimg">${gsvg(d.type,30)}</span><span class="cname">${esc(d.name)}</span>
-    <span class="cip">${esc(d.ip||'sin IP')}</span><span class="cmeta">${esc(d.type)}${d.location?' · '+esc(d.location):''}</span>
+    <span class="cip">${esc(d.ip||'sin IP')}</span><span class="cmeta">${esc(d.type)}${d.place?' · '+esc(placeChain(d.place).slice(-2).map(x=>x.name).join(' › ')):(d.location?' · '+esc(d.location):'')}</span>
     <span class="cmeta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${secChips(d)}<span>En ${u} diagrama${u===1?'':'s'}</span></span>
     ${n?`<span class="cinc">⚠ ${n} incidencia${n===1?'':'s'} activa${n===1?'':'s'}</span>`:''}
     <button class="cedit" data-dcol-open="${d.id}" title="Color de la tarjeta" aria-label="Color"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="5.5" cy="6.5" r="1" fill="currentColor"/><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="11" cy="8.5" r="1" fill="currentColor"/></svg></button></div>`;}
@@ -1640,19 +1670,54 @@ function deviceSheet(id){
   const col=d.color||typeOf(d.type).color||'var(--accent)';
   modal('Ficha del equipo',`<div class="fichaHead" style="--cc:${col}"><span class="cimg">${gsvg(d.type,34)}</span><div style="min-width:0"><h3>${esc(d.name)}</h3><div class="mono" style="color:var(--muted)">${esc(d.ip||'sin IP')}</div><div style="margin-top:4px">${secChips(d)}</div></div></div>
     <div class="fgrid"><div>
-      <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}${d.location?`<dt>Ubicación</dt><dd>${esc(d.location)}</dd>`:''}<dt>Usado en</dt><dd>${fids.length} diagrama${fids.length===1?'':'s'}</dd></dl>
+      <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}<dt>Usado en</dt><dd>${fids.length} diagrama${fids.length===1?'':'s'}</dd></dl>
       ${accessBlock(d)}
       <div class="portBox"><div class="head"><b>Puertos / IPs</b><span class="endHint">${ps.length}</span></div>${ps.length?`<div class="pchips">${ps.map(p=>`<button type="button" class="pchip" data-imp="${d.id}" data-port="${esc(p)}" title="Ver impacto">${esc(p)}</button>`).join('')}</div>`:'<span class="endHint">Sin puertos ni IPs.</span>'}</div>
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
     </div><div>
+      ${placeSection(d,'sheet')}
       <div class="acc"><span class="lbl">Diagramas donde aparece</span>${fids.length?svcChips(fids):'<span class="endHint">No está en ningún diagrama.</span>'}</div>
       <div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="endHint">${tot} en total</span></div>
       <div class="fld"><span class="lbl">Color de la tarjeta</span>${swatches('data-dcol',d.color,typeOf(d.type).color||'var(--accent)')}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-locdev="${d.id}">Ubicación física</button><button class="btn sm dan" data-act="incFromSheet" data-devid="${d.id}">Registrar incidencia</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm dan" data-act="incFromSheet" data-devid="${d.id}">Registrar incidencia</button></div>
     </div></div>`,
     [{l:'Editar equipo',f:()=>devModal(id)},{l:'Ver impacto',k:'pri',f:()=>setImpact(id,'')},{l:'Cerrar'}],{wide:true});
   ui.sheetDev=id;
 }
+
+/* ---------- catálogo de ubicaciones (ciudad › edificio › piso › sala › gabinete › rack) ---------- */
+function pathHTML(id){const ch=placeChain(id);return `<div class="pathRows">${ch.map((x,i)=>`<div class="prow" style="padding-left:${i*12}px"><span class="k">${esc(GKINDS[x.kind]||'')}</span><b>${esc(x.name)}</b></div>`).join('')}</div><div class="pathTxt mono">📍 ${esc(ch.map(x=>x.name).join(' › '))}</div>`;}
+function defaultParentFor(g,kind){const D=getDiag(ui.folder),rk=PKINDS.indexOf(kind);
+  const cont=D.groups.filter(o=>o!==g&&o.placeId&&placeById(o.placeId)&&PKINDS.indexOf(placeById(o.placeId).kind)<rk&&o.x<=g.x&&o.y<=g.y&&o.x+o.w>=g.x+g.w&&o.y+o.h>=g.y+g.h)
+    .sort((a,b)=>PKINDS.indexOf(placeById(b.placeId).kind)-PKINDS.indexOf(placeById(a.placeId).kind));return cont[0]?.placeId||'';}
+function parentOptions(kind,sel){const rk=PKINDS.indexOf(kind);
+  return `<option value="">(sin ubicación superior)</option>`+(S.places||[]).filter(x=>PKINDS.indexOf(x.kind)<rk).map(x=>({x,p:placePath(x.id)})).sort((a,b)=>ncmp(a.p,b.p)).map(o=>`<option value="${o.x.id}"${o.x.id===sel?' selected':''}>${esc(GKINDS[o.x.kind])}: ${esc(o.p)}</option>`).join('');}
+function placeListHTML(g){const q=fold(ui.gq||''),kind=g.kind;
+  const list=(S.places||[]).filter(x=>x.kind===kind&&(!q||fold(placePath(x.id)).includes(q))).sort((a,b)=>ncmp(placePath(a.id),placePath(b.id)));
+  const exact=list.some(x=>fold(x.name)===q);
+  let h=list.map(x=>`<button type="button" class="pitem${x.id===g.placeId?' on':''}" data-gplace="${x.id}"><b>${esc(x.name)}</b><span>${esc(placeChain(x.id).slice(0,-1).map(y=>y.name).join(' › ')||'nivel principal')}</span></button>`).join('');
+  if(q&&!exact)h+=`<div class="pnew"><span>＋ Crear <b>«${esc(ui.gq.trim())}»</b> como ${esc(GKINDS[kind].toLowerCase())}${kind==='ciudad'?'':' dentro de:'}</span>${kind==='ciudad'?'':`<select class="inp" id="gNewParent">${parentOptions(kind,defaultParentFor(g,kind))}</select>`}<button type="button" class="btn sm pri" data-gcreate="1">Crear y asignar</button></div>`;
+  if(!h)h=`<span class="endHint">No hay ${esc(GKINDS[kind].toLowerCase())}s registrados. Escribe el nombre para crear uno.</span>`;
+  return h;}
+function assignGroupPlace(g,pid){const pl=placeById(pid);if(!pl)return;g.placeId=pid;g.kind=pl.kind;g.label=pl.name;ui.gq='';applyGroupPlaces(getDiag(ui.folder));save();renderInsp();rc();toast(`Ubicación asignada: ${placePath(pid)}`);}
+function placeSection(d,ctx){const ch=placeChain(d.place);
+  return `<div class="locBox" id="locBox"><div class="head"><b>Ubicación física</b><button class="btn sm" data-placepick="${d.id}" data-ctx="${ctx||''}">${ch.length?'Cambiar':'Asignar'}</button></div>
+    ${ch.length?`<div class="lrows">${ch.map(x=>`<div class="lrow"><span class="k">${esc(GKINDS[x.kind])}</span><span>${esc(x.name)}</span></div>`).join('')}</div>`
+      :'<span class="endHint">Sin ubicación. Engloba el equipo en un grupo (ciudad, edificio, piso, sala, gabinete o rack) o asígnala aquí.</span>'}
+    ${d.location?`<span class="endHint">Referencia: ${esc(d.location)}</span>`:''}</div>`;}
+function placePicker(devId,ctx){const d=devById(devId);if(!d)return;let q='';
+  const back=()=>{if(ctx==='sheet')deviceSheet(devId);else closeModal();renderAll();};
+  const draw=()=>{const f=fold(q);const list=(S.places||[]).map(x=>({x,p:placePath(x.id)})).filter(o=>!f||fold(o.p).includes(f)).sort((a,b)=>ncmp(a.p,b.p));
+    $('#ppL').innerHTML=list.map(o=>`<button data-pp="${o.x.id}"${o.x.id===d.place?' class="on"':''}><span class="kind">${esc(GKINDS[o.x.kind])}</span><span>${esc(o.p)}</span><span></span></button>`).join('')||'<p style="padding:10px;margin:0;color:var(--muted)">Sin coincidencias.</p>';};
+  modal('Ubicación de '+d.name,`<input class="inp" id="ppQ" type="search" placeholder="Buscar: Monterrey, Sala 5, GAB-07…"><div class="pick" id="ppL" style="max-height:260px"></div>
+    <div class="fld" style="margin-top:12px"><span class="lbl">O crea una nueva</span><div class="two"><select class="inp" id="ppKind">${PKINDS.map(k=>`<option value="${k}">${GKINDS[k]}</option>`).join('')}</select><input class="inp" id="ppName" placeholder="Nombre"></div>
+    <select class="inp" id="ppParent" style="margin-top:6px">${parentOptions('ciudad','')}</select><div style="margin-top:6px"><button class="btn sm" id="ppNew">Crear y asignar</button></div></div>`,
+    [{l:'Quitar ubicación',k:'dan',f:()=>{delete d.place;save();back();}},{l:'Cerrar',f:back}]);
+  draw();$('#ppQ').oninput=e=>{q=e.target.value;draw();};
+  $('#ppKind').onchange=e=>{$('#ppParent').innerHTML=parentOptions(e.target.value,'');};
+  $('#ppL').onclick=e=>{const b=e.target.closest('[data-pp]');if(!b)return;d.place=b.dataset.pp;save();toast('Ubicación: '+placePath(d.place));back();};
+  $('#ppNew').onclick=()=>{const name=$('#ppName').value.trim();if(!name){toast('Escribe el nombre');return;}const kind=$('#ppKind').value;
+    const pl={id:uid('p'),kind,name,parentId:kind==='ciudad'?null:($('#ppParent').value||null)};S.places.push(pl);d.place=pl.id;save();toast('Ubicación: '+placePath(pl.id));back();};}
 /* ---------- inspector ---------- */
 function accessCmd(d,a){
   const ip=d.ip||'';
@@ -1690,9 +1755,12 @@ function renderInsp(){
   if(ui.sel.t==='group'){
     const g=D.groups.find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
     const inn=D.nodes.filter(n=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return n.deviceId&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;});
-    el.innerHTML=`${close}<span class="lbl">Grupo</span>
+    const gpl=placeById(g.placeId),isP=PKINDS.includes(g.kind);
+    el.innerHTML=`${close}<span class="lbl">Grupo de ubicación</span>
       <div class="fld"><span class="lbl">Tipo</span><select class="inp" id="gKind">${Object.entries(GKINDS).map(([k,v])=>`<option value="${k}"${g.kind===k?' selected':''}>${v}</option>`).join('')}</select></div>
-      <div class="fld"><span class="lbl">Nombre</span><input class="inp" id="gLabel" value="${esc(g.label)}" placeholder="Torre Norte · Piso 3 · Sala B · Rack R12"></div>
+      ${isP?`<div class="fld"><span class="lbl">${esc(GKINDS[g.kind])}</span><input class="inp" id="gPlaceQ" placeholder="Buscar o escribir ${esc(GKINDS[g.kind].toLowerCase())}…" value="${esc(ui.gq||'')}" autocomplete="off"><div class="plist" id="gPlist">${placeListHTML(g)}</div></div>
+        ${gpl?`<div class="pathBox"><span class="lbl">Ruta de la ubicación</span>${pathHTML(gpl.id)}</div>`:'<p class="endHint" style="margin:0">Elige una opción de la lista o crea una nueva. Al elegirla, los equipos dentro del grupo guardan esta ubicación.</p>'}`
+      :`<div class="fld"><span class="lbl">Nombre</span><input class="inp" id="gLabel" value="${esc(g.label)}" placeholder="Zona norte"></div>`}
       <div class="fld"><span class="lbl">Color</span><div class="sw">${TYPE_COLORS.map(c=>`<button data-gcol="${c}" class="${c===(g.color||'')?'on':''}" style="background:${c||'var(--muted)'}" aria-label="${c||'Gris'}"></button>`).join('')}</div></div>
       <div class="fld"><span class="lbl">Notas</span><textarea class="inp" id="gNotes" rows="2" placeholder="Dirección, acceso al sitio, contacto…">${esc(g.notes||'')}</textarea></div>
       ${inn.length?`<div class="acc"><span class="lbl">Equipos dentro (${inn.length})</span>${inn.map(n=>{const d=devById(n.deviceId);return `<button class="drow" data-selnode="${d?.id}">${gsvg(d?.type)}<div class="t"><div>${esc(d?.name)}</div><div class="ip">${esc(d?.ip)}</div></div><span></span></button>`;}).join('')}</div>`:''}
@@ -1725,12 +1793,13 @@ function renderInsp(){
     const conns=D.edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>{const mine=e.from===n.id?e.fp:e.tp,other=D.nodes.find(x=>x.id===(e.from===n.id?e.to:e.from)),od=other?.deviceId?devById(other.deviceId)?.name:'texto';return{e,mine,od};});
     const u=usage(d.id);
     el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0;flex:1"><h3>${esc(d.name)}</h3><div class="sub mono" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${esc(d.ip||'sin IP')}${d.ip?`<button class="btn sm" data-copyip="${d.id}" title="Copiar IP (también con doble clic sobre el equipo)">Copiar IP</button>`:''}</div></div></div>
-      <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${(d.sections||[]).length?`<dt>Red</dt><dd>${secChips(d)}</dd>`:''}${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}${d.location?`<dt>Ubicación</dt><dd>${esc(d.location)}</dd>`:''}<dt>Usado en</dt><dd>${u} diagrama${u===1?'':'s'}</dd></dl>
+      <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${(d.sections||[]).length?`<dt>Red</dt><dd>${secChips(d)}</dd>`:''}${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}<dt>Usado en</dt><dd>${u} diagrama${u===1?'':'s'}</dd></dl>
       ${(()=>{const ps=devicePorts(d.id),used=new Set(conns.map(c=>norm(c.mine)).filter(Boolean));
         return `<div class="portBox"><div class="head"><b>Puertos / IPs</b><span class="endHint">${ps.length} registrado${ps.length===1?'':'s'}</span></div>
         ${ps.length?`<div class="pchips">${ps.map(p=>`<button type="button" class="pchip${used.has(norm(p))?' used':''}" data-imp="${d.id}" data-port="${esc(p)}" title="Ver impacto de ${esc(p)}">${esc(p)}</button>`).join('')}</div><span class="endHint">Los resaltados se usan en este diagrama. Toca uno para ver su impacto.</span>`:'<span class="endHint">Sin puertos ni IPs todavía.</span>'}
         <div class="portAdd"><input class="inp mono" id="nPortAdd" placeholder="Agregar puerto o IP"><button class="btn sm" data-act="addPort" data-devid="${d.id}">Agregar</button></div>
         ${conns.length?`<div class="kv" style="margin-top:2px">${conns.map(c=>`<dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd>`).join('')}</div>`:''}</div>`;})()}
+      ${placeSection(d)}
       ${mapInfo}
       ${ui.folder===MAP?'':`<div class="fld"><span class="lbl">Forma en este diagrama</span><select class="inp" id="nShape"><option value="">Según el tipo (${SHAPE_NAMES[SH[typeOf(d.type).shape]?typeOf(d.type).shape:'rect']})</option>${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${n.shape===k?' selected':''}>${v}</option>`).join('')}</select></div>`}
       ${accessBlock(d)}
@@ -1738,7 +1807,7 @@ function renderInsp(){
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
       ${(()=>{const ai=activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)),all=S.incidents.filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)).length;
         return `<div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="sub">${all} en total para este equipo</span><button class="btn sm dan" data-act="incFromNode" data-devid="${d.id}">Registrar incidencia</button></div>`;})()}
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-locdev="${d.id}">Ubicación física</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button>${ui.folder===MAP?'':'<button class="btn sm dan" data-act="delSel">Quitar del diagrama</button>'}</div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button>${ui.folder===MAP?'':'<button class="btn sm dan" data-act="delSel">Quitar del diagrama</button>'}</div>`;
     return;
   }
   const e=D.edges.find(x=>x.id===ui.sel.id);if(!e){ui.sel=null;return renderInsp();}
@@ -1781,6 +1850,8 @@ $('#insp').addEventListener('input',e=>{
   if(e.target.id==='nSize'||e.target.id==='nBold'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='nSize')n.size=+e.target.value;else n.bold=e.target.checked;save();rc();}return;}
   if(['elLabel','elSub','elShape','elNotes'].includes(e.target.id)||e.target.matches('[data-elcol-custom]')){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){const k={elLabel:'label',elSub:'sub',elShape:'shape',elNotes:'notes'}[e.target.id]||'color';n[k]=e.target.value;save();rc();}return;}
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
+  if(e.target.id==='gPlaceQ'){ui.gq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gPlist').innerHTML=placeListHTML(g);return;}
+  if(e.target.id==='gKind'){const g=D.groups.find(x=>x.id===ui.sel.id);if(g){g.kind=e.target.value;const pl=placeById(g.placeId);if(pl&&pl.kind!==g.kind)g.placeId=null;ui.gq='';save();renderInsp();rc();}return;}
   if(ui.sel.t==='group'){const g=D.groups.find(x=>x.id===ui.sel.id);if(!g)return;const m={gLabel:'label',gKind:'kind',gNotes:'notes'}[e.target.id];if(m){g[m]=e.target.value;save();rc();}return;}
   if(ui.sel.t!=='edge')return;
   if(e.target.id==='eFrom'||e.target.id==='eTo'){reconnect(ui.sel.id,e.target.id==='eFrom'?'from':'to',e.target.value);return;}
@@ -1863,7 +1934,7 @@ function devModal(id,pre){
     <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||pre.name||'')}" placeholder="AGG-GPE-02" autocomplete="off"><span class="err" id="dNameMsg"></span></div>
     <div class="fld"><span class="lbl">IP de gestión</span><input id="dIp" class="mono" value="${esc(d?.ip||'')}" placeholder="10.0.1.2"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${(()=>{const names=S.types.map(t=>t.name).sort(ncmp);if(d?.type&&!names.some(n=>norm(n)===norm(d.type)))names.unshift(d.type);const cur=d?.type||ui.lastType||names[0];return names.map(t=>`<option${norm(cur)===norm(t)?' selected':''}>${esc(t)}</option>`).join('');})()}</select></div>
-    <div class="fld"><span class="lbl">Ubicación / nodo</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
+    <div class="fld"><span class="lbl">Referencia / nodo (texto libre)</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Marca</span><input id="dBrand" value="${esc(d?.brand||'')}"></div>
     <div class="fld"><span class="lbl">Modelo</span><input id="dModel" value="${esc(d?.model||'')}"></div></div>
     <div class="fld"><span class="lbl">Red / sección</span><div class="chkrow">${Object.entries(SECTIONS).map(([k,v])=>`<label class="chk"><input type="checkbox" id="dS_${k}"${(d?.sections||[]).includes(k)?' checked':''}> <span class="sec" style="background:${v.c}">${v.l}</span></label>`).join('')}</div></div>
@@ -1969,14 +2040,18 @@ function askMerge(inc){
 }
 function mergeData(inc){
   const r={dev:0,devMatch:0,fol:0,edges:0},dm={},fm={};
+  const pm={};const rkP=k=>PKINDS.indexOf(k);
+  [...(inc.places||[])].sort((a,b)=>rkP(a.kind)-rkP(b.kind)).forEach(x=>{const par=x.parentId?(pm[x.parentId]||null):null;
+    let m=(S.places||[]).find(y=>y.kind===x.kind&&fold(y.name)===fold(x.name)&&(y.parentId||null)===par);
+    if(!m){m={...x,parentId:par};if(placeById(m.id))m.id=uid('p');(S.places=S.places||[]).push(m);}pm[x.id]=m.id;});
   inc.devices.forEach(d=>{
     let m=devById(d.id)&&(!d.ip||devById(d.id).ip===d.ip)?devById(d.id):null;
     if(!m&&d.ip)m=S.devices.find(x=>x.ip===d.ip);
     if(!m)m=S.devices.find(x=>norm(x.name)===norm(d.name));
-    if(m){dm[d.id]=m.id;r.devMatch++;m.sections=[...new Set([...(m.sections||[]),...(d.sections||[])])];m.ports=[...new Set([...(m.ports||[]),...(d.ports||[])])];
+    if(m){dm[d.id]=m.id;r.devMatch++;if(!m.place&&d.place&&pm[d.place])m.place=pm[d.place];m.sections=[...new Set([...(m.sections||[]),...(d.sections||[])])];m.ports=[...new Set([...(m.ports||[]),...(d.ports||[])])];
       ['ip','type','brand','model','location','notes'].forEach(k=>{if(!m[k]&&d[k])m[k]=d[k];});
       (d.access||[]).forEach(a=>{if(!(m.access||[]).some(x=>x.p===a.p))(m.access=m.access||[]).push(a);});}
-    else{const nd={...d,ports:[...(d.ports||[])],access:[...(d.access||[])]};if(devById(nd.id))nd.id=uid('d');S.devices.push(nd);dm[d.id]=nd.id;r.dev++;}
+    else{const nd={...d,ports:[...(d.ports||[])],access:[...(d.access||[])],place:d.place?pm[d.place]:undefined};if(devById(nd.id))nd.id=uid('d');S.devices.push(nd);dm[d.id]=nd.id;r.dev++;}
   });
   (inc.types||[]).forEach(t=>{const m=S.types.find(x=>norm(x.name)===norm(t.name));if(!m)S.types.push({...t});else if(!m.img&&t.img&&m.icon===guessIcon(m.name)&&!m.color)Object.assign(m,{img:t.img});});
   const pending=[...inc.folders];let guard=0;
@@ -1991,7 +2066,7 @@ function mergeData(inc){
   Object.entries(inc.diagrams||{}).forEach(([fid,ID])=>{
     const tf=fm[fid];if(!tf||!ID)return;
     const D=getDiag(tf,true),nmap={};
-    (ID.groups||[]).forEach(g=>{if(!D.groups.some(x=>x.id===g.id||(norm(x.label)===norm(g.label)&&x.kind===g.kind&&g.label)))D.groups.push({...g});});
+    (ID.groups||[]).forEach(g=>{if(!D.groups.some(x=>x.id===g.id||(norm(x.label)===norm(g.label)&&x.kind===g.kind&&g.label)))D.groups.push({...g,placeId:g.placeId?pm[g.placeId]:undefined});});
     (ID.nodes||[]).forEach(n=>{
       if(n.deviceId){const did=dm[n.deviceId];if(!did)return;const ex=D.nodes.find(x=>x.deviceId===did);
         if(ex){nmap[n.id]=ex.id;}else{const nn={id:D.nodes.some(x=>x.id===n.id)?uid('n'):n.id,deviceId:did,x:n.x,y:n.y};D.nodes.push(nn);nmap[n.id]=nn.id;}}
@@ -2266,6 +2341,9 @@ document.addEventListener('click',e=>{
   const sdr=t.closest('[data-sitedevrm]');if(sdr){e.stopPropagation();const [sid,did]=sdr.dataset.sitedevrm.split('|'),st=folById(sid);if(st){st.devs=(st.devs||[]).filter(x=>x!==did);save();renderAll();}return;}
   const sda=t.closest('[data-sitedevadd]');if(sda){siteDevPicker(sda.dataset.sitedevadd);return;}
   const sga=t.closest('[data-sugadd]');if(sga){ui.addFrom=null;addDeviceNode(sga.dataset.sugadd);return;}
+  const gpi=t.closest('[data-gplace]');if(gpi){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g)assignGroupPlace(g,gpi.dataset.gplace);return;}
+  const gcr=t.closest('[data-gcreate]');if(gcr){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);const name=(ui.gq||'').trim();if(g&&name){const pl={id:uid('p'),kind:g.kind,name,parentId:g.kind==='ciudad'?null:($('#gNewParent')?.value||null)};S.places.push(pl);assignGroupPlace(g,pl.id);}return;}
+  const ppk=t.closest('[data-placepick]');if(ppk){placePicker(ppk.dataset.placepick,ppk.dataset.ctx);return;}
   const cip=t.closest('[data-copyip]');if(cip){const d=devById(cip.dataset.copyip);if(d){if(d.ip)copyIp(d);else toast(d.name+' no tiene IP registrada');}return;}
   const vw=t.closest('[data-view]');if(vw){setView(vw.dataset.view);return;}
   const ce=t.closest('[data-cedit]');if(ce){e.stopPropagation();clientModal(ce.dataset.cedit);return;}
@@ -2318,7 +2396,7 @@ document.addEventListener('click',e=>{
     case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
     case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
       const t={id:uid('t'),text:'Nota',x:n.x,y:n.y+G.h+18};D.nodes.push(t);ui.multi=new Set([t.id]);ui.sel={t:'node',id:t.id};save();renderAll();setTimeout(()=>{const i=$('#nTxt');if(i){i.focus();i.select();}},30);break;}
-    case 'plusLoc':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)locModal(n.deviceId);break;}
+    case 'plusLoc':{$('#plusMenu').hidden=true;if(S.meta.hideR){S.meta.hideR=false;applyPanels();}renderInsp();setTimeout(()=>{const b=$('#locBox');if(b){b.scrollIntoView({block:'center',behavior:'smooth'});b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}},30);break;}
     case 'locAll':locModal(null);break;
     case 'plusImp':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)setImpact(n.deviceId,'');break;}
     case 'plusInc':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)incModal(null,[{dev:n.deviceId,port:''}]);break;}
@@ -2406,6 +2484,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
+S_READY=true;try{migratePlaces(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>

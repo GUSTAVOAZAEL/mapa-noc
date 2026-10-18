@@ -28,15 +28,17 @@ Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **E
 - Tarjetas agrupadas en **Red de voz**, **Red de transporte** y **Red de datos** (y *Sin red*), con filtro por red, buscador (nombre, IP o puerto) y **Solo con incidencia**.
 - Al tocar una tarjeta se abre la **ficha del equipo**: datos, acceso, puertos/IPs, diagramas donde aparece, incidencias, ubicación física, color de la tarjeta, editar y ver impacto.
 
-## Ubicación física
+## Ubicación física (ciudad › edificio › piso › sala › gabinete › rack)
 
-Desde el **+** de un equipo (**Ver ubicación física**), su panel derecho o **Equipos → Ubicaciones** ves en qué edificio, zona, piso, sala, gabinete o rack lo has englobado, juntando lo que capturaste en todos tus diagramas:
+Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio › Piso › Sala › Gabinete › Rack** (puedes saltarte niveles).
 
-- Los grupos con el mismo tipo y nombre en distintos diagramas se consideran el mismo lugar y suman sus equipos.
-- Si un gabinete estuvo dentro de un edificio en algún diagrama, o comparten equipos, el gabinete se muestra dentro del edificio.
-- Ves qué otros equipos comparten ese lugar y en qué diagramas se capturó cada ubicación (con botón para abrirlos).
-- Si el mismo equipo quedó en dos lugares distintos del mismo tipo (por ejemplo, dos gabinetes), te avisa para que lo revises.
-- Sin equipo elegido muestra todas las ubicaciones, con buscador.
+- **Grupos del diagrama**: al seleccionar un grupo eliges su **Tipo** y luego el lugar de la lista. Cada opción muestra su ruta (por ejemplo *Monterrey › DC Norte › Piso 2*) para distinguir una "Sala 5" de Monterrey de otra en Querétaro. Si no existe, escríbelo y créalo indicando **dentro de** qué lugar va.
+- Al elegir un nivel bajo (por ejemplo un gabinete), la ruta completa se toma automáticamente y se muestra debajo como **Ruta de la ubicación**.
+- **Los equipos guardan su ubicación**: al englobar un equipo en un grupo (o al moverlo dentro de uno) se le asigna el lugar más específico. Si ya tenía uno más detallado dentro de ese mismo lugar, se respeta.
+- En el panel del equipo y en su ficha aparece **Ubicación física** con la ruta en orden; **Cambiar/Asignar** permite elegirla o crearla sin dibujar un grupo. **Ver ubicación física** del menú **+** te lleva a esa sección.
+- **Equipos → Ubicaciones** muestra el catálogo completo con los equipos de cada lugar.
+- El campo de texto libre del equipo ahora se llama *Referencia / nodo*.
+- Tus grupos anteriores se convirtieron solos al catálogo la primera vez que abres esta versión.
 
 ## Mapa general
 
