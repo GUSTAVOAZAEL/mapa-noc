@@ -12,6 +12,13 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Edición rápida en el diagrama
+
+- **Botón + junto a cada elemento**: al pasar el mouse o seleccionar un equipo aparece un **+** al lado del punto de conexión. Desde ahí agregas un **equipo conectado** (se coloca a la derecha y queda unido con una línea), un **texto** debajo o un **grupo** alrededor.
+- **Cambiar a qué elemento llega una línea**: selecciona la línea y arrastra el círculo de cualquiera de sus extremos hacia otro equipo, o elige el elemento en el panel derecho. Si la punta pasa a otro equipo, su puerto se limpia para que lo captures de nuevo.
+- **Agregar equipos desde la búsqueda**: en *+ Equipo* escribe el nombre; si no existe, aparece **Crear equipo «nombre»** (o presiona Enter) y se abre el alta con ese nombre ya escrito. Al guardar se agrega al diagrama.
+- **Nombres únicos**: no se puede guardar un equipo con un nombre que ya existe (sin importar mayúsculas). Mientras escribes te avisa y te ofrece **Agregar el existente**. Si la IP ya la tiene otro equipo, te avisa y te pide confirmar.
+
 ## Formas de los equipos
 
 Cada tipo de equipo tiene una forma en el diagrama, que eliges en **Equipos → Tipos → Editar**:

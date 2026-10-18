@@ -153,6 +153,19 @@ button,input,select,textarea{font:inherit;color:inherit}
 .node .hd{fill:var(--panel);stroke:var(--accent);stroke-width:1.5;cursor:crosshair;opacity:.0;transition:opacity .12s}
 .node:hover .hd,.node.sel .hd{opacity:1}
 @media (hover:none){.node .hd{opacity:.9}}
+.node .plus{cursor:pointer;opacity:0;transition:opacity .12s}
+.node .plus circle{fill:var(--accent)}
+.node .plus path{stroke:var(--accent-ink);stroke-width:1.8;stroke-linecap:round}
+.node:hover .plus,.node.sel .plus{opacity:1}
+@media (hover:none){.node.sel .plus{opacity:1}}
+.eend{fill:var(--panel);stroke:var(--accent);stroke-width:2;cursor:grab}
+.eend:hover{fill:var(--accent)}
+.plusMenu{position:absolute;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:4px;display:grid;min-width:190px}
+.plusMenu button{display:flex;gap:8px;align-items:center;border:0;background:none;padding:8px 10px;border-radius:5px;cursor:pointer;text-align:left}
+.plusMenu button:hover{background:var(--panel-2)}
+.plusMenu small{color:var(--muted);display:block;font-size:11.5px}
+.pick .create{grid-template-columns:22px 1fr;color:var(--accent);font-weight:500}
+.endSel{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 6px;font:600 13px var(--f-cond)}
 .node{cursor:move}
 .node.sel .nb{stroke:var(--accent);stroke-width:2}
 .node.hit .nb{stroke:var(--hit);stroke-width:2.5;fill:var(--hit-soft)}
@@ -191,7 +204,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ends{display:grid;gap:8px}
 .end{display:grid;gap:4px;padding:8px;border-radius:6px;background:var(--panel-2)}
 .end .who{font:600 13px var(--f-cond)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
 .insClose{display:none}
 
 /* modal y toast */
@@ -409,6 +422,7 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
         <g id="vp"></g>
       </svg>
       <div class="empty" id="empty" hidden></div>
+      <div class="plusMenu" id="plusMenu" hidden></div>
       <div class="banners"><div class="incBanner" id="incBanner" hidden></div><div class="impBanner" id="impBanner" hidden></div></div>
       <div class="hint" id="hint">Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom</div>
       <div class="zoom">
@@ -775,6 +789,7 @@ function renderCanvas(){
   });
   // aristas paralelas
   const pairs={};D.edges.forEach(e=>{const k=[e.from,e.to].sort().join('|');(pairs[k]=pairs[k]||[]).push(e.id);});
+  let endH='';
   D.edges.forEach(e=>{
     const a=nm[e.from],b=nm[e.to];if(!a||!b)return;
     const da=dims(a),db=dims(b);
@@ -799,6 +814,7 @@ function renderCanvas(){
       s+=`<g class="dm"><line x1="${px2-nx*R}" y1="${py2-ny*R}" x2="${px2+nx*R}" y2="${py2+ny*R}"/><text x="${tx}" y="${ty+3}" text-anchor="middle">${esc(trunc(e.demarcLabel||'Demarcación',22))}</text>${e.demarcA||e.demarcB?`<text class="sd" x="${tx}" y="${ty+(ny>0?-9:15)}" text-anchor="middle">${esc(trunc(e.demarcA||'',14))} ⟷ ${esc(trunc(e.demarcB||'',14))}</text>`:''}<title>Punto de demarcación${e.demarcA||e.demarcB?`: ${esc(e.demarcA||'')} | ${esc(e.demarcB||'')}`:''}</title></g>`;}
     s+=`<line class="eh" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></g>`;
     out+=s;
+    if(sel&&!(ui.drag?.kind==='reend'))endH=`<circle class="eend" data-eend="from" cx="${x1}" cy="${y1}" r="7"><title>Arrastra para cambiar el origen</title></circle><circle class="eend" data-eend="to" cx="${x2}" cy="${y2}" r="7"><title>Arrastra para cambiar el destino</title></circle>`;
   });
   D.nodes.forEach(n=>{
     const {w,h}=dims(n),sel=ui.sel?.t==='node'&&ui.sel.id===n.id,hn=hit?.nodes.has(n.id);
@@ -813,9 +829,11 @@ function renderCanvas(){
     }
     if(ic){const bx=G.bd?G.bd[0]:w-4,by=G.bd?G.bd[1]:4;
       const lab=L==='historial'?String(ic.size):'!';s+=`<g class="ibadge"><circle cx="${bx}" cy="${by}" r="9"/><text x="${bx}" y="${by+4}" text-anchor="middle">${lab}</text><title>${esc([...ic].map(id=>S.incidents.find(x=>x.id===id)?.title).filter(Boolean).join('\n'))}</title></g>`;}
-    s+=`<circle class="hd" data-handle="${n.id}" cx="${G.hd[0]}" cy="${G.hd[1]}" r="6.5"/></g>`;
+    s+=`<circle class="hd" data-handle="${n.id}" cx="${G.hd[0]}" cy="${G.hd[1]}" r="6.5"/><g class="plus" data-plus="${n.id}" transform="translate(${G.hd[0]+20},${G.hd[1]})"><title>Agregar equipo, texto o grupo</title><circle r="8.5"/><path d="M-4 0h8M0-4v8"/></g></g>`;
     out+=s;
   });
+  out+=endH;
+  if(ui.drag?.kind==='reend'){const g=ui.drag,ed=D.edges.find(x=>x.id===g.eid),fix=ed&&nm[g.end==='from'?ed.to:ed.from];if(fix){const [fx,fy]=anchorOf(fix);out+=`<line class="tmp" x1="${fx}" y1="${fy}" x2="${g.x}" y2="${g.y}"/>`;}}
   if(ui.drag?.kind==='box'){const b=ui.drag;out+=`<rect class="marquee" x="${Math.min(b.x0,b.x)}" y="${Math.min(b.y0,b.y)}" width="${Math.abs(b.x-b.x0)}" height="${Math.abs(b.y-b.y0)}"/>`;}
   if(ui.drag?.kind==='link'){const a=nm[ui.drag.from];if(a){const G=geom(a);out+=`<line class="tmp" x1="${a.x+G.hd[0]}" y1="${a.y+G.hd[1]}" x2="${ui.drag.x}" y2="${ui.drag.y}"/>`;}}
   vpG.innerHTML=out;
@@ -837,6 +855,10 @@ function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.2,Math.min(2.5,vp.k*f));vp
 svg.addEventListener('pointerdown',e=>{
   if(!ui.folder||e.button>0)return;
   const pt=toWorld(e),D=getDiag(ui.folder,true);
+  const pl=e.target.closest('[data-plus]');
+  if(pl){e.preventDefault();openPlusMenu(pl.dataset.plus,e);return;}
+  const ee=e.target.closest('[data-eend]');
+  if(ee&&ui.sel?.t==='edge'){ui.drag={kind:'reend',eid:ui.sel.id,end:ee.dataset.eend,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);e.preventDefault();rc();return;}
   const h=e.target.closest('[data-handle]');
   if(h){ui.drag={kind:'link',from:h.dataset.handle,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);e.preventDefault();return;}
   const gr=e.target.closest('[data-gresize]');
@@ -869,7 +891,7 @@ svg.addEventListener('pointermove',e=>{
   if(g.kind==='node'){const dx=Math.round((pt.x-g.sx)/8)*8,dy=Math.round((pt.y-g.sy)/8)*8;g.orig.forEach(([o,x,y])=>{o.x=x+dx;o.y=y+dy;});g.moved=g.moved||dx||dy;rc();}
   if(g.kind==='gresize'){const gg=getDiag(ui.folder).groups.find(x=>x.id===g.id);if(gg){gg.w=Math.max(120,Math.round((pt.x-gg.x)/8)*8);gg.h=Math.max(70,Math.round((pt.y-gg.y)/8)*8);g.moved=true;rc();}}
   if(g.kind==='box'){g.x=pt.x;g.y=pt.y;rc();}
-  if(g.kind==='link'){g.x=pt.x;g.y=pt.y;rc();}
+  if(g.kind==='link'||g.kind==='reend'){g.x=pt.x;g.y=pt.y;rc();}
 });
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
@@ -877,6 +899,10 @@ function endDrag(e){
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
+  if(g.kind==='reend'){
+    const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-node]');
+    if(t)reconnect(g.eid,g.end,t.dataset.node);
+  }
   if(g.kind==='link'){
     const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-node]');
     if(t&&t.dataset.node!==g.from){
@@ -912,12 +938,51 @@ function groupFromSelection(kind){
 }
 
 function addDeviceNode(devId){
-  const D=getDiag(ui.folder,true),ex=D.nodes.find(n=>n.deviceId===devId);
-  if(ex){ui.sel={t:'node',id:ex.id};renderCanvas();renderInsp();toast('Ese equipo ya está en el diagrama');return;}
-  const c=centerPt(),k=D.nodes.length%5;
-  const n={id:uid('n'),deviceId:devId,x:Math.round((c.x-89+k*24)/8)*8,y:Math.round((c.y-29+k*24)/8)*8};
-  D.nodes.push(n);ui.sel={t:'node',id:n.id};save();renderCanvas();renderInsp();renderSide();
+  const D=getDiag(ui.folder,true),ex=D.nodes.find(n=>n.deviceId===devId),from=ui.addFrom&&D.nodes.find(n=>n.id===ui.addFrom);ui.addFrom=null;
+  const link=(a,b)=>{const ed={id:uid('e'),from:a.id,to:b.id,fp:'',tp:'',medium:a.deviceId?'fibra':'logico',label:'',dir:a.deviceId?'fwd':'none'};D.edges.push(ed);return ed;};
+  if(ex){
+    if(from&&from.id!==ex.id){const ed=link(from,ex);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};save();renderAll();toast('Conectado con el equipo que ya estaba en el diagrama');return;}
+    ui.multi=new Set([ex.id]);ui.sel={t:'node',id:ex.id};renderCanvas();renderInsp();toast('Ese equipo ya está en el diagrama');return;}
+  const n={id:uid('n'),deviceId:devId,x:0,y:0};
+  if(from){const gf=geom(from),gn=SH[shapeOf(n)];
+    n.x=Math.round((from.x+gf.w+110)/8)*8;n.y=Math.round((from.y+gf.c[1]-gn.c[1])/8)*8;
+    const hitsAny=()=>D.nodes.some(o=>{const d=dims(o);return n.x<o.x+d.w+20&&n.x+gn.w+20>o.x&&n.y<o.y+d.h+20&&n.y+gn.h+20>o.y;});
+    let guard=0;while(hitsAny()&&guard++<30)n.y+=Math.max(48,gn.h+24);
+  }else{const c=centerPt(),k=D.nodes.length%5;n.x=Math.round((c.x-89+k*24)/8)*8;n.y=Math.round((c.y-29+k*24)/8)*8;}
+  D.nodes.push(n);
+  if(from){const ed=link(from,n);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};}
+  else{ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};}
+  save();renderAll();showNode(n);
+  if(from)setTimeout(()=>{const f=$('#eFp');if(f&&matchMedia('(min-width:861px)').matches)f.focus();},30);
 }
+function showNode(n){const r=svg.getBoundingClientRect(),vp=getVp(),G=geom(n);
+  const sx=vp.x+(n.x+G.c[0])*vp.k,sy=vp.y+(n.y+G.c[1])*vp.k;
+  if(sx<60||sx>r.width-60||sy<90||sy>r.height-60){vp.x+=r.width*.6-sx;vp.y+=r.height/2-sy;rc();}}
+function reconnect(eid,end,nodeId){
+  const D=getDiag(ui.folder),ed=D.edges.find(x=>x.id===eid);if(!ed)return;
+  const other=end==='from'?ed.to:ed.from,cur=ed[end];
+  if(nodeId===cur)return;
+  if(nodeId===other){toast('Una conexión no puede empezar y terminar en el mismo elemento');renderInsp();return;}
+  const nOld=D.nodes.find(n=>n.id===cur),nNew=D.nodes.find(n=>n.id===nodeId);
+  ed[end]=nodeId;
+  if(nOld?.deviceId!==nNew?.deviceId){if(end==='from')ed.fp='';else ed.tp='';}
+  ui.sel={t:'edge',id:ed.id};save();renderAll();
+  toast('Conexión movida a '+(nNew?.deviceId?devById(nNew.deviceId)?.name:'texto'));
+}
+function openPlusMenu(nodeId,ev){
+  const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();
+  ui.plusNode=nodeId;
+  const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===nodeId);
+  if(!(ui.multi?.has(nodeId)))ui.multi=new Set([nodeId]);
+  ui.sel=ui.multi.size>1?{t:'multi'}:{t:'node',id:nodeId};renderInsp();rc();
+  m.innerHTML=`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>
+    <button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>
+    <button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`;
+  m.hidden=false;
+  const x=Math.min(ev.clientX-wr.left+10,wr.width-210),y=Math.min(ev.clientY-wr.top+10,wr.height-170);
+  m.style.left=Math.max(6,x)+'px';m.style.top=Math.max(6,y)+'px';
+}
+document.addEventListener('pointerdown',e=>{const m=$('#plusMenu');if(!m.hidden&&!e.target.closest('#plusMenu')&&!e.target.closest('[data-plus]'))m.hidden=true;},true);
 
 /* ---------- inspector ---------- */
 function accessCmd(d,a){
@@ -988,12 +1053,13 @@ function renderInsp(){
   const e=D.edges.find(x=>x.id===ui.sel.id);if(!e){ui.sel=null;return renderInsp();}
   const a=D.nodes.find(n=>n.id===e.from),b=D.nodes.find(n=>n.id===e.to);
   const nameOf=n=>n?.deviceId?devById(n.deviceId)?.name:'Texto';
+  const endSel=(id,cur)=>`<select class="endSel" id="${id}" title="Elemento al que se conecta esta punta">${D.nodes.map(n=>`<option value="${n.id}"${n.id===cur?' selected':''}>${esc(n.deviceId?devById(n.deviceId)?.name||'?':'Texto: '+trunc(n.text,24))}</option>`).join('')}</select>`;
   const dl=(id,n)=>n?.deviceId?`<datalist id="${id}">${devicePorts(n.deviceId).map(p=>`<option value="${esc(p)}">`).join('')}</datalist>`:'';
   el.innerHTML=`${close}<span class="lbl">Conexión</span>
     <div class="ends">
-      <div class="end"><span class="who">${esc(nameOf(a))}</span><input class="inp mono" id="eFp" list="dlA" placeholder="Puerto de salida (ej. Gi0/1)" value="${esc(e.fp)}" ${a?.deviceId?'':'disabled'}>${dl('dlA',a)}</div>
+      <div class="end">${endSel('eFrom',e.from)}<input class="inp mono" id="eFp" list="dlA" placeholder="Puerto de salida (ej. Gi0/1)" value="${esc(e.fp)}" ${a?.deviceId?'':'disabled'}>${dl('dlA',a)}</div>
       <div style="text-align:center;color:var(--muted)">${e.dir==='both'?'⇅':'↓'}</div>
-      <div class="end"><span class="who">${esc(nameOf(b))}</span><input class="inp mono" id="eTp" list="dlB" placeholder="Puerto de llegada" value="${esc(e.tp)}" ${b?.deviceId?'':'disabled'}>${dl('dlB',b)}</div>
+      <div class="end">${endSel('eTo',e.to)}<input class="inp mono" id="eTp" list="dlB" placeholder="Puerto de llegada" value="${esc(e.tp)}" ${b?.deviceId?'':'disabled'}>${dl('dlB',b)}</div>
     </div>
     <div class="fld"><span class="lbl">Etiqueta</span><input class="inp" id="eLb" placeholder="VLAN, ONT, circuito…" value="${esc(e.label)}"></div>
     <div class="two"><div class="fld"><span class="lbl">Medio</span><select id="eMd">${Object.entries(MEDIA).map(([k,v])=>`<option value="${k}"${e.medium===k?' selected':''}>${v.l}</option>`).join('')}</select></div>
@@ -1003,6 +1069,7 @@ function renderInsp(){
     <div class="fld"><span class="lbl">Texto</span><input class="inp" id="eDl" value="${esc(e.demarcLabel??'Demarcación')}" placeholder="Demarcación"></div>
     <div class="two"><div class="fld"><span class="lbl">Lado ${esc(nameOf(a))}</span><input class="inp" id="eDa" value="${esc(e.demarcA||'')}" placeholder="Proveedor"></div><div class="fld"><span class="lbl">Lado ${esc(nameOf(b))}</span><input class="inp" id="eDb" value="${esc(e.demarcB||'')}" placeholder="Cliente"></div></div>`:''}
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="flip">Invertir sentido</button><button class="btn sm dan" data-act="delSel">Eliminar conexión</button></div>
+    <p class="sub" style="margin:0">Para cambiar a qué elemento llega una punta, elígelo arriba o arrastra los círculos de los extremos de la línea hacia otro equipo.</p>
     <p class="sub" style="margin:0">Los puertos que escribas se agregan al inventario del equipo y quedan disponibles para el análisis de impacto.</p>`;
 }
 $('#insp').addEventListener('input',e=>{
@@ -1011,6 +1078,7 @@ $('#insp').addEventListener('input',e=>{
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
   if(ui.sel.t==='group'){const g=D.groups.find(x=>x.id===ui.sel.id);if(!g)return;const m={gLabel:'label',gKind:'kind',gNotes:'notes'}[e.target.id];if(m){g[m]=e.target.value;save();rc();}return;}
   if(ui.sel.t!=='edge')return;
+  if(e.target.id==='eFrom'||e.target.id==='eTo'){reconnect(ui.sel.id,e.target.id==='eFrom'?'from':'to',e.target.value);return;}
   const dm={eDp:'demarcPos',eDl:'demarcLabel',eDa:'demarcA',eDb:'demarcB'}[e.target.id];
   if(e.target.id==='eDm'){const ed=D.edges.find(x=>x.id===ui.sel.id);if(ed){ed.demarc=e.target.checked;if(ed.demarc&&ed.demarcLabel==null){ed.demarcLabel='Demarcación';ed.demarcPos=.5;}save();rc();renderInsp();}return;}
   if(dm){const ed=D.edges.find(x=>x.id===ui.sel.id);if(ed){ed[dm]=dm==='demarcPos'?+e.target.value:e.target.value;save();rc();}return;}
@@ -1057,11 +1125,11 @@ function delFolderModal(id){
   modal('Eliminar '+f.name,`<p>Se eliminará <b>${esc(f.name)}</b>${ids.length>1?` y ${ids.length-1} elemento${ids.length>2?'s':''} dentro`:''}, con sus diagramas. Los equipos siguen en el inventario.</p>`,
     [{l:'Cancelar'},{l:'Eliminar',k:'dan pri',f:()=>{S.folders=S.folders.filter(x=>!ids.includes(x.id));ids.forEach(i=>delete S.diagrams[i]);if(ids.includes(ui.folder)){ui.folder=null;ui.sel=null;}save();closeModal();renderAll();}}]);
 }
-function devModal(id){
-  const d=id?devById(id):null;
+function devModal(id,pre){
+  const d=id?devById(id):null;pre=pre||{};
   const acc=p=>d?.access?.find(a=>a.p===p);
   modal(d?'Editar equipo':'Nuevo equipo',`
-    <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||'')}" placeholder="AGG-GPE-02"></div>
+    <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||pre.name||'')}" placeholder="AGG-GPE-02" autocomplete="off"><span class="err" id="dNameMsg"></span></div>
     <div class="fld"><span class="lbl">IP de gestión</span><input id="dIp" class="mono" value="${esc(d?.ip||'')}" placeholder="10.0.1.2"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${(()=>{const names=S.types.map(t=>t.name).sort(ncmp);if(d?.type&&!names.some(n=>norm(n)===norm(d.type)))names.unshift(d.type);const cur=d?.type||ui.lastType||names[0];return names.map(t=>`<option${norm(cur)===norm(t)?' selected':''}>${esc(t)}</option>`).join('');})()}</select></div>
     <div class="fld"><span class="lbl">Ubicación / nodo</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
@@ -1077,8 +1145,10 @@ function devModal(id){
     [...(d?[{l:'Eliminar',k:'dan',f:()=>delDevModal(d.id)}]:[]),{l:'Cancelar'},{l:d?'Guardar':'Agregar',k:'pri',f:()=>{
       const name=$('#dName').value.trim(),ip=$('#dIp').value.trim();
       if(!name){$('#dErr').textContent='El nombre es obligatorio.';return;}
-      const dup=S.devices.find(x=>x.id!==d?.id&&((ip&&x.ip===ip)||norm(x.name)===norm(name)));
-      if(dup&&!$('#dErr').dataset.ok){$('#dErr').textContent=`Ya existe ${dup.name} (${dup.ip}) con ese nombre o IP. Presiona de nuevo para guardar de todos modos.`;$('#dErr').dataset.ok=1;return;}
+      const dupN=S.devices.find(x=>x.id!==d?.id&&norm(x.name)===norm(name));
+      if(dupN){$('#dErr').textContent=`Ya existe un equipo llamado ${dupN.name}${dupN.ip?' ('+dupN.ip+')':''}. Usa otro nombre${!d&&ui.addAfterCreate?' o agrega el existente':''}.`;$('#dName').focus();return;}
+      const dupI=ip&&S.devices.find(x=>x.id!==d?.id&&x.ip===ip);
+      if(dupI&&$('#dErr').dataset.ip!==ip){$('#dErr').textContent=`La IP ${ip} ya la tiene ${dupI.name}. Si es correcto (por ejemplo, otra VRF), presiona Guardar de nuevo.`;$('#dErr').dataset.ip=ip;return;}
       const obj=d||{id:uid('d')};
       Object.assign(obj,{name,ip,type:$('#dType').value,location:$('#dLoc').value.trim(),brand:$('#dBrand').value.trim(),model:$('#dModel').value.trim(),
         access:['ssh','telnet','web'].filter(p=>$('#dA_'+p).checked).map(p=>({p,port:$('#dP_'+p).value.trim()})),
@@ -1088,6 +1158,11 @@ function devModal(id){
       save();closeModal();renderAll();
       if(!d&&ui.addAfterCreate){ui.addAfterCreate=false;addDeviceNode(obj.id);}
     }}]);
+  const chk=()=>{const v=$('#dName').value.trim(),m=$('#dNameMsg'),dup=v&&S.devices.find(x=>x.id!==d?.id&&norm(x.name)===norm(v));
+    m.innerHTML=dup?`Ya existe ${esc(dup.name)}${dup.ip?' · '+esc(dup.ip):''}.${!d&&ui.addAfterCreate&&ui.folder?` <button class="btn sm" id="useEx" type="button">Agregar el existente</button>`:''}`:'';
+    const u=$('#useEx');if(u)u.onclick=()=>{ui.addAfterCreate=false;closeModal();addDeviceNode(dup.id);};};
+  $('#dName').addEventListener('input',chk);chk();
+  if(pre.name)setTimeout(()=>{const i=$('#dIp');if(i)i.focus();},40);
 }
 function delDevModal(id){
   const d=devById(id),u=usage(id);
@@ -1098,13 +1173,22 @@ function delDevModal(id){
 }
 function pickDevModal(){
   if(!ui.folder)return;
-  const D=getDiag(ui.folder),inD=new Set(D.nodes.map(n=>n.deviceId));
-  const draw=q=>{q=fold(q);$('#pickL').innerHTML=S.devices.filter(d=>!q||fold(d.name+' '+d.ip+' '+d.model+' '+d.location).includes(q)).sort((a,b)=>ncmp(a.name,b.name)).slice(0,200)
-    .map(d=>`<button data-pick="${d.id}"${inD.has(d.id)?' disabled':''}>${gsvg(d.type)}<span>${esc(d.name)} <span class="mono" style="color:var(--muted);font-size:12px">${esc(d.ip)}</span></span><span style="font-size:11.5px;color:var(--muted)">${inD.has(d.id)?'ya agregado':esc(d.type)}</span></button>`).join('')||'<p style="padding:10px;margin:0;color:var(--muted)">No hay coincidencias.</p>';};
-  modal('Agregar equipo al diagrama',`<input class="inp" id="pickQ" type="search" placeholder="Buscar en el inventario…"><div class="pick" id="pickL"></div>`,
-    [{l:'Nuevo equipo',f:()=>{ui.addAfterCreate=true;devModal(null);}},{l:'Cerrar'}]);
+  const D=getDiag(ui.folder),inD=new Set(D.nodes.map(n=>n.deviceId)),fromN=ui.addFrom&&D.nodes.find(n=>n.id===ui.addFrom);
+  const fromName=fromN?(fromN.deviceId?devById(fromN.deviceId)?.name:'el texto'):'';
+  let list=[];
+  const draw=raw=>{const q=fold(raw);
+    list=S.devices.filter(d=>!q||fold(d.name+' '+d.ip+' '+d.model+' '+d.location+' '+d.type).includes(q)).sort((a,b)=>ncmp(a.name,b.name)).slice(0,200);
+    const exact=S.devices.some(d=>fold(d.name)===q);
+    const create=raw.trim()&&!exact?`<button class="create" data-create="1"><span style="font-size:18px;line-height:1">＋</span><span>Crear equipo «${esc(raw.trim())}»${list.length?'':' (no hay coincidencias)'}</span></button>`:'';
+    $('#pickL').innerHTML=(list.length?'':create)+list.map(d=>{const dis=inD.has(d.id)&&!fromN;return `<button data-pick="${d.id}"${dis?' disabled':''}>${gsvg(d.type)}<span>${esc(d.name)} <span class="mono" style="color:var(--muted);font-size:12px">${esc(d.ip)}</span></span><span style="font-size:11.5px;color:var(--muted)">${inD.has(d.id)?(fromN?'conectar':'ya agregado'):esc(d.type)}</span></button>`;}).join('')+(list.length?create:'')
+      ||'<p style="padding:10px;margin:0;color:var(--muted)">El inventario está vacío. Escribe el nombre del equipo para crearlo.</p>';};
+  const create=()=>{const q=$('#pickQ').value.trim();ui.addAfterCreate=true;devModal(null,{name:q});};
+  modal(fromN?'Agregar equipo conectado a '+fromName:'Agregar equipo al diagrama',`<input class="inp" id="pickQ" type="search" placeholder="Buscar por nombre o IP; si no existe, créalo aquí"><div class="pick" id="pickL"></div>`,
+    [{l:'Nuevo equipo',f:create},{l:'Cerrar',f:()=>{ui.addFrom=null;closeModal();}}]);
   draw('');$('#pickQ').oninput=e=>draw(e.target.value);
-  $('#pickL').onclick=e=>{const b=e.target.closest('[data-pick]');if(b&&!b.disabled){addDeviceNode(b.dataset.pick);closeModal();}};
+  $('#pickQ').onkeydown=e=>{if(e.key!=='Enter')return;e.preventDefault();const q=e.target.value.trim();const ok=list.filter(d=>!(inD.has(d.id)&&!fromN));
+    if(q&&!list.length)create();else if(ok.length===1){addDeviceNode(ok[0].id);closeModal();}};
+  $('#pickL').onclick=e=>{if(e.target.closest('[data-create]')){create();return;}const b=e.target.closest('[data-pick]');if(b&&!b.disabled){addDeviceNode(b.dataset.pick);closeModal();}};
 }
 
 /* ---------- exportar / importar ---------- */
@@ -1464,10 +1548,14 @@ document.addEventListener('click',e=>{
   const D=ui.folder&&getDiag(ui.folder);
   switch(a.dataset.act){
     case 'newClient':folderModal(null,null,'cliente');break;
-    case 'newDev':ui.addAfterCreate=false;devModal(null);break;
+    case 'newDev':ui.addAfterCreate=false;ui.addFrom=null;devModal(null);break;
     case 'csv':csvModal();break;
     case 'newInc':incModal(null);break;
-    case 'addDev':pickDevModal();break;
+    case 'addDev':ui.addFrom=null;pickDevModal();break;
+    case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
+    case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
+      const t={id:uid('t'),text:'Nota',x:n.x,y:n.y+G.h+18};D.nodes.push(t);ui.multi=new Set([t.id]);ui.sel={t:'node',id:t.id};save();renderAll();setTimeout(()=>{const i=$('#nTxt');if(i){i.focus();i.select();}},30);break;}
+    case 'plusGrp':$('#plusMenu').hidden=true;groupFromSelection('edificio');break;
     case 'addTxt':addText();break;
     case 'addGrp':groupFromSelection('edificio');break;
     case 'mkGroup':groupFromSelection($('#mKind').value);break;
