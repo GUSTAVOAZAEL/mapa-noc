@@ -12,6 +12,20 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Vistas de tarjetas: Clientes y Equipos
+
+Arriba a la izquierda puedes cambiar entre **Diagramas** (la vista de siempre), **Clientes** y **Equipos**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
+
+**Clientes**
+- Una tarjeta por cliente con su ícono o logo, color, número de sitios y servicios, y aviso si tiene incidencias activas.
+- El filtro **Con incidencia activa** muestra solo los clientes afectados.
+- El lápiz de cada tarjeta (o **Personalizar**) cambia nombre, color, ícono o imagen/logo.
+- Al abrir un cliente ves sus sitios con los servicios de cada uno; **Abrir diagrama** te lleva directo al diagrama. Desde ahí también agregas sitios y servicios.
+
+**Equipos**
+- Tarjetas agrupadas en **Red de voz**, **Red de transporte** y **Red de datos** (y *Sin red*), con filtro por red, buscador (nombre, IP o puerto) y **Solo con incidencia**.
+- Al tocar una tarjeta se abre la **ficha del equipo**: datos, acceso, puertos/IPs, diagramas donde aparece, incidencias, ubicación física, color de la tarjeta, editar y ver impacto.
+
 ## Ubicación física
 
 Desde el **+** de un equipo (**Ver ubicación física**), su panel derecho o **Equipos → Ubicaciones** ves en qué edificio, zona, piso, sala, gabinete o rack lo has englobado, juntando lo que capturaste en todos tus diagramas:
