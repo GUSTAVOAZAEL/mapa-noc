@@ -348,6 +348,7 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 .grp .gr{fill:var(--panel);stroke:var(--accent);stroke-width:1.5;cursor:nwse-resize;opacity:0}
 .grp:hover .gr,.grp.sel .gr{opacity:1}
 .grp.sel .gb{stroke-width:2.5}
+.grp.auto .gb{fill-opacity:.025;stroke-opacity:.75}
 .grp.inc .gb{stroke:var(--danger)!important;stroke-width:2.5}
 .marquee{fill:var(--accent);fill-opacity:.08;stroke:var(--accent);stroke-dasharray:4 3}
 .chkrow{display:flex;gap:14px;flex-wrap:wrap}
@@ -616,6 +617,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
         <button class="btn sm" id="tFit">Ajustar vista</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
         <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
+        <button class="btn sm pillTog" id="autoLocTog" title="Mostrar u ocultar los recuadros de ubicación que se dibujan solos según la ubicación de cada equipo">📍 Ubicaciones</button>
         <select class="layerSel secSel" id="secSel" title="Resaltar una red" aria-label="Resaltar una red"><option value="">Todas las redes</option><option value="voz">Red de voz</option><option value="transporte">Red de transporte</option><option value="datos">Red de datos</option></select>
       </div>
     </div>
@@ -790,6 +792,17 @@ function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x
 const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
 function placeChain(id){const out=[];let x=placeById(id),gd=0;while(x&&gd++<20){out.unshift(x);x=placeById(x.parentId);}return out;}
 const placePath=id=>placeChain(id).map(x=>x.name).join(' › ');
+function placeColor(pid){for(const D of Object.values(S.diagrams||{}))for(const g of (D.groups||[]))if(g.placeId===pid&&g.color)return g.color;return '';}
+function autoGroups(D){if(!D||ui.folder===MAP||S.meta.autoLoc===false)return [];
+  const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)).map(g=>g.placeId)),box={},dep={};
+  const ext=(pid,x0,y0,x1,y1)=>{const b=box[pid];if(!b)box[pid]=[x0,y0,x1,y1];else{b[0]=Math.min(b[0],x0);b[1]=Math.min(b[1],y0);b[2]=Math.max(b[2],x1);b[3]=Math.max(b[3],y1);}};
+  D.nodes.forEach(n=>{if(!n.deviceId)return;const dv=devById(n.deviceId);if(!dv||!dv.place)return;const d=dims(n);placeChain(dv.place).forEach((p,i)=>{dep[p.id]=i;ext(p.id,n.x,n.y,n.x+d.w,n.y+d.h+6);});});
+  (D.groups||[]).forEach(g=>{if(!g.placeId||!placeById(g.placeId))return;placeChain(g.placeId).slice(0,-1).forEach((p,i)=>{dep[p.id]=i;ext(p.id,g.x,g.y,g.x+g.w,g.y+g.h);});});
+  const out=[];Object.keys(box).sort((a,b)=>dep[b]-dep[a]).forEach(pid=>{if(ex.has(pid)||placeChain(pid).slice(0,-1).some(p=>ex.has(p.id)))return;const pl=placeById(pid),b=box[pid],r=[b[0]-14,b[1]-36,b[2]+14,b[3]+12];
+    out.push({id:'ag:'+pid,auto:true,ro:true,kind:pl.kind,placeId:pid,label:pl.name,color:placeColor(pid),x:r[0],y:r[1],w:r[2]-r[0],h:r[3]-r[1]});
+    if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...r);});
+  return out;}
+function autoMembers(D,pid){return D.nodes.filter(n=>{const dv=n.deviceId&&devById(n.deviceId);return dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid));});}
 function placeUnder(id,anc){let x=placeById(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=placeById(x.parentId);}return false;}
 function ensureTypes(d){
   if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
@@ -1026,7 +1039,7 @@ function mlines(x,y,t,n,attrs){const L=wrapTxt(t,n);return `<text x="${x}" y="${
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
   document.querySelectorAll('[data-act=addDev],[data-act=addTxt],[data-act=addGrp],[data-act=addEl]').forEach(b=>b.disabled=!fid||fid===MAP);
-  document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
+  document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#autoLocTog').classList.toggle('off',S.meta.autoLoc===false);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
   if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
   if(fid===MAP&&S.meta.mapLoc!==false&&ui.mapLOC)D.groups=mapGroups(D.nodes,ui.mapLOC);
@@ -1054,15 +1067,15 @@ function renderCanvas(){
   const sdim=new Set();if(SV)D.nodes.forEach(n=>{if(n.deviceId&&!((devById(n.deviceId)?.sections)||[]).includes(SV))sdim.add(n.id);});
   // grupos (detrás)
   const inside=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
-  let out='';
-  [...D.groups].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
-    const col=g.color||'var(--muted)',sel=ui.sel?.t==='group'&&ui.sel.id===g.id;
+  let out='';const AG=ui.ag=autoGroups(D);
+  [...D.groups,...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
+    const col=g.color||'var(--muted)',sel=(ui.sel?.t==='group'||ui.sel?.t==='agroup')&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
     const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.kind==='sitio'&&folById(g.siteId)?sitePath(g.siteId):(g.label||''));
     const dash=GDASH[gk]||'';
-    out+=`<g class="grp${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${gk==='rack'||gk==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
+    out+=`<g class="grp${g.auto?' auto':''}${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${gk==='rack'||gk==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
       <rect class="gh" data-ghead="${g.id}" x="${g.x}" y="${g.y}" width="${g.w}" height="26"/>
-      <text class="gt" x="${g.x+10}" y="${g.y+17}" style="fill:${col}"><tspan class="k">${esc(GKINDS[gk]||'Grupo')}</tspan><tspan dx="6" style="fill:var(--ink)">${esc(trunc(gl,Math.max(6,Math.floor(g.w/7.2)-8)))}</tspan>${g.placeId?`<title>${esc(placePath(g.placeId))}</title>`:''}</text>
+      <text class="gt" x="${g.x+10}" y="${g.y+17}" style="fill:${col}"><tspan class="k">${esc(GKINDS[gk]||'Grupo')}</tspan><tspan dx="6" style="fill:var(--ink)">${esc(trunc(gl,Math.max(6,Math.floor(g.w/7.2)-8)))}</tspan>${g.placeId?`<title>${esc(placePath(g.placeId))}${g.auto?' · se dibuja sola por la ubicación de los equipos':''}</title>`:''}</text>
       ${g.ro?'':`<rect class="gr" data-gresize="${g.id}" x="${g.x+g.w-11}" y="${g.y+g.h-11}" width="13" height="13" rx="2"/>`}</g>`;
   });
   // aristas paralelas
@@ -1169,6 +1182,9 @@ svg.addEventListener('pointerdown',e=>{
   if(ed){ui.multi=new Set();ui.sel={t:'edge',id:ed.dataset.edge};renderInsp();rc();return;}
   const gh=e.target.closest('[data-ghead]');
   if(gh&&ui.folder===MAP){const g=getDiag(MAP).groups.find(x=>x.id===gh.dataset.ghead);if(g){locState={dev:null,q:g.label};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}return;}
+  if(gh&&!e.shiftKey&&gh.dataset.ghead.startsWith('ag:')){const g=(ui.ag||[]).find(x=>x.id===gh.dataset.ghead);if(!g)return;ui.multi=new Set();ui.sel={t:'agroup',id:g.id};
+    const nodes=autoMembers(D,g.placeId).map(x=>[x,x.x,x.y]),grps=D.groups.filter(o=>o.placeId&&(o.placeId===g.placeId||placeUnder(o.placeId,g.placeId))).map(o=>[o,o.x,o.y]);
+    ui.drag={kind:'node',sx:pt.x,sy:pt.y,orig:[...nodes,...grps],moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();return;}
   if(gh&&!e.shiftKey){const g=D.groups.find(x=>x.id===gh.dataset.ghead);ui.multi=new Set();ui.gq='';ui.sel={t:'group',id:g.id};
     const inG=(o,w,h)=>o.x+w/2>=g.x&&o.x+w/2<=g.x+g.w&&o.y+h/2>=g.y&&o.y+h/2<=g.y+g.h;
     const nodes=D.nodes.filter(x=>{const d=dims(x);return inG(x,d.w,d.h);}).map(x=>[x,x.x,x.y]);
@@ -1187,10 +1203,21 @@ svg.addEventListener('pointermove',e=>{
   if(g.kind==='box'){g.x=pt.x;g.y=pt.y;rc();}
   if(g.kind==='link'||g.kind==='reend'){g.x=pt.x;g.y=pt.y;rc();}
 });
+function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]));const msgs=[];
+  const ctr=(n,x,y)=>{const d=dims(n);return[x+d.w/2,y+d.h/2];};const inR=(G,gx,gy,[cx,cy])=>cx>=gx&&cx<=gx+G.w&&cy>=gy&&cy<=gy+G.h;
+  const before=autoGroups(D);
+  orig.forEach(([n,x,y])=>{if(!n.deviceId)return;const dv=devById(n.deviceId);if(!dv)return;
+    // salió de un grupo dibujado → se quita esa ubicación
+    if(dv.place)D.groups.forEach(G=>{if(!G.placeId||!dv.place||!(dv.place===G.placeId||placeUnder(dv.place,G.placeId)))return;const gp=op.get(G)||[G.x,G.y];
+      if(inR(G,gp[0],gp[1],ctr(n,x,y))&&!inR(G,G.x,G.y,ctr(n,n.x,n.y))){dv.place=placeById(G.placeId).parentId||undefined;if(!dv.place)delete dv.place;msgs.push(`${dv.name} salió de ${placeById(G.placeId).name}`);}});
+    // equipo sin ubicación soltado dentro de una ubicación automática
+    if(!dv.place){const c=ctr(n,n.x,n.y),hit=before.filter(A=>inR(A,A.x,A.y,c)).sort((a,b)=>PKINDS.indexOf(b.kind)-PKINDS.indexOf(a.kind))[0];if(hit){dv.place=hit.placeId;msgs.push(`${dv.name} → ${placePath(hit.placeId)}`);}}
+  });
+  if(msgs.length)toast('Ubicación: '+msgs.join(' · '));}
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){applyGroupPlaces(getDiag(ui.folder));linkSiteDevs(getDiag(ui.folder));save();}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);save();renderInsp();rc();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1222,6 +1249,7 @@ $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
 $('#pillTog').onclick=()=>{S.meta.hidePills=!S.meta.hidePills;save(false);rc();};
+$('#autoLocTog').onclick=()=>{S.meta.autoLoc=S.meta.autoLoc===false;if(ui.sel?.t==='agroup')ui.sel=null;save(false);renderAll();};
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
@@ -1728,6 +1756,22 @@ function placePicker(devId,ctx){const d=devById(devId);if(!d)return;let q='';
   $('#ppL').onclick=e=>{const b=e.target.closest('[data-pp]');if(!b)return;d.place=b.dataset.pp;save();toast('Ubicación: '+placePath(d.place));back();};
   $('#ppNew').onclick=()=>{const name=$('#ppName').value.trim();if(!name){toast('Escribe el nombre');return;}const kind=$('#ppKind').value;
     const pl={id:uid('p'),kind,name,parentId:kind==='ciudad'?null:($('#ppParent').value||null)};S.places.push(pl);d.place=pl.id;save();toast('Ubicación: '+placePath(pl.id));back();};}
+function placeCombo(box,st){let q='';
+  const list=()=>{const f=fold(q.trim());if(!f)return '';const ws=f.split(/[\s›>/]+/).filter(Boolean);
+    const L=(S.places||[]).map(x=>({x,p:placePath(x.id)})).filter(o=>{const fp=fold(o.p);return fp.includes(f)||ws.every(w=>fp.includes(w));}).sort((a,b)=>PKINDS.indexOf(a.x.kind)-PKINDS.indexOf(b.x.kind)||ncmp(a.p,b.p)).slice(0,40);
+    let h=L.map(o=>`<button type="button" class="pitem" data-pcpick="${o.x.id}"><b>${esc(o.x.name)} <span>· ${esc(GKINDS[o.x.kind])}</span></b><span>${esc(placeChain(o.x.id).slice(0,-1).map(y=>y.name).join(' › ')||'nivel principal')}</span></button>`).join('');
+    if(!L.some(o=>fold(o.x.name)===f))h+=`<div class="pnew"><span>＋ Crear <b>«${esc(q.trim())}»</b> como</span><div class="two"><select class="inp" id="pcKind">${PKINDS.map(k=>`<option value="${k}"${k==='sala'?' selected':''}>${GKINDS[k]}</option>`).join('')}</select><select class="inp" id="pcPar">${parentOptions('sala','')}</select></div><button type="button" class="btn sm pri" data-pcnew="1">Crear y asignar</button></div>`;
+    return h;};
+  const draw=()=>{if(st.v&&placeById(st.v)){box.innerHTML=`<div class="pathBox">${pathHTML(st.v)}<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn sm" data-pcchg="1">Cambiar</button><button type="button" class="btn sm dan" data-pcclr="1">Quitar</button></div></div>`;return;}
+    box.innerHTML=`<input class="inp" id="pcQ" placeholder="Escribe: Monterrey, Sala 5, GAB-07… (opcional)" autocomplete="off" value="${esc(q)}"><div class="plist" id="pcL">${list()}</div><span class="endHint">También se llena sola si metes el equipo en un grupo de ubicación en cualquier diagrama.</span>`;};
+  box.addEventListener('input',e=>{if(e.target.id==='pcQ'){q=e.target.value;box.querySelector('#pcL').innerHTML=list();}});
+  box.addEventListener('change',e=>{if(e.target.id==='pcKind')box.querySelector('#pcPar').innerHTML=parentOptions(e.target.value,'');});
+  box.addEventListener('click',e=>{const t=e.target;
+    const pk=t.closest('[data-pcpick]');if(pk){st.v=pk.dataset.pcpick;q='';draw();return;}
+    if(t.closest('[data-pcclr]')){st.v=null;q='';draw();return;}
+    if(t.closest('[data-pcchg]')){st.v=null;draw();const i=box.querySelector('#pcQ');if(i)i.focus();return;}
+    if(t.closest('[data-pcnew]')){const name=q.trim(),kind=box.querySelector('#pcKind').value;if(!name)return;const pl={id:uid('p'),kind,name,parentId:kind==='ciudad'?null:(box.querySelector('#pcPar').value||null)};S.places.push(pl);st.v=pl.id;q='';draw();}});
+  draw();}
 /* ---------- inspector ---------- */
 function accessCmd(d,a){
   const ip=d.ip||'';
@@ -1762,6 +1806,16 @@ function renderInsp(){
       <button class="btn sm dan" data-act="delSel">Quitar ${ns.length} del diagrama</button>`;
     return;
   }
+  if(ui.sel.t==='agroup'){
+    const g=(ui.ag||[]).find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
+    const mem=autoMembers(D,g.placeId);
+    el.innerHTML=`${close}<span class="lbl">Ubicación (se dibuja sola)</span>
+      <div class="pathBox">${pathHTML(g.placeId)}</div>
+      <p class="endHint" style="margin:0">Este recuadro aparece en todos los diagramas donde haya equipos con esta ubicación registrada. Para cambiar la ubicación de un equipo, edítalo o arrástralo a otro grupo.</p>
+      ${mem.length?`<div class="acc"><span class="lbl">Equipos aquí (${mem.length})</span>${mem.map(n=>{const d=devById(n.deviceId);return `<button class="drow" data-selnode="${d.id}">${gsvg(d?.type)}<div class="t"><div>${esc(d?.name)}</div><div class="ip">${esc(placePath(d.place))}</div></div><span></span></button>`;}).join('')}</div>`:''}
+      <button class="btn sm" data-act="pinAuto">Fijar como grupo editable en este diagrama</button>
+      <button class="btn sm" data-act="autoLocOff">Ocultar ubicaciones automáticas</button>`;
+    return;}
   if(ui.sel.t==='group'){
     const g=D.groups.find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
     const inn=D.nodes.filter(n=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return n.deviceId&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;});
@@ -1942,12 +1996,13 @@ function delFolderModal(id){
 }
 function devModal(id,pre){
   const d=id?devById(id):null;pre=pre||{};
-  const acc=p=>d?.access?.find(a=>a.p===p);
+  const acc=p=>d?.access?.find(a=>a.p===p);const dPl={v:d?.place||pre.place||null};
   modal(d?'Editar equipo':'Nuevo equipo',`
     <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||pre.name||'')}" placeholder="AGG-GPE-02" autocomplete="off"><span class="err" id="dNameMsg"></span></div>
     <div class="fld"><span class="lbl">IP de gestión</span><input id="dIp" class="mono" value="${esc(d?.ip||'')}" placeholder="10.0.1.2"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${(()=>{const names=S.types.map(t=>t.name).sort(ncmp);if(d?.type&&!names.some(n=>norm(n)===norm(d.type)))names.unshift(d.type);const cur=d?.type||ui.lastType||names[0];return names.map(t=>`<option${norm(cur)===norm(t)?' selected':''}>${esc(t)}</option>`).join('');})()}</select></div>
     <div class="fld"><span class="lbl">Referencia / nodo (texto libre)</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
+    <div class="fld"><span class="lbl">Ubicación física</span><div id="dPlBox"></div></div>
     <div class="two"><div class="fld"><span class="lbl">Marca</span><input id="dBrand" value="${esc(d?.brand||'')}"></div>
     <div class="fld"><span class="lbl">Modelo</span><input id="dModel" value="${esc(d?.model||'')}"></div></div>
     <div class="fld"><span class="lbl">Red / sección</span><div class="chkrow">${Object.entries(SECTIONS).map(([k,v])=>`<label class="chk"><input type="checkbox" id="dS_${k}"${(d?.sections||[]).includes(k)?' checked':''}> <span class="sec" style="background:${v.c}">${v.l}</span></label>`).join('')}</div></div>
@@ -1965,6 +2020,7 @@ function devModal(id,pre){
       const dupI=ip&&S.devices.find(x=>x.id!==d?.id&&x.ip===ip);
       if(dupI&&$('#dErr').dataset.ip!==ip){$('#dErr').textContent=`La IP ${ip} ya la tiene ${dupI.name}. Si es correcto (por ejemplo, otra VRF), presiona Guardar de nuevo.`;$('#dErr').dataset.ip=ip;return;}
       const obj=d||{id:uid('d')};
+      if(dPl.v)obj.place=dPl.v;else delete obj.place;
       Object.assign(obj,{name,ip,type:$('#dType').value,location:$('#dLoc').value.trim(),brand:$('#dBrand').value.trim(),model:$('#dModel').value.trim(),
         access:['ssh','telnet','web'].filter(p=>$('#dA_'+p).checked).map(p=>({p,port:$('#dP_'+p).value.trim()})),
         sections:Object.keys(SECTIONS).filter(k=>$('#dS_'+k).checked),
@@ -1977,6 +2033,7 @@ function devModal(id,pre){
     m.innerHTML=dup?`Ya existe ${esc(dup.name)}${dup.ip?' · '+esc(dup.ip):''}.${!d&&ui.addAfterCreate&&ui.folder?` <button class="btn sm" id="useEx" type="button">Agregar el existente</button>`:''}`:'';
     const u=$('#useEx');if(u)u.onclick=()=>{ui.addAfterCreate=false;closeModal();addDeviceNode(dup.id);};};
   $('#dName').addEventListener('input',chk);chk();
+  placeCombo($('#dPlBox'),dPl);
   if(pre.name)setTimeout(()=>{const i=$('#dIp');if(i)i.focus();},40);
 }
 function delDevModal(id){
@@ -2424,6 +2481,8 @@ document.addEventListener('click',e=>{
     case 'plusEl':$('#plusMenu').hidden=true;addElement(ui.plusNode);break;
     case 'dupEl':{const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.sel?.id);if(!n)break;const c={...n,id:uid('x'),x:n.x+32,y:n.y+32};D.nodes.push(c);ui.multi=new Set([c.id]);ui.sel={t:'node',id:c.id};save();renderAll();break;}
     case 'addGrp':groupFromSelection('edificio');break;
+    case 'pinAuto':{const D=getDiag(ui.folder),g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){const ng={id:uid('g'),kind:g.kind,label:g.label,placeId:g.placeId,color:g.color||'',x:Math.round(g.x/8)*8,y:Math.round(g.y/8)*8,w:Math.round(g.w/8)*8+8,h:Math.round(g.h/8)*8+8};D.groups.push(ng);ui.sel={t:'group',id:ng.id};save();renderInsp();rc();toast('Grupo fijado: ahora puedes moverlo y cambiar su tamaño');}break;}
+    case 'autoLocOff':S.meta.autoLoc=false;ui.sel=null;save(false);renderAll();toast('Ubicaciones automáticas ocultas (botón 📍 para volver a verlas)');break;
     case 'mkGroup':groupFromSelection($('#mKind').value);break;
     case 'incFromImp':incModal(null,[{dev:ui.impact.dev,port:ui.impact.port||''}]);break;
     case 'incFromNode':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
