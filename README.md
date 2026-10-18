@@ -12,11 +12,29 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Incidencias
+
+En la pestaña **Incidencias** registras cada evento: título, ticket de red, ticket del proveedor, severidad, causa, inicio, fin y notas. En **Equipos y puertos afectados** eliges qué equipo (y opcionalmente qué puerto) falló; la herramienta calcula sola qué servicios y clientes quedan afectados.
+
+- Una incidencia sin hora de fin está **activa**. Con **Cerrar ahora** se registra el fin.
+- Los equipos y conexiones afectados se marcan en **rojo** en todos los diagramas, y al abrir el diagrama de un cliente afectado aparece un aviso de **evento activo**.
+- En el árbol de clientes, un punto rojo indica que hay una incidencia activa dentro.
+- **Copiar resumen** genera un texto con la afectación lista para pegar en el ticket o en un correo.
+- También puedes registrar una incidencia desde el panel de un equipo o desde el análisis de impacto.
+
+**Capa de incidencias** (selector en la barra del diagrama):
+
+- **Activas**: resalta solo los eventos en curso.
+- **Historial**: resalta todo lo que ha fallado en el periodo elegido y muestra en cada equipo cuántas incidencias ha tenido. Sirve para ver en qué parte del camino de un cliente se concentran las fallas.
+- **Ocultas**: diagrama limpio.
+
+Al final de la pestaña Incidencias está el ranking de **equipos y clientes más afectados** por periodo (30 días, 90 días, 12 meses o todo).
+
 ## Tipos de equipo
 
 En **Equipos → Tipos** (o en el engrane ⚙) puedes crear y editar tipos como *CIENA*, *Switch Huawei*, *Firewall Fortinet* o *CPE Cliente*. Cada tipo tiene:
 
-- Un ícono de la galería (router, switch, OLT, óptico, firewall, radio, CPE, edificio, nube…) con el color que elijas, **o**
+- Un ícono de la galería (30 opciones: router, switch, OLT, óptico, ODF, splitter, mufla, torre, satélite, energía, rack, firewall, VPN, servidor, base de datos, cámara IP, teléfono IP, CPE, edificio, internet, nube…) con el color que elijas, **o**
 - Una imagen propia (PNG, JPG o SVG). Se reduce automáticamente a 96×96 px y viaja dentro del JSON exportado, así que tus compañeros también la ven al importar.
 
 Si renombras un tipo, sus equipos se actualizan. Si lo eliminas, eliges a qué tipo pasan sus equipos. En el CSV, un tipo que no existe se crea solo con un ícono sugerido.

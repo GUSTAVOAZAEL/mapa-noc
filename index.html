@@ -69,7 +69,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .side,.insp,.stage{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:0;min-width:0}
 .side{display:flex;flex-direction:column;overflow:hidden}
 .tabs{display:flex;border-bottom:1px solid var(--line);padding:0 6px}
-.tabs button{flex:1;border:0;background:none;padding:11px 4px 9px;cursor:pointer;color:var(--muted);font:500 13px var(--f-ui);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button{flex:1;border:0;background:none;padding:11px 2px 9px;cursor:pointer;color:var(--muted);font:500 12.5px var(--f-ui);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
 .pane{flex:1;overflow:auto;padding:10px}
 .paneHead{display:flex;gap:6px;align-items:center;margin-bottom:8px}
@@ -132,7 +132,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block;background:var(--panel-2)}
 #cv.panning{cursor:grabbing}
 .hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;pointer-events:none;max-width:calc(100% - 70px)}
-.impBanner{position:absolute;left:10px;top:10px;right:10px;display:flex;gap:10px;align-items:center;background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
+.banners{position:absolute;left:10px;top:10px;right:10px;display:grid;gap:6px;pointer-events:none}
+.banners>*{pointer-events:auto}
+.incBanner{display:flex;gap:10px;align-items:center;background:var(--danger-soft);border:1px solid var(--danger);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
+.incBanner b{color:var(--danger)}
+.incBanner .grow{flex:1}
+.impBanner{display:flex;gap:10px;align-items:center;background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
 .impBanner b{color:var(--hit)}
 .impBanner .grow{flex:1}
 .empty{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;padding:20px}
@@ -238,6 +243,48 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 .tprev{display:flex;justify-content:center;padding:12px;background:var(--panel-2);border-radius:8px;margin-bottom:12px}
 .tprev svg{max-width:100%}
 
+
+/* incidencias */
+.tabs .cnt{display:inline-block;min-width:16px;padding:0 4px;margin-left:3px;border-radius:8px;background:var(--danger);color:var(--panel);font:600 10px/16px var(--f-ui)}
+.layerSel{height:28px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:0 6px;font-size:12.5px}
+.node.inc .nb{stroke:var(--danger);stroke-width:2.4}
+.node.inc.hit .nb{stroke:var(--hit)}
+.edge.inc line.ln{stroke:var(--danger);stroke-width:2.6}
+.edge.inc.hit line.ln{stroke:var(--hit)}
+.edge.inc .pl rect{stroke:var(--danger)}
+.ibadge circle{fill:var(--danger)}
+.ibadge text{font:700 11px var(--f-ui);fill:#fff}
+.node.inc .halo{fill:none;stroke:var(--danger);stroke-opacity:.35;stroke-width:6}
+@media (prefers-reduced-motion:no-preference){.node.inc.act .halo{animation:pulse 1.8s ease-in-out infinite}}
+@keyframes pulse{50%{stroke-opacity:.08}}
+.row .incdot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
+.ilist{display:grid;gap:6px}
+.icard{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:9px 10px;text-align:left;cursor:pointer;display:grid;gap:3px;width:100%}
+.icard:hover{border-color:var(--muted)}
+.icard.act{border-color:var(--danger);background:var(--danger-soft)}
+.icard .ih{display:flex;gap:6px;align-items:center;font-size:11.5px;color:var(--muted)}
+.icard b{font-weight:600;overflow-wrap:anywhere}
+.icard .it{font:12px var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.icard .ia{font-size:12px}
+.sev{font:600 10px/1 var(--f-ui);text-transform:uppercase;letter-spacing:.05em;padding:3px 5px;border-radius:3px;border:1px solid currentColor}
+.sev.critica{color:var(--danger)} .sev.mayor{color:var(--hit)} .sev.menor{color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.seg button{flex:1;border:0;background:var(--panel);padding:5px 4px;font-size:12px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--accent-soft);color:var(--ink);font-weight:500}
+.rank{display:grid;gap:3px}
+.rank button{display:grid;grid-template-columns:minmax(0,1fr) 90px 26px;gap:8px;align-items:center;border:0;background:none;padding:5px 4px;border-radius:5px;cursor:pointer;text-align:left;width:100%}
+.rank button:hover{background:var(--panel-2)}
+.rank .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.rank .bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+.rank .bar i{display:block;height:100%;background:var(--danger)}
+.rank .n{font:12px var(--f-mono);text-align:right}
+.scope{display:grid;gap:6px}
+.scRow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 30px;gap:6px}
+.scRow select{min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px}
+.affect{background:var(--panel-2);border-radius:6px;padding:8px 10px;font-size:12.5px;display:grid;gap:3px;max-height:150px;overflow:auto}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.three,.two{grid-template-columns:1fr}}
+
 @media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
 @media (max-width:860px){
   #app{grid-template-columns:minmax(0,1fr)}
@@ -285,6 +332,7 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
       <button data-tab="clientes">Clientes</button>
       <button data-tab="equipos">Equipos</button>
       <button data-tab="impacto">Impacto</button>
+      <button data-tab="incidencias">Incidencias<span class="cnt" id="incCnt" hidden></span></button>
     </nav>
     <div class="pane" id="pane"></div>
   </aside>
@@ -297,6 +345,7 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
         <button class="btn sm" id="tAddDev">+ Equipo</button>
         <button class="btn sm" id="tAddTxt">+ Texto</button>
         <button class="btn sm" id="tFit">Ajustar vista</button>
+        <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
       </div>
     </div>
     <div class="canvasWrap">
@@ -305,13 +354,14 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
           <pattern id="gridp" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" style="fill:var(--grid)"/></pattern>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--edge)"/></marker>
           <marker id="arS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--accent)"/></marker>
+          <marker id="arI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--danger)"/></marker>
           <marker id="arH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--hit)"/></marker>
         </defs>
         <rect id="gridbg" x="-50000" y="-50000" width="100000" height="100000" fill="url(#gridp)"/>
         <g id="vp"></g>
       </svg>
       <div class="empty" id="empty" hidden></div>
-      <div class="impBanner" id="impBanner" hidden></div>
+      <div class="banners"><div class="incBanner" id="incBanner" hidden></div><div class="impBanner" id="impBanner" hidden></div></div>
       <div class="hint" id="hint">Arrastra el punto <b>●</b> del borde de un equipo hacia otro para conectarlos · rueda para zoom · arrastra el fondo para moverte</div>
       <div class="zoom">
         <button class="btn ic sm" id="zIn" aria-label="Acercar">+</button>
@@ -343,6 +393,11 @@ const norm=s=>String(s??'').trim().toLowerCase();
 const fold=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 const ncmp=(a,b)=>String(a).localeCompare(String(b),'es',{numeric:true,sensitivity:'base'});
 const today=()=>new Date().toISOString().slice(0,10);
+const localDT=(dt=new Date())=>new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+const parseDT=s=>s?new Date(s):null;
+function fmtDT(s){const d=parseDT(s);if(!d||isNaN(d))return'—';return d.toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function fmtDur(a,b){const d1=parseDT(a),d2=b?parseDT(b):new Date();if(!d1||isNaN(d1))return'';let m=Math.max(0,Math.round((d2-d1)/60000));const dd=Math.floor(m/1440);m-=dd*1440;const h=Math.floor(m/60);m-=h*60;
+  return dd?`${dd} d ${h} h`:h?`${h} h ${m} min`:`${m} min`;}
 
 const GLYPHS={
   Router:'<circle cx="9" cy="9" r="7.5"/><path d="M9 3.5v11M3.5 9h11M7 5.5 9 3.5l2 2M7 12.5l2 2 2-2M5.5 7 3.5 9l2 2M12.5 7l2 2-2 2"/>',
@@ -356,15 +411,32 @@ const GLYPHS={
   CPE:'<path d="M2 9 9 2.5 16 9M4 7.5V16h10V7.5"/><rect x="7" y="10.5" width="4" height="5.5"/>',
   Edificio:'<path d="M3 16.5V2.5h8v14M11 7h4v9.5M1.5 16.5h15M5.5 5.5h1M8 5.5h1M5.5 8.5h1M8 8.5h1M5.5 11.5h1M8 11.5h1"/>',
   PC:'<rect x="1.5" y="2.5" width="15" height="10" rx="1"/><path d="M6 16h6M9 12.5V16"/>',
+  Internet:'<circle cx="9" cy="9" r="7.5"/><path d="M1.5 9h15M9 1.5c2.2 2 3.2 4.6 3.2 7.5S11.2 14.5 9 16.5M9 1.5C6.8 3.5 5.8 6.1 5.8 9s1 5.5 3.2 7.5"/>',
+  Torre:'<path d="M9 5v12M5.5 17 9 5l3.5 12M6.4 13.5h5.2M7.4 9.5h3.2"/><circle cx="9" cy="3.5" r="1.2"/><path d="M5 1.5a4 4 0 0 0 0 4M13 1.5a4 4 0 0 1 0 4"/>',
+  Satelite:'<rect x="7" y="6" width="4" height="5" rx=".8"/><rect x="1" y="7" width="5" height="3"/><rect x="12" y="7" width="5" height="3"/><path d="M9 11v2.5M6.5 16.5a3 3 0 0 1 5 0"/>',
+  ODF:'<rect x="1" y="5" width="16" height="8" rx="1"/><circle cx="4.5" cy="9" r="1"/><circle cx="7.5" cy="9" r="1"/><circle cx="10.5" cy="9" r="1"/><circle cx="13.5" cy="9" r="1"/>',
+  Splitter:'<path d="M1.5 9h5M6.5 9 16 3.5M6.5 9H16M6.5 9 16 14.5"/><circle cx="6.5" cy="9" r="1.4"/>',
+  Mufla:'<rect x="5" y="4.5" width="8" height="9" rx="4"/><path d="M1 7.5h4M1 10.5h4M13 7.5h4M13 10.5h4"/>',
+  UPS:'<rect x="3" y="2" width="12" height="14" rx="1.5"/><path d="M10 4.8 6.8 9.5H11L7.8 14.2"/>',
+  Rack:'<rect x="3" y="1.5" width="12" height="15" rx="1"/><path d="M3 5.5h12M3 9.5h12M3 13.5h12M5 3.5h1M5 7.5h1M5 11.5h1"/>',
+  Balanceador:'<circle cx="9" cy="3.5" r="2"/><path d="M9 5.5v3M9 8.5 3.5 12.5M9 8.5v4M9 8.5l5.5 4"/><circle cx="3.5" cy="14.5" r="1.6"/><circle cx="9" cy="14.5" r="1.6"/><circle cx="14.5" cy="14.5" r="1.6"/>',
+  Modem:'<rect x="1.5" y="8.5" width="15" height="6" rx="1.5"/><path d="M4.5 11.5h1M7.5 11.5h1M13 8.5V4.5M10.8 4a3 3 0 0 1 4.4 0"/>',
+  BaseDatos:'<ellipse cx="9" cy="4" rx="6" ry="2.2"/><path d="M3 4v10c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2V4M3 9c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2"/>',
+  VPN:'<rect x="3.5" y="8" width="11" height="8.5" rx="1.5"/><path d="M6 8V5.5a3 3 0 0 1 6 0V8M9 11.2v2.3"/>',
+  Telefono:'<path d="M3 6.5c0-2 2.7-4 6-4s6 2 6 4l-2.5 1-1-2.2a6 6 0 0 0-5 0l-1 2.2z"/><rect x="3" y="9" width="12" height="7" rx="1.5"/><path d="M6 12.5h1M9 12.5h1M12 12.5h0"/>',
+  Celular:'<rect x="5" y="1.5" width="8" height="15" rx="1.6"/><path d="M8 14h2"/>',
+  Camara:'<rect x="1.5" y="5" width="11" height="7" rx="1.5"/><path d="M12.5 7.5 16.5 6v5l-4-1.5M5 12v4h5"/>',
+  Laptop:'<rect x="3.5" y="3" width="11" height="8" rx="1"/><path d="M1.5 14.5h15L15 11H3z"/>',
+  Usuario:'<circle cx="9" cy="5.5" r="3.5"/><path d="M2.5 16.5a6.5 6.5 0 0 1 13 0"/>',
   Nube:'<path d="M5 14.5h8.5a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 4.3 8.6 3 3 0 0 0 5 14.5z"/>',
   Otro:'<circle cx="9" cy="9" r="7.5"/><circle cx="9" cy="9" r="2"/>'
 };
-const GLYPH_NAMES={Router:'Router',Switch:'Switch',OLT:'OLT',Optico:'Óptico',Firewall:'Firewall',Servidor:'Servidor',Radio:'Radio',WiFi:'WiFi / AP',CPE:'CPE',Edificio:'Edificio',PC:'PC',Nube:'Nube',Otro:'Genérico'};
+const GLYPH_NAMES={Router:'Router',Switch:'Switch',OLT:'OLT',Optico:'Óptico',Firewall:'Firewall',Servidor:'Servidor',Radio:'Radio',WiFi:'WiFi / AP',CPE:'CPE',Edificio:'Edificio',PC:'PC',Nube:'Nube',Internet:'Internet',Torre:'Torre',Satelite:'Satélite',ODF:'ODF / patch',Splitter:'Splitter',Mufla:'Mufla',UPS:'Energía / UPS',Rack:'Rack',Balanceador:'Balanceador',Modem:'Módem',BaseDatos:'Base de datos',VPN:'VPN',Telefono:'Teléfono IP',Celular:'Móvil',Camara:'Cámara IP',Laptop:'Laptop',Usuario:'Usuario',Otro:'Genérico'};
 const TYPE_COLORS=['','#2F6FD6','#7A4FC9','#C2367A','#C7432A','#B86A00','#3C8A3E','#0F8A80','#5A6978'];
 const DEFAULT_TYPES=[['Router','Router'],['Switch','Switch'],['OLT','OLT'],['Equipo óptico','Optico'],['Firewall','Firewall'],['Servidor','Servidor'],['Radio','Radio'],['CPE','CPE'],['Otro','Otro']];
 const mkTypes=list=>list.map(([name,icon,color])=>({name,icon,color:color||'',img:''}));
 function guessIcon(name){const n=fold(name);
-  const r=[[/router|core|asr|mx\d/,'Router'],[/switch|agg|sw\b/,'Switch'],[/olt|gpon|ont/,'OLT'],[/ciena|dwdm|optic|transport|sdh|ptn/,'Optico'],[/firewall|forti|\bfw\b|palo|asa/,'Firewall'],
+  const r=[[/torre|tower/,'Torre'],[/satel|vsat/,'Satelite'],[/odf|patch/,'ODF'],[/splitter/,'Splitter'],[/mufla|empalme/,'Mufla'],[/ups|energia|planta/,'UPS'],[/rack/,'Rack'],[/balance|\bf5\b|\blb\b/,'Balanceador'],[/modem/,'Modem'],[/\bdb\b|base de datos|sql/,'BaseDatos'],[/vpn/,'VPN'],[/telefon|voip|\bip phone/,'Telefono'],[/camara|cctv|nvr/,'Camara'],[/celular|movil/,'Celular'],[/laptop/,'Laptop'],[/usuario/,'Usuario'],[/internet|\bisp\b|upstream|transito/,'Internet'],[/router|core|asr|mx\d/,'Router'],[/switch|agg|sw\b/,'Switch'],[/olt|gpon|ont/,'OLT'],[/ciena|dwdm|optic|transport|sdh|ptn/,'Optico'],[/firewall|forti|\bfw\b|palo|asa/,'Firewall'],
     [/serv|vm|host/,'Servidor'],[/radio|ptp|ptmp|antena|airfiber|enlace/,'Radio'],[/wifi|wireless|\bap\b/,'WiFi'],[/cpe|cliente/,'CPE'],[/sitio|edificio|nodo/,'Edificio'],[/pc|laptop/,'PC'],[/nube|cloud|internet/,'Nube']];
   const m=r.find(([re])=>re.test(n));return m?m[1]:'Otro';}
 function glyph(key){return `<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[key]||GLYPHS.Otro}</g>`;}
@@ -379,12 +451,13 @@ function nodeIcon(name){const t=typeOf(name);
   return `<g transform="translate(11,20)" style="color:${t.color||'var(--accent)'}">${glyph(t.icon)}</g>`;}
 function ensureTypes(d){
   if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
+  if(!Array.isArray(d.incidents))d.incidents=[];
   (d.devices||[]).forEach(x=>{if(x.type&&!d.types.some(t=>norm(t.name)===norm(x.type)))d.types.push({name:x.type,icon:guessIcon(x.type),color:'',img:''});});
   return d;
 }
 
 /* ---------- datos ---------- */
-function emptyData(){return {app:'mapa-noc',version:1,meta:{owner:'',lastExport:null,dirty:0,example:false},devices:[],folders:[],diagrams:{},types:mkTypes(DEFAULT_TYPES)};}
+function emptyData(){return {app:'mapa-noc',version:1,meta:{owner:'',lastExport:null,dirty:0,example:false},devices:[],folders:[],diagrams:{},types:mkTypes(DEFAULT_TYPES),incidents:[]};}
 function sample(){
   const d=emptyData(); d.meta.example=true;
   d.types=mkTypes([['Router','Router'],['Switch Huawei','Switch','#C7432A'],['OLT Huawei','OLT','#C7432A'],['CIENA','Optico','#7A4FC9'],['Firewall Fortinet','Firewall','#B86A00'],['Radio','Radio'],['CPE Cliente','CPE','#3C8A3E'],['Servidor','Servidor'],['Otro','Otro']]);
@@ -418,6 +491,13 @@ function sample(){
     edges:[E('e1','n1','n2','Te0/0/0/1','XGE0/0/1'),E('e2','n2','n3','XGE0/0/7','eth0','cobre'),E('e3','n3','n4','air','ether1','radio')]};
   d.diagrams.fB1a={nodes:[N('n1','dCORE',40,160),N('n2','dFW',290,160),N('n3','dAGG',540,160),N('n4','dOLT',790,160),N('n5','dC3',790,330),T('t1','VPN IPsec hacia FW-DC-01',300,60)],
     edges:[E('e1','n1','n2','Te0/0/0/2','port1'),E('e2','n2','n3','port3','XGE0/0/2'),E('e3','n3','n4','XGE0/0/5','0/9/0'),E('e4','n4','n5','0/1/3','Gi0/0/0','fibra','ONT 2'),E('e5','n5','n2','','', 'logico','IPsec','both')]};
+  const ago=m=>localDT(new Date(Date.now()-m*60000));
+  d.incidents=[
+    {id:'i1',title:'Corte de fibra tramo Guadalupe → OLT',ticket:'NOC-24871',vendorTicket:'',cause:'Corte de fibra',severity:'critica',start:ago(95),end:'',notes:'Cuadrilla en camino. Sin tráfico en XGE0/0/5 desde las alarmas de LOS.',scope:[{dev:'dAGG',port:'XGE0/0/5'}]},
+    {id:'i2',title:'Reinicio inesperado de OLT-GPE-01',ticket:'NOC-24510',vendorTicket:'HW-77812',cause:'Falla de equipo',severity:'mayor',start:ago(60*24*12),end:ago(60*24*12-75),notes:'Volvió sola tras 75 min. Caso abierto con Huawei.',scope:[{dev:'dOLT',port:''}]},
+    {id:'i3',title:'Intermitencia en tarjeta 0/1/2',ticket:'NOC-24302',vendorTicket:'',cause:'Falla de equipo',severity:'menor',start:ago(60*24*30),end:ago(60*24*30-180),notes:'',scope:[{dev:'dOLT',port:'0/1/2'}]},
+    {id:'i4',title:'Ventana de mantenimiento core',ticket:'CHG-1180',vendorTicket:'',cause:'Mantenimiento',severity:'menor',start:ago(60*24*45),end:ago(60*24*45-40),notes:'',scope:[{dev:'dCORE',port:'Te0/0/0/1'}]}
+  ];
   return d;
 }
 function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);if(d&&d.devices)return d;}}catch(e){}return null;}
@@ -483,14 +563,18 @@ function renderSide(){
   const pane=$('#pane');
   if(ui.tab==='clientes')pane.innerHTML=sideClients();
   else if(ui.tab==='equipos')pane.innerHTML=sideDevices();
+  else if(ui.tab==='incidencias')pane.innerHTML=sideIncidents();
   else pane.innerHTML=sideImpact();
+  const na=activeIncs().length,cn=$('#incCnt');cn.hidden=!na;cn.textContent=na;
   if(ui.tab==='equipos'){const i=$('#devQ');if(i){i.value=ui.devQ;}}
+  if(ui.tab==='incidencias'){const i=$('#incQ');if(i)i.value=ui.incQ||'';}
 }
 function exampleNote(){
   return S.meta.example?`<div class="note"><span><b>Datos de ejemplo.</b> Clientes y equipos ficticios para que pruebes el flujo. Prueba el análisis de impacto en <span class="mono">AGG-GPE-02 · XGE0/0/5</span>.</span><div><button class="btn sm" data-act="wipe">Empezar vacío</button></div></div>`:'';
 }
 function sideClients(){
-  const hitF=new Set();
+  const hitF=new Set(),incF=new Set();
+  activeIncs().forEach(inc=>incAffect(inc).fids.forEach(fid=>pathOf(fid).forEach(f=>incF.add(f.id))));
   if(ui.impact)impactOf(ui.impact.dev,ui.impact.port).forEach(i=>pathOf(i.fid).forEach(f=>hitF.add(f.id)));
   const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
@@ -498,7 +582,7 @@ function sideClients(){
       return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
         <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>
-        <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
+        <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
         <span class="ra"><button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button></span>
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
   const tree=branch(null);
@@ -522,7 +606,7 @@ function sideImpact(){
     const items=impactOf(cur.dev,cur.port);
     const byC={};items.forEach(i=>{const c=clientOf(i.fid);const k=c?c.id:'-';(byC[k]=byC[k]||{c,items:[]}).items.push(i);});
     html+=`<div class="sum"><div><b>${Object.keys(byC).length}</b><span>clientes</span></div><div><b>${items.length}</b><span>servicios / diagramas</span></div></div>`;
-    if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Quitar resaltado</button></div>`;
+    if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Quitar resaltado</button></div><button class="btn sm dan" data-act="incFromImp">Registrar incidencia con esta afectación</button>`;
     html+=Object.values(byC).sort((a,b)=>ncmp(a.c?.name,b.c?.name)).map(g=>`<div class="grp"><h4>${esc(g.c?.name||'Sin cliente')}</h4>${g.items.map(i=>{
       const p=pathOf(i.fid).slice(1).map(f=>f.name).join(' › ')||'(diagrama del cliente)';
       return `<button class="irow" data-open="${i.fid}"><span>${esc(p)}</span><span class="pp">${esc(i.ports.join(', ')||'sin puertos registrados')}</span></button>`;}).join('')}</div>`).join('');
@@ -550,7 +634,7 @@ function lbl(x,y,t,cls){const w=t.length*6.4+10;return `<g class="${cls}"><rect 
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
   const tools=$('#tools');tools.style.visibility=fid?'visible':'hidden';
-  if(!fid){vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
+  if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
   const path=pathOf(fid);
@@ -561,6 +645,13 @@ function renderCanvas(){
     const d=devById(ui.impact.dev),all=impactOf(ui.impact.dev,ui.impact.port);
     ib.hidden=false;ib.innerHTML=`<span>Impacto: <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b> — ${all.length} servicio${all.length===1?'':'s'}${it?'':' (no pasa por este diagrama)'}</span><span class="grow"></span><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm ghost" data-act="clearImp">Quitar</button>`;
   }else ib.hidden=true;
+  // capa de incidencias
+  const L=S.meta.layer||'activas',$ls=$('#layerSel');if($ls.value!==L)$ls.value=L;
+  const act=incHits(fid,activeIncs()),incB=$('#incBanner');
+  const inc=L==='ocultas'?null:(L==='activas'?act:incHits(fid,periodIncs()));
+  if(L!=='ocultas'&&act.list.length){const i0=act.list[0];incB.hidden=false;
+    incB.innerHTML=`<span>⚠ Evento activo: <b>${esc(i0.title)}</b>${i0.ticket?' · <span class="mono">'+esc(i0.ticket)+'</span>':''} · hace ${fmtDur(i0.start)}${act.list.length>1?` · +${act.list.length-1} más`:''}</span><span class="grow"></span><button class="btn sm" data-inc="${i0.id}">Ver incidencia</button>`;}
+  else incB.hidden=true;
   const nm={};D.nodes.forEach(n=>nm[n.id]=n);
   // aristas paralelas
   const pairs={};D.edges.forEach(e=>{const k=[e.from,e.to].sort().join('|');(pairs[k]=pairs[k]||[]).push(e.id);});
@@ -574,8 +665,9 @@ function renderCanvas(){
     const off=[px,py];
     const [x1,y1]=clip(a,bx+px,by+py,off),[x2,y2]=clip(b,ax+px,ay+py,off);
     const sel=ui.sel?.t==='edge'&&ui.sel.id===e.id,h=hit?.edges.has(e.id);
-    const mk=h?'arH':sel?'arS':'ar';
-    const cls='edge'+(sel?' sel':'')+(h?' hit':'')+(hit&&!h?' dim':'');
+    const ie=inc?.edges.has(e.id);
+    const mk=h?'arH':sel?'arS':ie?'arI':'ar';
+    const cls='edge'+(sel?' sel':'')+(h?' hit':'')+(ie?' inc':'')+(hit&&!h?' dim':'');
     const dash=MEDIA[e.medium]?.d||'';
     const ms=e.dir==='both'?`marker-start="url(#${mk})"`:'',me=e.dir==='none'?'':`marker-end="url(#${mk})"`;
     let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
@@ -588,7 +680,8 @@ function renderCanvas(){
   });
   D.nodes.forEach(n=>{
     const {w,h}=dims(n),sel=ui.sel?.t==='node'&&ui.sel.id===n.id,hn=hit?.nodes.has(n.id);
-    const cls='node'+(n.deviceId?'':' txt')+(sel?' sel':'')+(hn?' hit':'')+(hit&&!hn&&n.deviceId?' dim':'');
+    const ic=inc?.nodes.get(n.id),isAct=act.nodes.has(n.id);
+    const cls='node'+(n.deviceId?'':' txt')+(sel?' sel':'')+(hn?' hit':'')+(ic?' inc':'')+(isAct&&L!=='ocultas'?' act':'')+(hit&&!hn&&n.deviceId?' dim':'');
     let s=`<g class="${cls}" data-node="${n.id}" transform="translate(${n.x},${n.y})">`;
     if(n.deviceId){const d=devById(n.deviceId)||{name:'(equipo eliminado)',ip:'',type:'Otro'};
       s+=`<rect class="nb" width="${w}" height="${h}" rx="7"/>${nodeIcon(d.type)}
@@ -596,6 +689,8 @@ function renderCanvas(){
     }else{
       s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0">${String(n.text||'').split('\n').map((l,i)=>`<tspan x="5" dy="${i?18:18}">${esc(l)||' '}</tspan>`).join('')}</text>`;
     }
+    if(ic){s=s.replace('<rect class="nb"',`<rect class="halo" x="-3" y="-3" width="${w+6}" height="${h+6}" rx="9"/><rect class="nb"`);
+      const lab=L==='historial'?String(ic.size):'!';s+=`<g class="ibadge"><circle cx="${w-4}" cy="4" r="9"/><text x="${w-4}" y="8" text-anchor="middle">${lab}</text><title>${esc([...ic].map(id=>S.incidents.find(x=>x.id===id)?.title).filter(Boolean).join('\n'))}</title></g>`;}
     s+=`<circle class="hd" data-handle="${n.id}" cx="${w}" cy="${h/2}" r="6.5"/></g>`;
     out+=s;
   });
@@ -655,6 +750,8 @@ svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!
 $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,r.height/2);};
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
+$('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
+setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
 $('#tAddTxt').onclick=()=>{if(!ui.folder)return;const D=getDiag(ui.folder,true),c=centerPt();const n={id:uid('t'),text:'Nota',x:Math.round(c.x-30),y:Math.round(c.y-15)};D.nodes.push(n);ui.sel={t:'node',id:n.id};save();renderCanvas();renderInsp();setTimeout(()=>{const t=$('#nTxt');if(t){t.focus();t.select();}},30);};
 $('#tAddDev').onclick=()=>pickDevModal();
@@ -705,6 +802,8 @@ function renderInsp(){
       ${conns.length?`<div class="acc"><span class="lbl">Puertos en este diagrama</span>${conns.map(c=>`<div class="kv"><dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd></div>`).join('')}</div>`:''}
       ${devicePorts(d.id).length?`<div class="acc"><span class="lbl">Ver impacto por puerto</span><div class="chips">${devicePorts(d.id).map(p=>`<span class="chip" data-imp="${d.id}" data-port="${esc(p)}">${esc(p)}</span>`).join('')}</div></div>`:''}
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
+      ${(()=>{const ai=activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)),all=S.incidents.filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)).length;
+        return `<div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="sub">${all} en total para este equipo</span><button class="btn sm dan" data-act="incFromNode" data-devid="${d.id}">Registrar incidencia</button></div>`;})()}
       <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button><button class="btn sm dan" data-act="delSel">Quitar del diagrama</button></div>`;
     return;
   }
@@ -859,7 +958,7 @@ function askMerge(inc){
     <button data-m="replace"><b>Reemplazar todo</b><span>Tu información actual se sustituye por la del archivo. Exporta un respaldo antes.</span></button></div>`,[{l:'Cancelar'}]);
   $('#mB').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;
     if(b.dataset.m==='replace'){const owner=S.meta.owner;S={...emptyData(),...inc,meta:{...emptyData().meta,owner,lastExport:S.meta.lastExport}};S.diagrams=S.diagrams||{};ensureTypes(S);ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save();closeModal();renderAll();requestAnimationFrame(fit);toast('Datos reemplazados');}
-    else{const r=mergeData(inc);closeModal();renderAll();modal('Combinación lista',`<dl class="kv"><dt>Equipos nuevos</dt><dd>${r.dev}</dd><dt>Equipos empatados</dt><dd>${r.devMatch}</dd><dt>Carpetas nuevas</dt><dd>${r.fol}</dd><dt>Conexiones nuevas</dt><dd>${r.edges}</dd></dl>`,[{l:'Listo',k:'pri'}]);}
+    else{const r=mergeData(inc);closeModal();renderAll();modal('Combinación lista',`<dl class="kv"><dt>Equipos nuevos</dt><dd>${r.dev}</dd><dt>Equipos empatados</dt><dd>${r.devMatch}</dd><dt>Carpetas nuevas</dt><dd>${r.fol}</dd><dt>Conexiones nuevas</dt><dd>${r.edges}</dd><dt>Incidencias nuevas</dt><dd>${r.inc||0}</dd></dl>`,[{l:'Listo',k:'pri'}]);}
   };
 }
 function mergeData(inc){
@@ -895,6 +994,7 @@ function mergeData(inc){
       const dup=D.edges.some(x=>((x.from===a&&x.to===b&&norm(x.fp)===norm(e.fp)&&norm(x.tp)===norm(e.tp))||(x.from===b&&x.to===a&&norm(x.fp)===norm(e.tp)&&norm(x.tp)===norm(e.fp))));
       if(!dup){D.edges.push({...e,id:D.edges.some(x=>x.id===e.id)?uid('e'):e.id,from:a,to:b});r.edges++;}});
   });
+  (inc.incidents||[]).forEach(i=>{if(S.incidents.some(x=>x.id===i.id))return;const sc=(i.scope||[]).map(x=>({dev:dm[x.dev],port:x.port||''})).filter(x=>x.dev);S.incidents.push({...i,scope:sc});r.inc=(r.inc||0)+1;});
   S.meta.example=S.meta.example&&!r.dev&&!r.fol;ensureTypes(S);
   if(!ui.folder)ui.folder=firstLeaf();
   save();return r;
@@ -1019,6 +1119,101 @@ function typeDeleteModal(name){
       S.types=S.types.filter(t=>t.name!==name);save();renderAll();typesModal();toast('Tipo eliminado');}}]);
 }
 
+
+/* ---------- incidencias ---------- */
+const SEV={critica:'Crítica',mayor:'Mayor',menor:'Menor'};
+const CAUSES=['Corte de fibra','Falla eléctrica','Falla de equipo','Mantenimiento','Configuración','Saturación','Proveedor / upstream','Clima','Vandalismo / robo','Otro'];
+const PERIODS={'30':'30 días','90':'90 días','365':'12 meses','all':'Todo'};
+const activeIncs=()=>(S.incidents||[]).filter(i=>!i.end);
+function periodIncs(){const p=S.meta.incPeriod||'90';if(p==='all')return S.incidents||[];const lim=Date.now()-(+p)*86400000;return (S.incidents||[]).filter(i=>{const d=parseDT(i.start);return d&&d.getTime()>=lim;});}
+function incAffect(inc){const fids=new Set(),clients=new Set();(inc.scope||[]).forEach(sc=>{if(!sc.dev)return;impactOf(sc.dev,sc.port).forEach(it=>{fids.add(it.fid);const c=clientOf(it.fid);if(c)clients.add(c.id);});});return{fids,clients};}
+function incHits(fid,list){
+  const nodes=new Map(),edges=new Set(),hl=[];
+  list.forEach(inc=>{let any=false;(inc.scope||[]).forEach(sc=>{if(!sc.dev)return;const it=impactOf(sc.dev,sc.port).find(i=>i.fid===fid);if(!it)return;any=true;
+    it.nodes.forEach(n=>{if(!nodes.has(n))nodes.set(n,new Set());nodes.get(n).add(inc.id);});it.edges.forEach(e=>edges.add(e));});if(any)hl.push(inc);});
+  return{nodes,edges,list:hl};
+}
+function incCard(i){const a=incAffect(i),act=!i.end;
+  return `<button class="icard${act?' act':''}" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>${act?`Activa · ${fmtDur(i.start)}`:`${fmtDT(i.start)} · duró ${fmtDur(i.start,i.end)}`}</span>
+    <b>${esc(i.title||'(sin título)')}</b>${i.ticket||i.cause?`<span class="it">${esc([i.ticket,i.cause].filter(Boolean).join(' · '))}</span>`:''}
+    <span class="ia">${a.fids.size} servicio${a.fids.size===1?'':'s'} · ${a.clients.size} cliente${a.clients.size===1?'':'s'}</span></button>`;}
+function sideIncidents(){
+  const f=ui.incFilter||'activas',q=fold(ui.incQ||'');
+  let list=[...(S.incidents||[])].filter(i=>f==='todas'||(f==='activas'?!i.end:!!i.end))
+    .filter(i=>!q||fold([i.title,i.ticket,i.vendorTicket,i.cause,i.notes].join(' ')).includes(q))
+    .sort((a,b)=>(!a.end-!b.end)*-1||String(b.start).localeCompare(String(a.start)));
+  const na=activeIncs().length;
+  // ranking
+  const per=S.meta.incPeriod||'90',pl=periodIncs(),dc={},cc={};
+  pl.forEach(i=>{const ds=new Set((i.scope||[]).map(x=>x.dev).filter(Boolean));ds.forEach(d=>dc[d]=(dc[d]||0)+1);incAffect(i).clients.forEach(c=>cc[c]=(cc[c]||0)+1);});
+  const rk=(obj,nameOf,attr)=>{const arr=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,8),mx=arr[0]?.[1]||1;
+    return arr.length?`<div class="rank">${arr.map(([id,n])=>`<button ${attr}="${id}"><span class="nm">${esc(nameOf(id))}</span><span class="bar"><i style="width:${n/mx*100}%"></i></span><span class="n">${n}</span></button>`).join('')}</div>`:'<p class="sub" style="color:var(--muted);margin:0">Sin incidencias en este periodo.</p>';};
+  return `<div class="paneHead"><span class="lbl grow">${na} activa${na===1?'':'s'}</span><button class="btn sm dan" data-act="newInc">+ Incidencia</button></div>
+   <div class="seg">${['activas','cerradas','todas'].map(k=>`<button data-incf="${k}" class="${f===k?'on':''}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+   <input class="inp" id="incQ" type="search" placeholder="Buscar por ticket, título, causa…" style="margin-bottom:8px">
+   <div class="ilist">${list.map(incCard).join('')||`<p class="sub" style="color:var(--muted)">${f==='activas'?'No hay incidencias activas.':'Sin incidencias.'}</p>`}</div>
+   <hr class="sep" style="margin:14px 0 10px">
+   <div class="paneHead"><span class="lbl grow">Más afectados</span><select class="layerSel" id="incPer">${Object.entries(PERIODS).map(([k,v])=>`<option value="${k}"${k===per?' selected':''}>${v}</option>`).join('')}</select></div>
+   <p class="sub" style="color:var(--muted);margin:0 0 6px;font-size:12px">${pl.length} incidencia${pl.length===1?'':'s'} en el periodo. Activa la capa <b>historial</b> en el diagrama para ver dónde se concentran.</p>
+   <span class="lbl">Equipos</span>${rk(dc,id=>devById(id)?.name||'(eliminado)','data-rkdev')}
+   <span class="lbl" style="display:block;margin-top:10px">Clientes</span>${rk(cc,id=>folById(id)?.name||'(eliminado)','data-rkcli')}`;
+}
+let iDraft=null;
+function incModal(id,prefill){
+  const ex=id?S.incidents.find(x=>x.id===id):null;
+  iDraft=ex?JSON.parse(JSON.stringify(ex)):{id:uid('i'),title:'',ticket:'',vendorTicket:'',cause:'',severity:'mayor',start:localDT(),end:'',notes:'',scope:prefill||[{dev:'',port:''}]};
+  if(!iDraft.scope.length)iDraft.scope=[{dev:'',port:''}];
+  modal(ex?'Incidencia':'Nueva incidencia','<div id="incBody"></div>',[
+    ...(ex?[{l:'Eliminar',k:'dan',f:()=>modal('Eliminar incidencia','<p>Se borra del historial y deja de contar en las estadísticas.</p>',[{l:'Cancelar',f:()=>incModal(id)},{l:'Eliminar',k:'dan pri',f:()=>{S.incidents=S.incidents.filter(x=>x.id!==id);save();closeModal();renderAll();toast('Incidencia eliminada');}}])}]:[]),
+    {l:'Copiar resumen',f:()=>copyText(incSummary(iDraft))},
+    {l:'Cancelar'},
+    {l:'Guardar',k:'pri',f:()=>{
+      const d=iDraft,err=$('#iErr');
+      if(!d.title.trim()){err.textContent='Escribe un título para la incidencia.';return;}
+      if(!d.start){err.textContent='Indica la fecha y hora de inicio.';return;}
+      if(d.end&&parseDT(d.end)<parseDT(d.start)){err.textContent='La hora de fin es anterior al inicio.';return;}
+      d.scope=d.scope.filter(x=>x.dev);
+      const i=S.incidents.findIndex(x=>x.id===d.id);if(i>=0)S.incidents[i]=d;else S.incidents.push(d);
+      save();closeModal();renderAll();toast(d.end?'Incidencia guardada como cerrada':'Incidencia activa guardada');}}]);
+  drawInc();
+}
+function incSummary(d){const a=incAffect(d);
+  const lines=[`${d.title} ${d.ticket?'['+d.ticket+']':''}`.trim(),`Severidad: ${SEV[d.severity]||''} · Causa: ${d.cause||'—'}`,`Inicio: ${fmtDT(d.start)}${d.end?` · Fin: ${fmtDT(d.end)} · Duración: ${fmtDur(d.start,d.end)}`:` · Activa (${fmtDur(d.start)})`}`];
+  if(d.vendorTicket)lines.push('Ticket proveedor: '+d.vendorTicket);
+  lines.push('Afectación: '+(d.scope.filter(x=>x.dev).map(x=>(devById(x.dev)?.name||'?')+(x.port?' '+x.port:' (todo el equipo)')).join(', ')||'—'));
+  lines.push(`Servicios afectados (${a.fids.size}):`);[...a.fids].forEach(f=>lines.push('- '+pathOf(f).map(x=>x.name).join(' › ')));
+  if(d.notes)lines.push('Notas: '+d.notes);return lines.join('\n');}
+function drawInc(){
+  const d=iDraft,body=$('#incBody');if(!body)return;
+  const devs=[...S.devices].sort((a,b)=>ncmp(a.name,b.name)),a=incAffect(d);
+  const byC={};[...a.fids].forEach(f=>{const c=clientOf(f);(byC[c?.name||'—']=byC[c?.name||'—']||[]).push(pathOf(f).slice(1).map(x=>x.name).join(' › ')||'(cliente)');});
+  body.innerHTML=`
+    <div class="fld"><span class="lbl">Título</span><input id="iTitle" value="${esc(d.title)}" placeholder="Corte de fibra tramo GPE–Apodaca"></div>
+    <div class="three"><div class="fld"><span class="lbl">Ticket de red</span><input id="iTicket" class="mono" value="${esc(d.ticket)}" placeholder="NOC-12345"></div>
+      <div class="fld"><span class="lbl">Ticket proveedor</span><input id="iVendor" class="mono" value="${esc(d.vendorTicket||'')}" placeholder="Opcional"></div>
+      <div class="fld"><span class="lbl">Severidad</span><select id="iSev">${Object.entries(SEV).map(([k,v])=>`<option value="${k}"${d.severity===k?' selected':''}>${v}</option>`).join('')}</select></div></div>
+    <div class="fld"><span class="lbl">Causa</span><input id="iCause" list="dlCause" value="${esc(d.cause)}" placeholder="Elige o escribe"><datalist id="dlCause">${CAUSES.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+    <div class="two"><div class="fld"><span class="lbl">Inicio</span><input type="datetime-local" id="iStart" value="${esc(d.start)}"></div>
+      <div class="fld"><span class="lbl">Fin ${d.end?'':'(vacío = activa)'}</span><div style="display:flex;gap:6px"><input type="datetime-local" id="iEnd" value="${esc(d.end)}" style="flex:1;min-width:0">${d.end?'<button class="btn sm" id="iReopen" title="Reabrir">Reabrir</button>':'<button class="btn sm pri" id="iCloseNow">Cerrar ahora</button>'}</div></div></div>
+    <div class="fld"><span class="lbl">Equipos y puertos afectados</span><div class="scope">${d.scope.map((sc,k)=>`<div class="scRow"><select data-scd="${k}"><option value="">Equipo…</option>${devs.map(x=>`<option value="${x.id}"${x.id===sc.dev?' selected':''}>${esc(x.name)}</option>`).join('')}</select>
+        <select data-scp="${k}" ${sc.dev?'':'disabled'}><option value="">Todo el equipo</option>${sc.dev?devicePorts(sc.dev).map(p=>`<option${norm(p)===norm(sc.port)?' selected':''}>${esc(p)}</option>`).join(''):''}</select>
+        <button class="btn ic sm ghost" data-scx="${k}" aria-label="Quitar">✕</button></div>`).join('')}
+      <div><button class="btn sm" id="iAddSc">+ Agregar equipo</button></div></div></div>
+    <div class="affect"><b>${a.fids.size} servicio${a.fids.size===1?'':'s'} de ${a.clients.size} cliente${a.clients.size===1?'':'s'} afectados</b>${Object.entries(byC).map(([c,l])=>`<span><b style="color:var(--ink)">${esc(c)}</b>: ${l.map(esc).join(', ')}</span>`).join('')}</div>
+    <div class="fld" style="margin-top:10px"><span class="lbl">Notas / bitácora</span><textarea id="iNotes" rows="3" placeholder="Avances, contacto con proveedor, cuadrilla…">${esc(d.notes)}</textarea></div>
+    <div class="err" id="iErr"></div>`;
+  const bind=(id,k)=>{$(id).oninput=e=>{d[k]=e.target.value;};};
+  bind('#iTitle','title');bind('#iTicket','ticket');bind('#iVendor','vendorTicket');bind('#iCause','cause');bind('#iNotes','notes');bind('#iStart','start');
+  $('#iSev').onchange=e=>d.severity=e.target.value;
+  $('#iEnd').onchange=e=>{d.end=e.target.value;drawInc();};
+  if($('#iCloseNow'))$('#iCloseNow').onclick=()=>{d.end=localDT();drawInc();};
+  if($('#iReopen'))$('#iReopen').onclick=()=>{d.end='';drawInc();};
+  body.querySelectorAll('[data-scd]').forEach(el=>el.onchange=()=>{const sc=d.scope[+el.dataset.scd];sc.dev=el.value;sc.port='';drawInc();});
+  body.querySelectorAll('[data-scp]').forEach(el=>el.onchange=()=>{d.scope[+el.dataset.scp].port=el.value;drawInc();});
+  body.querySelectorAll('[data-scx]').forEach(el=>el.onclick=()=>{d.scope.splice(+el.dataset.scx,1);if(!d.scope.length)d.scope.push({dev:'',port:''});drawInc();});
+  $('#iAddSc').onclick=()=>{d.scope.push({dev:'',port:''});drawInc();};
+}
+
 function settingsModal(){
   modal('Ajustes',`<div class="fld"><span class="lbl">Tu nombre</span><input id="sOwner" value="${esc(S.meta.owner||'')}" placeholder="Se usa en el nombre del archivo exportado"></div>
     <p class="sub" style="color:var(--muted)">Tu información vive solo en este navegador. Si borras los datos del sitio o cambias de equipo, la recuperas importando tu último JSON exportado.</p>
@@ -1058,6 +1253,10 @@ document.addEventListener('click',e=>{
   const tog=t.closest('[data-tog]');if(tog){e.stopPropagation();const id=tog.dataset.tog;ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}
   const ac=t.closest('[data-addchild]');if(ac){const p=folById(ac.dataset.addchild);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
   const ef=t.closest('[data-editf]');if(ef){folderModal(ef.dataset.editf);return;}
+  const ic=t.closest('[data-inc]');if(ic){incModal(ic.dataset.inc);return;}
+  const icf=t.closest('[data-incf]');if(icf){ui.incFilter=icf.dataset.incf;renderSide();return;}
+  const rd=t.closest('[data-rkdev]');if(rd){setImpact(rd.dataset.rkdev,'');return;}
+  const rcl=t.closest('[data-rkcli]');if(rcl){openFolder(rcl.dataset.rkcli);return;}
   const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
   const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
   const op=t.closest('[data-open]');if(op){sres.hidden=true;openFolder(op.dataset.open);return;}
@@ -1070,6 +1269,9 @@ document.addEventListener('click',e=>{
     case 'newClient':folderModal(null,null,'cliente');break;
     case 'newDev':ui.addAfterCreate=false;devModal(null);break;
     case 'csv':csvModal();break;
+    case 'newInc':incModal(null);break;
+    case 'incFromImp':incModal(null,[{dev:ui.impact.dev,port:ui.impact.port||''}]);break;
+    case 'incFromNode':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
     case 'types':typesModal();break;
     case 'wipe':wipeModal();break;
     case 'clearImp':ui.impact=null;renderAll();break;
@@ -1082,8 +1284,9 @@ document.addEventListener('click',e=>{
       copyText(txt);break;}
   }
 });
-$('#pane').addEventListener('input',e=>{if(e.target.id==='devQ'){ui.devQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#devQ');i.focus();i.setSelectionRange(p,p);}});
+$('#pane').addEventListener('input',e=>{if(e.target.id==='incQ'){ui.incQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#incQ');i.focus();i.setSelectionRange(p,p);return;}if(e.target.id==='devQ'){ui.devQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#devQ');i.focus();i.setSelectionRange(p,p);}});
 $('#pane').addEventListener('change',e=>{
+  if(e.target.id==='incPer'){S.meta.incPeriod=e.target.value;save(false);renderAll();return;}
   if(e.target.id==='impDev'){ui.impact=e.target.value?{dev:e.target.value,port:''}:null;renderAll();}
   if(e.target.id==='impPort'){ui.impact.port=e.target.value;renderAll();}
 });
