@@ -49,6 +49,8 @@ Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio ›
 
 En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tabla editas directo en cada celda (nombre, IP, tipo, marca, modelo, referencia, acceso, puertos/IPs, notas); el cambio se guarda al salir de la celda (**Enter** baja a la fila siguiente, **Esc** deshace). Las redes **V / T / D** se activan con un clic. La ubicación va en columnas **Ciudad, Edificio, Sitio, Piso, Sala, Gabinete y Rack**: escribe o elige de la lista (solo muestra lo que existe dentro del nivel de arriba); si capturas directo un nivel bajo que ya existe, los de arriba se llenan solos, y si llenas un nivel intermedio que faltaba, queda insertado para todos los equipos de ese lugar. **📍** abre el catálogo, y clic en el título de una columna ordena. El acceso se escribe como `ssh, telnet:2323, web:8443`. **＋ Fila nueva** agrega un equipo en blanco. Los filtros de red, búsqueda y "solo con incidencia" también aplican a la tabla, y se recuerda la vista que elegiste.
 
+En el panel de **Clientes** (y en la lista del mapa general) cada cliente va en un bloque sombreado con su color, para ver fácil dónde empieza y dónde termina.
+
 ## Mapa general
 
 El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
@@ -85,6 +87,8 @@ Mientras dibujas un diagrama, el panel derecho (sin nada seleccionado) y la vent
 ## Elementos sin inventario
 
 Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme, splitter, ODF, poste, registro, un proveedor externo…) usa **+ Elemento** (panel derecho) o **Elemento conectado** en el menú **+** de un equipo.
+
+**Tipos de elemento propios:** en la ventana de **+ Elemento** (o *Elemento conectado* del menú +) presiona **＋ Nuevo tipo**, ponle nombre, ícono, forma y color, y se queda guardado como opción del menú para todos tus diagramas (viaja en tu JSON). La ✕ en la esquina lo quita del menú sin borrar los elementos ya dibujados.
 
 - No se agregan al inventario ni cuentan en el análisis de impacto o el mapa general.
 - Puedes poner **varios en el mismo diagrama** (botón **Duplicar**), con nombre, texto debajo (hilos, poste…), forma, ícono, color y notas.

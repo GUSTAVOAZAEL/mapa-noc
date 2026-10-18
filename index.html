@@ -89,6 +89,9 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 /* árbol */
 .tree,.tree ul{list-style:none;margin:0;padding:0}
 .tree ul{padding-left:14px;border-left:1px solid var(--line);margin-left:9px}
+.tree>li,.mtree>li{background:color-mix(in srgb,var(--cc,var(--accent)) 6%,transparent);border:1px solid color-mix(in srgb,var(--cc,var(--accent)) 20%,transparent);border-left:3px solid var(--cc,var(--accent));border-radius:8px;padding:3px 4px 5px;margin-bottom:7px}
+.tree>li>.row,.mtree>li>.mrow{background:color-mix(in srgb,var(--cc,var(--accent)) 15%,transparent);font-weight:600}
+.tree>li>.row.on{background:var(--accent-soft)}
 .row{display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 4px;cursor:pointer;min-width:0}
 .row:hover{background:var(--panel-2)}
 .row.on{background:var(--accent-soft)}
@@ -1035,7 +1038,7 @@ function sideClients(){
   const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
-      return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="Arrastra para mover a otro cliente o sitio">
+      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="Arrastra para mover a otro cliente o sitio">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
         <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${(f.alsoIn||[]).length?`<span title="Línea privada: también en ${esc(f.alsoIn.map(x=>folById(x)?.name).filter(Boolean).join(', '))}" style="color:var(--accent);font-size:12px">↔</span>`:''}${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
@@ -1349,22 +1352,43 @@ $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
 
+const elPresets=()=>[...EL_PRESETS.map(([l,ic,sh])=>({l,ic,sh,c:''})),...(S.elTypes||[]).map(t=>({l:t.name,ic:t.icon,sh:t.shape,c:t.color||'',id:t.id}))];
 const EL_PRESETS=[['Caja de empalme','Mufla','small'],['Splitter','Splitter','small'],['ODF','ODF','small'],['Poste','Torre','icon'],['Registro / pozo','Rack','small'],['Proveedor / ISP','Nube','cloud'],['Anillo','Anillo','ring'],['Otro','Otro','small']];
 function addElement(fromId){
   if(!ui.folder||ui.folder===MAP)return;
   modal('Agregar elemento',`<p class="sub" style="color:var(--muted);margin:0 0 10px">Para cosas que van en el diagrama pero no se inventarían ni se gestionan. Puedes repetirlo cuantas veces quieras.</p>
     <div class="fld"><span class="lbl">Nombre</span><input id="elNew" placeholder="Caja de empalme 12"></div>
-    <div class="fld"><span class="lbl">Tipo</span><div class="igrid">${EL_PRESETS.map(([l,ic,sh],i)=>`<button data-elp="${i}" class="${i===0?'on':''}"><svg width="20" height="20" viewBox="0 0 18 18">${glyph(ic)}</svg>${l}</button>`).join('')}</div></div>`,
+    <div class="fld"><span class="lbl">Tipo</span><div class="igrid" id="elGrid"></div></div>
+    <div id="elNewT" hidden class="pnew" style="margin-top:8px"><b>Nuevo tipo de elemento</b>
+      <input class="inp" id="etName" placeholder="Nombre del tipo (ej. Gabinete exterior, Repetidor, Mufla 48h)">
+      <span class="lbl">Ícono</span><div class="igrid" id="etIcons" style="max-height:150px;overflow:auto">${Object.keys(GLYPHS).map((k,i)=>`<button type="button" data-eti="${esc(k)}" class="${i===0?'on':''}" title="${esc(k)}"><svg width="20" height="20" viewBox="0 0 18 18">${glyph(k)}</svg>${esc(k)}</button>`).join('')}</div>
+      <div class="two"><div><span class="lbl">Forma</span><select class="inp" id="etShape">${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${k==='small'?' selected':''}>${v}</option>`).join('')}</select></div>
+      <div><span class="lbl">Color</span><div class="sw" id="etCol">${TYPE_COLORS.map((c,i)=>`<button type="button" data-etc="${c}" class="${i===0?'on':''}" style="background:${c||'var(--muted)'}"></button>`).join('')}</div></div></div>
+      <div style="display:flex;gap:6px"><button type="button" class="btn sm pri" id="etSave">Guardar tipo</button><button type="button" class="btn sm" id="etCancel">Cancelar</button></div></div>`,
     [{l:'Cancelar'},{l:'Agregar',k:'pri',f:()=>{
-      const pi=+($('#mB .igrid .on')?.dataset.elp||0),[pl,ic,sh]=EL_PRESETS[pi],D=getDiag(ui.folder,true);
-      const n={id:uid('x'),el:true,label:$('#elNew').value.trim()||pl,icon:ic,shape:sh,x:0,y:0};
+      const pi=+($('#elGrid .on')?.dataset.elp||0),P=elPresets()[pi]||elPresets()[0],pl=P.l,sh=P.sh,D=getDiag(ui.folder,true);
+      const n={id:uid('x'),el:true,label:$('#elNew').value.trim()||pl,icon:P.ic,shape:sh,x:0,y:0};if(P.c)n.color=P.c;if(P.id)n.elType=P.id;ui.lastEl=pi;
       const from=fromId&&D.nodes.find(x=>x.id===fromId);
       if(from){const G=geom(from);n.x=Math.round((from.x+G.w+110)/8)*8;n.y=Math.round((from.y+G.c[1]-SH[sh].c[1])/8)*8;}
       else{const c=centerPt();n.x=Math.round((c.x-62)/8)*8;n.y=Math.round((c.y-17)/8)*8;}
       D.nodes.push(n);
       if(from){const ed={id:uid('e'),from:from.id,to:n.id,fp:'',tp:'',medium:'fibra',label:'',dir:'none'};D.edges.push(ed);}
       ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};save();closeModal();renderAll();showNode(n);}}]);
-  $('#mB').onclick=e=>{const b=e.target.closest('[data-elp]');if(!b)return;$('#mB').querySelectorAll('[data-elp]').forEach(x=>x.classList.toggle('on',x===b));const i=$('#elNew');if(!i.value.trim())i.placeholder=EL_PRESETS[+b.dataset.elp][0];};
+  let cur=Math.min(ui.lastEl||0,elPresets().length-1);
+  const drawG=()=>{$('#elGrid').innerHTML=elPresets().map((P,i)=>`<button type="button" data-elp="${i}" class="${i===cur?'on':''}" style="position:relative"><svg width="20" height="20" viewBox="0 0 18 18" style="color:${P.c||'var(--ink)'}">${glyph(P.ic)}</svg>${esc(P.l)}${P.id?`<span data-eldel="${P.id}" title="Quitar este tipo del menú" style="position:absolute;top:1px;right:4px;font-size:11px;color:var(--muted)">✕</span>`:''}</button>`).join('')+`<button type="button" data-elnewt="1" title="Crear un tipo de elemento que se quede en este menú"><span style="font-size:18px;line-height:20px">＋</span>Nuevo tipo</button>`;
+    const i=$('#elNew');if(i&&!i.value.trim())i.placeholder=elPresets()[cur]?.l||'';};
+  drawG();
+  $('#mB').onclick=e=>{const t=e.target;
+    const del=t.closest('[data-eldel]');if(del){e.stopPropagation();const tt=(S.elTypes||[]).find(x=>x.id===del.dataset.eldel);if(tt&&confirm(`¿Quitar el tipo «${tt.name}» del menú? Los elementos ya dibujados se quedan.`)){S.elTypes=S.elTypes.filter(x=>x!==tt);cur=0;save();drawG();}return;}
+    if(t.closest('[data-elnewt]')){$('#elNewT').hidden=false;$('#etName').focus();return;}
+    const b=t.closest('[data-elp]');if(b){cur=+b.dataset.elp;drawG();return;}
+    const ic=t.closest('[data-eti]');if(ic){$('#etIcons').querySelectorAll('[data-eti]').forEach(x=>x.classList.toggle('on',x===ic));return;}
+    const cc=t.closest('[data-etc]');if(cc){$('#etCol').querySelectorAll('[data-etc]').forEach(x=>x.classList.toggle('on',x===cc));return;}
+    if(t.id==='etCancel'){$('#elNewT').hidden=true;return;}
+    if(t.id==='etSave'){const name=$('#etName').value.trim();if(!name){toast('Escribe el nombre del tipo');$('#etName').focus();return;}
+      if(elPresets().some(P=>fold(P.l)===fold(name))){toast('Ya existe un tipo con ese nombre');return;}
+      S.elTypes=S.elTypes||[];S.elTypes.push({id:uid('et'),name,icon:$('#etIcons .on')?.dataset.eti||'Otro',shape:$('#etShape').value,color:$('#etCol .on')?.dataset.etc||''});
+      cur=elPresets().length-1;save();$('#elNewT').hidden=true;$('#etName').value='';drawG();toast(`Tipo «${name}» agregado al menú`);return;}};
   $('#elNew').onkeydown=e=>{if(e.key==='Enter')$('#mF .pri').click();};
 }
 function addText(){if(!ui.folder)return;const D=getDiag(ui.folder,true),c=centerPt();const n={id:uid('t'),text:'Nota',x:Math.round(c.x-30),y:Math.round(c.y-15)};D.nodes.push(n);ui.sel={t:'node',id:n.id};save();renderCanvas();renderInsp();setTimeout(()=>{const t=$('#nTxt');if(t){t.focus();t.select();}},30);}
@@ -1550,7 +1574,7 @@ function sideMap(){
   const dsub=id=>subtree(id).filter(x=>all.includes(x));
   const branch=pid=>{const ks=kids(pid).filter(f=>dsub(f.id).length);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="mtree"')+'>'+ks.map(f=>{const ds=dsub(f.id),on=ds.filter(x=>sel.has(x)).length,own=all.includes(f.id);
-      return `<li><label class="mrow"><input type="checkbox" data-mapf="${f.id}"${on===ds.length?' checked':''}${on&&on<ds.length?' data-ind="1"':''}>${own?`<span class="dotc" style="background:${svcColor(f.id)}"></span>`:''}<span class="nm" title="${esc(svcName(f.id))}">${esc(f.name)}</span>${own?`<button class="open" data-open="${f.id}" title="Abrir diagrama">abrir ↗</button>`:''}</label>${branch(f.id)}</li>`;}).join('')+'</ul>';};
+      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><label class="mrow"><input type="checkbox" data-mapf="${f.id}"${on===ds.length?' checked':''}${on&&on<ds.length?' data-ind="1"':''}>${own?`<span class="dotc" style="background:${svcColor(f.id)}"></span>`:''}<span class="nm" title="${esc(svcName(f.id))}">${esc(f.name)}</span>${own?`<button class="open" data-open="${f.id}" title="Abrir diagrama">abrir ↗</button>`:''}</label>${branch(f.id)}</li>`;}).join('')+'</ul>';};
   // compartidos
   const D=getDiag(MAP),shared=D.nodes.filter(n=>n.svcCount>1).sort((a,b)=>b.svcCount-a.svcCount||ncmp(devById(a.deviceId)?.name,devById(b.deviceId)?.name));
   const cls=new Set(mapSel().map(f=>clientOf(f)?.id));
@@ -2266,6 +2290,7 @@ function askMerge(inc){
 }
 function mergeData(inc){
   const r={dev:0,devMatch:0,fol:0,edges:0},dm={},fm={};
+  (inc.elTypes||[]).forEach(t=>{S.elTypes=S.elTypes||[];if(!S.elTypes.some(x=>fold(x.name)===fold(t.name)))S.elTypes.push({...t});});
   const pm={};const rkP=k=>PKINDS.indexOf(k);
   [...(inc.places||[])].sort((a,b)=>rkP(a.kind)-rkP(b.kind)).forEach(x=>{const par=x.parentId?(pm[x.parentId]||null):null;
     let m=(S.places||[]).find(y=>y.kind===x.kind&&fold(y.name)===fold(x.name)&&(y.parentId||null)===par);
