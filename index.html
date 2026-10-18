@@ -1063,7 +1063,7 @@ function sideClients(){
   const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
-      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="Arrastra para mover a otro cliente o sitio">
+      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="${f.kind==='cliente'||f.kind==='sitio'?'Clic para abrir o cerrar · arrastra para mover':'Clic para abrir el diagrama · arrastra para mover'}">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
         <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${(f.alsoIn||[]).length?`<span title="Línea privada: también en ${esc(f.alsoIn.map(x=>folById(x)?.name).filter(Boolean).join(', '))}" style="color:var(--accent);font-size:12px">↔</span>`:''}${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
@@ -2718,6 +2718,7 @@ document.addEventListener('click',e=>{
   const rcl=t.closest('[data-rkcli]');if(rcl){openFolder(rcl.dataset.rkcli);return;}
   const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
   const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
+  const op0=t.closest('[data-open]');if(op0&&op0.matches('.row[data-fdrag]')){const f=folById(op0.dataset.open);if(f&&(f.kind==='cliente'||f.kind==='sitio')){e.preventDefault();const id=f.id;if(!kids(id).length){toast(`${f.name} todavía no tiene ${f.kind==='cliente'?'sitios':'servicios'}; agrégalos con el botón +`);return;}ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}}
   const op=t.closest('[data-open]');if(op){e.preventDefault();sres.hidden=true;openFolder(op.dataset.open);return;}
   const dv=t.closest('[data-dev]');if(dv){devModal(dv.dataset.dev);return;}
   const sn=t.closest('[data-selnode]');if(sn){const n=getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
