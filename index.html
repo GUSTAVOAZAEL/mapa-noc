@@ -427,6 +427,13 @@ body.mapMode .stage{border-color:var(--accent)}
 .locWarn{background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-bottom:10px}
 .locList{display:grid;gap:10px}
 .pillTog.off{opacity:.5;text-decoration:line-through}
+.pillTog.part{border-style:dashed}
+.locPop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:10px 12px;display:grid;gap:4px;min-width:210px;font-size:13px}
+.locPop .lph{font:600 11px var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.locPop label{display:flex;align-items:center;gap:8px;padding:3px 2px;cursor:pointer;border-radius:5px}
+.locPop label:hover{background:var(--accent-soft)}
+.locPop label i{width:16px;height:0;border-top:2px solid var(--muted);display:inline-block}
+.locPop .lpb{display:flex;gap:6px;margin-top:6px}
 /* vistas de tarjetas */
 .viewSeg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--panel)}
 .viewSeg button{border:0;background:none;padding:0 12px;height:34px;cursor:pointer;color:var(--muted);font:500 13px var(--f-ui);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -813,7 +820,7 @@ function migratePlaces(d){
 function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x.id===id);
   const under=(id,anc)=>{let x=P(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=P(x.parentId);}return false;};
   (D.nodes||[]).forEach(n=>{if(!n.deviceId)return;const dev=data.devices.find(x=>x.id===n.deviceId);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
-    const gs=(D.groups||[]).filter(g=>g.placeId&&P(g.placeId)&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h).sort((a,b)=>PKINDS.indexOf(P(b.placeId).kind)-PKINDS.indexOf(P(a.placeId).kind)||a.w*a.h-b.w*b.h);
+    const gs=(D.groups||[]).filter(g=>g.placeId&&P(g.placeId)&&(data!==S||locVis(P(g.placeId).kind))&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h).sort((a,b)=>PKINDS.indexOf(P(b.placeId).kind)-PKINDS.indexOf(P(a.placeId).kind)||a.w*a.h-b.w*b.h);
     if(!gs.length)return;const pid=gs[0].placeId;if(dev.place&&(dev.place===pid||under(dev.place,pid)))return;dev.place=pid;});}
 const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
 function placeChain(id){const out=[];let x=placeById(id),gd=0;while(x&&gd++<20){out.unshift(x);x=placeById(x.parentId);}return out;}
@@ -823,12 +830,14 @@ function migrateSitio(d){d.places=d.places||[];Object.values(d.diagrams||{}).for
     let pl=d.places.find(x=>x.kind==='sitio'&&(g.siteId?x.siteId===g.siteId:fold(x.name)===fold(name)));
     if(!pl){pl={id:uid('p'),kind:'sitio',name,parentId:null};if(g.siteId)pl.siteId=g.siteId;d.places.push(pl);}g.placeId=pl.id;g.label=pl.name;}));
   Object.values(d.diagrams||{}).forEach(D=>applyGroupPlaces(D,d));}
-function locBoxes(D){return [...(D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)).map(g=>({pid:g.placeId,x:g.x,y:g.y,w:g.w,h:g.h,ex:true,g})),...autoGroups(D).map(a=>({pid:a.placeId,x:a.x,y:a.y,w:a.w,h:a.h}))];}
+const locVis=k=>!(S.meta.locHide||[]).includes(k);
+const locAllOff=()=>PKINDS.every(k=>!locVis(k));
+function locBoxes(D){return [...(D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>({pid:g.placeId,x:g.x,y:g.y,w:g.w,h:g.h,ex:true,g})),...autoGroups(D).map(a=>({pid:a.placeId,x:a.x,y:a.y,w:a.w,h:a.h}))];}
 function shiftPlace(D,pid,dx,dy){dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
   D.nodes.forEach(n=>{const dv=n.deviceId&&devById(n.deviceId);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
   (D.groups||[]).forEach(g=>{if(g.placeId&&(g.placeId===pid||placeUnder(g.placeId,pid))){g.x+=dx;g.y+=dy;}});}
 /* Separa los grupos de ubicación para que no se encimen: hermanos lado a lado y equipos ajenos fuera */
-function fixLoc(D){if(!D||ui.folder===MAP||S.meta.autoLoc===false)return 0;let moves=0;const G=18;
+function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;let moves=0;const G=18;
   for(let it=0;it<80;it++){const B=locBoxes(D);if(!B.length)break;const byP={};B.forEach(b=>byP[b.pid]=b);
     const parentOf=b=>{let p=placeById(placeById(b.pid)?.parentId),gd=0;while(p&&gd++<20){if(byP[p.id])return p.id;p=placeById(p.parentId);}return '';};
     const sib={};B.forEach(b=>{const k=parentOf(b);(sib[k]=sib[k]||[]).push(b);});let did=false;
@@ -852,12 +861,14 @@ function placeNewNode(D,n){const dv=devById(n.deviceId);if(!dv||!dv.place)return
   let x=b.x+b.w-14+24,y=b.y+36;if(!b.ex){/* junto a los demás equipos de esa ubicación */}
   let gd=0;while(hit(x,y)&&gd++<30)y+=gn.h+24;n.x=Math.round(x/8)*8;n.y=Math.round(y/8)*8;return true;}
 function placeColor(pid){for(const D of Object.values(S.diagrams||{}))for(const g of (D.groups||[]))if(g.placeId===pid&&g.color)return g.color;return '';}
-function autoGroups(D){if(!D||ui.folder===MAP||S.meta.autoLoc===false)return [];
-  const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)).map(g=>g.placeId)),box={},dep={};
+function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];
+  const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>g.placeId)),box={},dep={};
   const ext=(pid,x0,y0,x1,y1)=>{const b=box[pid];if(!b)box[pid]=[x0,y0,x1,y1];else{b[0]=Math.min(b[0],x0);b[1]=Math.min(b[1],y0);b[2]=Math.max(b[2],x1);b[3]=Math.max(b[3],y1);}};
   D.nodes.forEach(n=>{if(!n.deviceId)return;const dv=devById(n.deviceId);if(!dv||!dv.place)return;const d=dims(n);placeChain(dv.place).forEach((p,i)=>{dep[p.id]=i;ext(p.id,n.x,n.y,n.x+d.w,n.y+d.h+6);});});
-  (D.groups||[]).forEach(g=>{if(!g.placeId||!placeById(g.placeId))return;placeChain(g.placeId).slice(0,-1).forEach((p,i)=>{dep[p.id]=i;ext(p.id,g.x,g.y,g.x+g.w,g.y+g.h);});});
-  const out=[];Object.keys(box).sort((a,b)=>dep[b]-dep[a]).forEach(pid=>{if(ex.has(pid)||placeChain(pid).slice(0,-1).some(p=>ex.has(p.id)))return;const pl=placeById(pid),b=box[pid],r=[b[0]-14,b[1]-36,b[2]+14,b[3]+12];
+  (D.groups||[]).forEach(g=>{if(!g.placeId||!placeById(g.placeId)||!ex.has(g.placeId))return;placeChain(g.placeId).slice(0,-1).forEach((p,i)=>{dep[p.id]=i;ext(p.id,g.x,g.y,g.x+g.w,g.y+g.h);});});
+  const out=[];Object.keys(box).sort((a,b)=>dep[b]-dep[a]).forEach(pid=>{if(ex.has(pid)||placeChain(pid).slice(0,-1).some(p=>ex.has(p.id)))return;const pl=placeById(pid),b=box[pid];
+    if(!locVis(pl.kind)){if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...b);return;}
+    const r=[b[0]-14,b[1]-36,b[2]+14,b[3]+12];
     out.push({id:'ag:'+pid,auto:true,ro:true,kind:pl.kind,placeId:pid,label:pl.name,color:placeColor(pid),x:r[0],y:r[1],w:r[2]-r[0],h:r[3]-r[1]});
     if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...r);});
   return out;}
@@ -1098,10 +1109,10 @@ function mlines(x,y,t,n,attrs){const L=wrapTxt(t,n);return `<text x="${x}" y="${
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
   document.querySelectorAll('[data-act=addDev],[data-act=addTxt],[data-act=addGrp],[data-act=addEl]').forEach(b=>b.disabled=!fid||fid===MAP);
-  document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#autoLocTog').classList.toggle('off',S.meta.autoLoc===false);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
+  document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#autoLocTog').classList.toggle('off',locAllOff());$('#autoLocTog').classList.toggle('part',!locAllOff()&&(S.meta.locHide||[]).length>0);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
   if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
-  if(fid===MAP&&S.meta.mapLoc!==false&&ui.mapLOC)D.groups=mapGroups(D.nodes,ui.mapLOC);
+  if(fid===MAP&&ui.mapLOC)D.groups=mapGroups(D.nodes,ui.mapLOC);
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
   const path=pathOf(fid);
   if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.length} equipos</span>`;}
@@ -1127,8 +1138,8 @@ function renderCanvas(){
   // grupos (detrás)
   const inside=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
   let out='';const AG=ui.ag=autoGroups(D);
-  const locOff=S.meta.autoLoc===false&&ui.folder!==MAP;
-  [...D.groups.filter(g=>!(locOff&&(g.placeId||PKINDS.includes(g.kind)))),...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
+  const gHid=g=>{const k=g.placeId&&placeById(g.placeId)?placeById(g.placeId).kind:g.kind;return PKINDS.includes(k)&&!locVis(k);};
+  [...D.groups.filter(g=>!gHid(g)),...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
     const col=g.color||'var(--muted)',sel=(ui.sel?.t==='group'||ui.sel?.t==='agroup')&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
     const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.kind==='sitio'&&folById(g.siteId)?sitePath(g.siteId):(g.label||''));
@@ -1277,7 +1288,7 @@ function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]))
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(S.meta.autoLoc!==false){if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);}save();renderInsp();rc();}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(!locAllOff()){if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);}save();renderInsp();rc();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1309,7 +1320,18 @@ $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
 $('#pillTog').onclick=()=>{S.meta.hidePills=!S.meta.hidePills;save(false);rc();};
-$('#autoLocTog').onclick=()=>{S.meta.autoLoc=S.meta.autoLoc===false;if(ui.sel?.t==='agroup'||ui.sel?.t==='group')ui.sel=null;const D=ui.folder&&ui.folder!==MAP&&S.diagrams[ui.folder];if(D&&S.meta.autoLoc&&fixLoc(D))save();else save(false);renderAll();toast(S.meta.autoLoc?'Grupos de ubicación visibles':'Grupos de ubicación ocultos');};
+function setLocHide(arr){S.meta.locHide=[...new Set(arr)].filter(k=>PKINDS.includes(k));if(ui.sel?.t==='agroup'||ui.sel?.t==='group')ui.sel=null;
+  const D=ui.folder&&ui.folder!==MAP&&S.diagrams[ui.folder];if(D&&fixLoc(D))save();else save(false);
+  renderAll();drawLocPop();}
+function drawLocPop(){const p=$('#locPop');if(!p)return;const h=new Set(S.meta.locHide||[]);
+  p.innerHTML=`<span class="lph">Niveles de ubicación visibles</span>${PKINDS.map(k=>`<label><input type="checkbox" data-lvis="${k}"${h.has(k)?'':' checked'}><i style="border-top-style:${GDASH[k]?'dashed':'solid'}"></i>${GKINDS[k]}</label>`).join('')}
+    <div class="lpb"><button class="btn sm" data-lvall="1">Todos</button><button class="btn sm" data-lvnone="1">Ninguno</button></div><span class="endHint" style="font-size:11.5px">Aplica a los diagramas y al mapa general.</span>`;}
+$('#autoLocTog').onclick=e=>{e.stopPropagation();let p=$('#locPop');if(p){p.remove();return;}
+  p=document.createElement('div');p.id='locPop';p.className='locPop';document.body.appendChild(p);drawLocPop();
+  const r=$('#autoLocTog').getBoundingClientRect();p.style.top=(r.bottom+6)+'px';p.style.left=Math.min(r.left,innerWidth-p.offsetWidth-10)+'px';
+  p.addEventListener('click',ev=>{ev.stopPropagation();if(ev.target.closest('[data-lvall]'))setLocHide([]);else if(ev.target.closest('[data-lvnone]'))setLocHide([...PKINDS]);});
+  p.addEventListener('change',ev=>{const k=ev.target.dataset.lvis;if(!k)return;const h=new Set(S.meta.locHide||[]);if(ev.target.checked)h.delete(k);else h.add(k);setLocHide([...h]);});};
+document.addEventListener('click',e=>{const p=$('#locPop');if(p&&!p.contains(e.target)&&e.target.id!=='autoLocTog')p.remove();},true);
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
@@ -1435,7 +1457,7 @@ function buildMap(){
     e.color=e.shared?'':svcColor(e.svcList[0]);e.label=e.shared?`${e.svcList.length} diagramas`:(e.label0||'');return e;});
   const LOC=collectLocations();ui.mapLOC=LOC;
   layoutMap(N,E,LOC);
-  return{nodes:N,edges:E,groups:S.meta.mapLoc===false?[]:mapGroups(N,LOC),isMap:true};
+  return{nodes:N,edges:E,groups:mapGroups(N,LOC),isMap:true};
 }
 function mapGroups(N,LOC){
   const byDev={};N.forEach(n=>byDev[n.deviceId]=n);const boxes={},out=[];
@@ -1443,7 +1465,7 @@ function mapGroups(N,LOC){
   locs.forEach(l=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,any=false;
     l.devs.forEach(d=>{const n=byDev[d];if(!n)return;any=true;const dm=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+dm.w);y1=Math.max(y1,n.y+dm.h);});
     locs.forEach(c=>{if(c.parent===l.key&&boxes[c.key]){const b=boxes[c.key];any=true;x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w);y1=Math.max(y1,b.y+b.h);}});
-    if(!any)return;const pad=16;
+    if(!any)return;if(PKINDS.includes(l.kind)&&!locVis(l.kind)){boxes[l.key]={x:x0,y:y0,w:x1-x0,h:y1-y0};return;}const pad=16;
     const b={id:'mg_'+out.length,kind:l.kind,label:l.label,color:l.color||'',notes:l.notes,x:x0-pad,y:y0-pad-26,w:x1-x0+pad*2,h:y1-y0+pad*2+26,ro:true};
     boxes[l.key]=b;out.push(b);});
   return out;
@@ -1526,7 +1548,7 @@ function sideMap(){
     ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div>`;
   return `<h3 style="margin:0 0 6px;font:600 17px var(--f-cond)">Mapa general</h3><div class="paneHead"><span class="lbl grow">${sel.size} de ${all.length} diagramas</span><button class="btn sm" data-act="mapAll">Todos</button><button class="btn sm" data-act="mapNone">Ninguno</button></div>
     ${box}
-    <label class="chk" style="margin:10px 0 2px;font-size:13px"><input type="checkbox" id="mapLoc"${S.meta.mapLoc===false?'':' checked'}> Mostrar ubicaciones (edificio, sala, gabinete…)</label>
+    <p class="endHint" style="margin:10px 0 2px">Los niveles de ubicación que se ven (ciudad, edificio, sitio, piso, sala, gabinete, rack) se eligen con el botón <b>📍 Ubicaciones</b> de la barra.</p>
     <label class="chk" style="margin:4px 0 6px;font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
     ${branch(null)}
     <hr class="sep" style="margin:12px 0 8px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="mapRelayout">Reacomodar automáticamente</button>${ui.prevFolder&&folById(ui.prevFolder)?`<button class="btn sm ghost" data-open="${ui.prevFolder}">← Volver al diagrama</button>`:''}</div>
@@ -1935,7 +1957,7 @@ function renderInsp(){
       <p class="endHint" style="margin:0">Este recuadro aparece en todos los diagramas donde haya equipos con esta ubicación registrada. Para cambiar la ubicación de un equipo, edítalo o arrástralo a otro grupo.</p>
       ${mem.length?`<div class="acc"><span class="lbl">Equipos aquí (${mem.length})</span>${mem.map(n=>{const d=devById(n.deviceId);return `<button class="drow" data-selnode="${d.id}">${gsvg(d?.type)}<div class="t"><div>${esc(d?.name)}</div><div class="ip">${esc(placePath(d.place))}</div></div><span></span></button>`;}).join('')}</div>`:''}
       <button class="btn sm" data-act="pinAuto">Fijar como grupo editable en este diagrama</button>
-      <button class="btn sm" data-act="autoLocOff">Ocultar grupos de ubicación</button>`;
+      <button class="btn sm" data-act="autoLocOff">Ocultar el nivel «${esc(GKINDS[g.kind])}»</button>`;
     return;}
   if(ui.sel.t==='group'){
     const g=D.groups.find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
@@ -2610,7 +2632,7 @@ document.addEventListener('click',e=>{
     case 'dupEl':{const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.sel?.id);if(!n)break;const c={...n,id:uid('x'),x:n.x+32,y:n.y+32};D.nodes.push(c);ui.multi=new Set([c.id]);ui.sel={t:'node',id:c.id};save();renderAll();break;}
     case 'addGrp':groupFromSelection('edificio');break;
     case 'pinAuto':{const D=getDiag(ui.folder),g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){const ng={id:uid('g'),kind:g.kind,label:g.label,placeId:g.placeId,color:g.color||'',x:Math.round(g.x/8)*8,y:Math.round(g.y/8)*8,w:Math.round(g.w/8)*8+8,h:Math.round(g.h/8)*8+8};D.groups.push(ng);ui.sel={t:'group',id:ng.id};save();renderInsp();rc();toast('Grupo fijado: ahora puedes moverlo y cambiar su tamaño');}break;}
-    case 'autoLocOff':S.meta.autoLoc=false;ui.sel=null;save(false);renderAll();toast('Grupos de ubicación ocultos (botón 📍 Ubicaciones para volver a verlos)');break;
+    case 'autoLocOff':{const g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){setLocHide([...(S.meta.locHide||[]),g.kind]);toast(`Nivel ${GKINDS[g.kind]} oculto (📍 Ubicaciones para volver a verlo)`);}break;}
     case 'dtAdd':{let i=1;while(S.devices.some(x=>norm(x.name)===norm('NUEVO-'+i)))i++;const nd={id:uid('d'),name:'NUEVO-'+i,ip:'',type:ui.lastType||S.types[0]?.name||'Router',access:[],sections:ui.devCardSec&&ui.devCardSec!=='none'?[ui.devCardSec]:[],ports:[]};S.devices.push(nd);ui.cvQ='';save();renderAll();
       requestAnimationFrame(()=>{const r=document.querySelector(`[data-drow="${nd.id}"] [data-dt="name"]`);if(r){r.scrollIntoView({block:'center'});r.focus();r.select();}});break;}
     case 'mkGroup':groupFromSelection($('#mKind').value);break;
@@ -2693,7 +2715,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;try{migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
