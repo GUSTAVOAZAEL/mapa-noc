@@ -12,6 +12,27 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Redes: voz, transporte y datos
+
+Cada equipo puede pertenecer a una o varias redes (**Voz**, **Transporte**, **Datos**). Se marca al editar el equipo o con la columna `red` del CSV.
+
+- En **Equipos** filtras el inventario por red (o ves los que no tienen red asignada).
+- En el diagrama cada equipo muestra etiquetas **V / T / D**, y el selector **Todas las redes** de la barra resalta una red y atenúa lo demás.
+
+## Punto de demarcación
+
+Selecciona una conexión y activa **Punto de demarcación**. Se dibuja una barra transversal sobre la línea, con el texto que quieras (por ejemplo "Demarcación" o "Entrega Telmex") y el nombre de cada lado (*Proveedor ⟷ Cliente*). La posición sobre la línea se ajusta con el control deslizante.
+
+## Grupos: edificio, piso, sala, gabinete, rack
+
+Para englobar equipos que están en el mismo lugar físico:
+
+1. Selecciona varios equipos con **Shift+clic**, o con **Shift+arrastrar** sobre el fondo para hacer un recuadro.
+2. En el panel derecho elige el tipo (Edificio, Piso, Sala, Gabinete, Rack o Zona) y presiona **Crear grupo**. También puedes usar **+ Grupo** en la barra.
+3. Ponle nombre, color y notas (dirección, acceso, contacto).
+
+Los grupos se pueden anidar (un rack dentro de una sala dentro de un edificio). Arrastra la franja del título para mover el grupo con todo lo que contiene y usa la esquina inferior derecha para cambiar su tamaño. Si un equipo dentro del grupo tiene una incidencia, el contorno del grupo se marca en rojo.
+
 ## Incidencias
 
 En la pestaña **Incidencias** registras cada evento: título, ticket de red, ticket del proveedor, severidad, causa, inicio, fin y notas. En **Equipos y puertos afectados** eliges qué equipo (y opcionalmente qué puerto) falló; la herramienta calcula sola qué servicios y clientes quedan afectados.
