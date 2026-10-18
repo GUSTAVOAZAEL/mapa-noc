@@ -57,7 +57,7 @@ Si diste de alta el mismo equipo dos veces con nombres distintos (por ejemplo *A
 
 ## Mapa general
 
-El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
+El mapa general se abre desde el árbol de clientes: **Mapa** (arriba del árbol) junta todo; el ícono de mapa en la fila de un **cliente** o **sitio** muestra solo sus diagramas (incluye las líneas privadas que también pertenecen a ese sitio); y **☑ Comparar** pone casillas en el árbol para elegir uno o más clientes, sitios o servicios —de clientes distintos— y verlos juntos con **Ver juntos en el mapa** (activa *Resaltar solo lo compartido* para ver la infraestructura en común). En el mapa, **← Árbol de clientes** regresa al árbol. El mapa une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
 
 - En el panel izquierdo marcas clientes, sitios o servicios. Puedes elegir varios a la vez; **Todos** y **Ninguno** ayudan a empezar.
 - Cada equipo aparece una sola vez. Los que están en varios diagramas llevan un número con cuántos los usan y la lista **compartidos** te dice cuáles son. Si los elegidos no comparten nada, te lo indica.
