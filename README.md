@@ -17,6 +17,11 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Botón + junto a cada elemento**: al pasar el mouse o seleccionar un equipo aparece un **+** al lado del punto de conexión. Desde ahí agregas un **equipo conectado** (se coloca a la derecha y queda unido con una línea), un **texto** debajo o un **grupo** alrededor.
 - **Cambiar a qué elemento llega una línea**: selecciona la línea y arrastra el círculo de cualquiera de sus extremos hacia otro equipo, o elige el elemento en el panel derecho. Si la punta pasa a otro equipo, su puerto se limpia para que lo captures de nuevo.
 - **Agregar equipos desde la búsqueda**: en *+ Equipo* escribe el nombre; si no existe, aparece **Crear equipo «nombre»** (o presiona Enter) y se abre el alta con ese nombre ya escrito. Al guardar se agrega al diagrama.
+- **Colores**: selecciona una línea o un texto y elige su color en el panel derecho (hay paleta y selector libre). A los textos también les cambias tamaño y negritas.
+- **Puertos o IPs en los enlaces**: al seleccionar una línea, debajo de cada extremo aparecen los puertos/IPs ya registrados en ese equipo; toca uno y queda puesto en el enlace. También puedes escribir uno nuevo y se guarda en el equipo.
+- **Panel de Puertos / IPs**: al seleccionar un equipo, el recuadro *Puertos / IPs* muestra todos los registrados (resaltados los que se usan en el diagrama), permite agregar nuevos y abrir el impacto de cada uno. Útil para equipos de voz con varias IPs públicas.
+- **Líneas sin flecha por default**: las conexiones nuevas se crean sin flecha; en el panel puedes elegir un sentido o ambos.
+- El menú del **+** también tiene **Ver impacto** y **Registrar incidencia**.
 - **Nombres únicos**: no se puede guardar un equipo con un nombre que ya existe (sin importar mayúsculas). Mientras escribes te avisa y te ofrece **Agregar el existente**. Si la IP ya la tiene otro equipo, te avisa y te pide confirmar.
 
 ## Formas de los equipos

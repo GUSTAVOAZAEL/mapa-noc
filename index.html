@@ -165,6 +165,17 @@ button,input,select,textarea{font:inherit;color:inherit}
 .plusMenu button:hover{background:var(--panel-2)}
 .plusMenu small{color:var(--muted);display:block;font-size:11.5px}
 .pick .create{grid-template-columns:22px 1fr;color:var(--accent);font-weight:500}
+.pchips{display:flex;flex-wrap:wrap;gap:4px;max-height:96px;overflow:auto}
+.pchip{font:11.5px var(--f-mono);padding:3px 7px;border-radius:4px;background:var(--panel);border:1px solid var(--line);cursor:pointer;color:var(--ink)}
+.pchip:hover{border-color:var(--accent)}
+.pchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pchip.used{border-color:var(--accent);color:var(--accent)}
+.portBox{background:var(--panel-2);border-radius:8px;padding:10px;display:grid;gap:8px}
+.portBox .head{display:flex;align-items:center;gap:6px}
+.portBox .head b{font:600 13px var(--f-cond);flex:1}
+.portAdd{display:flex;gap:6px}
+.portAdd input{flex:1;min-width:0}
+.endHint{font-size:11px;color:var(--muted)}
 .endSel{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 6px;font:600 13px var(--f-cond)}
 .node{cursor:move}
 .node.sel .nb{stroke:var(--accent);stroke-width:2}
@@ -456,6 +467,8 @@ const MEDIA={fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radio
 const SECTIONS={voz:{l:'Voz',k:'V',c:'#8A45C9'},transporte:{l:'Transporte',k:'T',c:'#2F6FD6'},datos:{l:'Datos',k:'D',c:'#23875A'}};
 const GKINDS={edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',zona:'Zona'};
 const GDASH={edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',zona:'2 5'};
+const COLORS=['','#C2361F','#B86A00','#23875A','#0F8A80','#2F6FD6','#7A4FC9','#C2367A','#5A6978','#15212C'];
+const swatches=(attr,cur,def)=>`<div class="sw">${COLORS.map(c=>`<button type="button" ${attr}="${c}" class="${c===(cur||'')?'on':''}" style="background:${c||def}" aria-label="${c||'Color por defecto'}"></button>`).join('')}<input type="color" ${attr}-custom value="${cur||'#2f6fd6'}" title="Otro color"></div>`;
 const secChips=d=>(d.sections||[]).filter(k=>SECTIONS[k]).length?`<span class="secs">${d.sections.filter(k=>SECTIONS[k]).map(k=>`<span class="sec" style="background:${SECTIONS[k].c}">${SECTIONS[k].l}</span>`).join('')}</span>`:'';
 const KINDS={cliente:'Cliente',sitio:'Sitio',servicio:'Servicio',carpeta:'Carpeta'};
 const CHILD_KIND={cliente:'sitio',sitio:'servicio',servicio:'carpeta',carpeta:'carpeta'};
@@ -715,14 +728,14 @@ function sideImpact(){
   let html=`<div class="imp"><p style="margin:0;color:var(--muted);font-size:12.5px">Elige el equipo (y si quieres el puerto) que está fallando para ver todos los clientes y servicios que pasan por ahí.</p>
   <div class="fld"><span class="lbl">Equipo</span><select id="impDev"><option value="">Selecciona…</option>${devs.map(d=>`<option value="${d.id}"${d.id===cur.dev?' selected':''}>${esc(d.name)} — ${esc(d.ip)}</option>`).join('')}</select></div>`;
   if(cur.dev){
-    html+=`<div class="fld"><span class="lbl">Puerto</span><select id="impPort"><option value="">Todo el equipo</option>${devicePorts(cur.dev).map(p=>`<option${norm(p)===norm(cur.port)?' selected':''}>${esc(p)}</option>`).join('')}</select></div>`;
+    html+=`<div class="fld"><span class="lbl">Puerto o IP</span><select id="impPort"><option value="">Todo el equipo</option>${devicePorts(cur.dev).map(p=>`<option${norm(p)===norm(cur.port)?' selected':''}>${esc(p)}</option>`).join('')}</select></div>`;
     const items=impactOf(cur.dev,cur.port);
     const byC={};items.forEach(i=>{const c=clientOf(i.fid);const k=c?c.id:'-';(byC[k]=byC[k]||{c,items:[]}).items.push(i);});
     html+=`<div class="sum"><div><b>${Object.keys(byC).length}</b><span>clientes</span></div><div><b>${items.length}</b><span>servicios / diagramas</span></div></div>`;
     if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Quitar resaltado</button></div><button class="btn sm dan" data-act="incFromImp">Registrar incidencia con esta afectación</button>`;
     html+=Object.values(byC).sort((a,b)=>ncmp(a.c?.name,b.c?.name)).map(g=>`<div class="grp"><h4>${esc(g.c?.name||'Sin cliente')}</h4>${g.items.map(i=>{
       const p=pathOf(i.fid).slice(1).map(f=>f.name).join(' › ')||'(diagrama del cliente)';
-      return `<button class="irow" data-open="${i.fid}"><span>${esc(p)}</span><span class="pp">${esc(i.ports.join(', ')||'sin puertos registrados')}</span></button>`;}).join('')}</div>`).join('');
+      return `<button class="irow" data-open="${i.fid}"><span>${esc(p)}</span><span class="pp">${esc(i.ports.join(', ')||'sin puertos/IPs registrados')}</span></button>`;}).join('')}</div>`).join('');
     if(!items.length)html+=`<p class="sub" style="color:var(--muted)">Ningún diagrama usa ${cur.port?'ese puerto':'este equipo'} todavía.</p>`;
   }
   return html+'</div>';
@@ -736,9 +749,14 @@ function geom(n){if(n.deviceId)return SH[shapeOf(n)];const d=dims(n);return{w:d.
 const anchorOf=n=>{const g=geom(n);return[n.x+g.c[0],n.y+g.c[1]];};
 function dims(n){
   if(n.deviceId){const g=SH[shapeOf(n)];return{w:g.w,h:g.h};}
-  const lines=String(n.text||' ').split('\n');
-  return{w:Math.max(60,Math.max(...lines.map(l=>l.length))*7.1+18),h:lines.length*18+12};
+  const lines=String(n.text||' ').split('\n'),fs=+n.size||13,k=fs/13;
+  return{w:Math.max(60,Math.max(...lines.map(l=>l.length))*7.1*k+18),h:lines.length*18*k+12};
 }
+function markerFor(c){const id='ar_'+c.replace(/[^0-9a-z]/gi,'');
+  if(!document.getElementById(id)){const m=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    m.setAttribute('id',id);m.setAttribute('viewBox','0 0 10 10');m.setAttribute('refX','9');m.setAttribute('refY','5');m.setAttribute('markerWidth','7');m.setAttribute('markerHeight','7');m.setAttribute('orient','auto-start-reverse');
+    m.innerHTML=`<path d="M0 0 10 5 0 10z" style="fill:${c}"/>`;svg.querySelector('defs').appendChild(m);}
+  return id;}
 function clip(n,tx,ty,off){
   const C=geom(n).clip;let cx,cy;
   if(C.k==='rect'){cx=n.x+C.x+C.w/2+off[0];cy=n.y+C.y+C.h/2+off[1];}else{cx=n.x+C.cx+off[0];cy=n.y+C.cy+off[1];}
@@ -800,15 +818,16 @@ function renderCanvas(){
     const [x1,y1]=clip(a,bx+px,by+py,off),[x2,y2]=clip(b,ax+px,ay+py,off);
     const sel=ui.sel?.t==='edge'&&ui.sel.id===e.id,h=hit?.edges.has(e.id);
     const ie=inc?.edges.has(e.id);
-    const mk=h?'arH':sel?'arS':ie?'arI':'ar';
+    const ec=!h&&!sel&&!ie&&e.color?e.color:'';
+    const mk=h?'arH':sel?'arS':ie?'arI':ec?markerFor(ec):'ar';
     const cls='edge'+(sel?' sel':'')+(h?' hit':'')+(ie?' inc':'')+(hit&&!h?' dim':'')+(sdim.has(e.from)||sdim.has(e.to)?' sdim':'');
     const dash=MEDIA[e.medium]?.d||'';
     const ms=e.dir==='both'?`marker-start="url(#${mk})"`:'',me=e.dir==='none'?'':`marker-end="url(#${mk})"`;
-    let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
+    let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" ${ec?`style="stroke:${ec}"`:''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
     const len=Math.hypot(x2-x1,y2-y1),t=Math.min(.3,Math.max(.12,46/(len||1)));
     if(e.fp)s+=lbl(x1+(x2-x1)*t,y1+(y2-y1)*t,trunc(e.fp,16),'pl');
     if(e.tp)s+=lbl(x1+(x2-x1)*(1-t),y1+(y2-y1)*(1-t),trunc(e.tp,16),'pl');
-    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2;s+=`<g class="ml"><text x="${mx}" y="${my-8}" text-anchor="middle">${esc(trunc(e.label,30))}</text></g>`;}
+    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2;s+=`<g class="ml"><text x="${mx}" y="${my-8}" text-anchor="middle"${ec?` style="fill:${ec}"`:''}>${esc(trunc(e.label,30))}</text></g>`;}
     if(e.demarc){const t2=Math.min(.95,Math.max(.05,+e.demarcPos||.5)),px2=x1+(x2-x1)*t2,py2=y1+(y2-y1)*t2,L2=len||1,ux=(x2-x1)/L2,uy=(y2-y1)/L2,nx=-uy,ny=ux,R=15;
       const tx=px2+nx*(R+10)*(ny>0?-1:1),ty=py2+ny*(R+10)*(ny>0?-1:1);
       s+=`<g class="dm"><line x1="${px2-nx*R}" y1="${py2-ny*R}" x2="${px2+nx*R}" y2="${py2+ny*R}"/><text x="${tx}" y="${ty+3}" text-anchor="middle">${esc(trunc(e.demarcLabel||'Demarcación',22))}</text>${e.demarcA||e.demarcB?`<text class="sd" x="${tx}" y="${ty+(ny>0?-9:15)}" text-anchor="middle">${esc(trunc(e.demarcA||'',14))} ⟷ ${esc(trunc(e.demarcB||'',14))}</text>`:''}<title>Punto de demarcación${e.demarcA||e.demarcB?`: ${esc(e.demarcA||'')} | ${esc(e.demarcB||'')}`:''}</title></g>`;}
@@ -825,7 +844,7 @@ function renderCanvas(){
       s+=(ic?G.out('halo'):'')+G.out('nb')+G.body(typeOf(d.type),d)+`<title>${esc(d.name)}${d.ip?' · '+esc(d.ip):''}</title>`;
       (d.sections||[]).filter(k=>SECTIONS[k]).forEach((k,i)=>{const x=G.pill[0]-26-i*20,y=G.pill[1];s+=`<g class="spill"><rect x="${x}" y="${y-7}" width="17" height="13" rx="3" style="fill:${SECTIONS[k].c}"/><text x="${x+8.5}" y="${y+2.5}" text-anchor="middle">${SECTIONS[k].k}</text><title>Red de ${SECTIONS[k].l.toLowerCase()}</title></g>`;});
     }else{
-      s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0">${String(n.text||'').split('\n').map((l,i)=>`<tspan x="5" dy="${i?18:18}">${esc(l)||' '}</tspan>`).join('')}</text>`;
+      s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0" style="${n.color?`fill:${n.color};`:''}font-size:${+n.size||13}px;${n.bold?'font-weight:600;':''}">${String(n.text||'').split('\n').map(l=>`<tspan x="5" dy="${Math.round(18*((+n.size||13)/13))}">${esc(l)||' '}</tspan>`).join('')}</text>`;
     }
     if(ic){const bx=G.bd?G.bd[0]:w-4,by=G.bd?G.bd[1]:4;
       const lab=L==='historial'?String(ic.size):'!';s+=`<g class="ibadge"><circle cx="${bx}" cy="${by}" r="9"/><text x="${bx}" y="${by+4}" text-anchor="middle">${lab}</text><title>${esc([...ic].map(id=>S.incidents.find(x=>x.id===id)?.title).filter(Boolean).join('\n'))}</title></g>`;}
@@ -908,7 +927,7 @@ function endDrag(e){
     if(t&&t.dataset.node!==g.from){
       const D=getDiag(ui.folder,true),a=D.nodes.find(n=>n.id===g.from),b=D.nodes.find(n=>n.id===t.dataset.node);
       const medium=(a?.deviceId&&b?.deviceId)?'fibra':'logico';
-      const ed={id:uid('e'),from:g.from,to:t.dataset.node,fp:'',tp:'',medium,label:'',dir:a?.deviceId&&b?.deviceId?'fwd':'none'};
+      const ed={id:uid('e'),from:g.from,to:t.dataset.node,fp:'',tp:'',medium,label:'',dir:'none'};
       D.edges.push(ed);ui.sel={t:'edge',id:ed.id};save();renderInsp();renderSide();
       setTimeout(()=>{const f=$('#eFp');if(f&&matchMedia('(min-width:861px)').matches)f.focus();},30);
     }
@@ -939,7 +958,7 @@ function groupFromSelection(kind){
 
 function addDeviceNode(devId){
   const D=getDiag(ui.folder,true),ex=D.nodes.find(n=>n.deviceId===devId),from=ui.addFrom&&D.nodes.find(n=>n.id===ui.addFrom);ui.addFrom=null;
-  const link=(a,b)=>{const ed={id:uid('e'),from:a.id,to:b.id,fp:'',tp:'',medium:a.deviceId?'fibra':'logico',label:'',dir:a.deviceId?'fwd':'none'};D.edges.push(ed);return ed;};
+  const link=(a,b)=>{const ed={id:uid('e'),from:a.id,to:b.id,fp:'',tp:'',medium:a.deviceId?'fibra':'logico',label:'',dir:'none'};D.edges.push(ed);return ed;};
   if(ex){
     if(from&&from.id!==ex.id){const ed=link(from,ex);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};save();renderAll();toast('Conectado con el equipo que ya estaba en el diagrama');return;}
     ui.multi=new Set([ex.id]);ui.sel={t:'node',id:ex.id};renderCanvas();renderInsp();toast('Ese equipo ya está en el diagrama');return;}
@@ -977,9 +996,11 @@ function openPlusMenu(nodeId,ev){
   ui.sel=ui.multi.size>1?{t:'multi'}:{t:'node',id:nodeId};renderInsp();rc();
   m.innerHTML=`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>
     <button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>
+    ${n?.deviceId?`<button data-act="plusImp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><circle cx="9" cy="9" r="6.5" stroke-dasharray="2.5 2"/></svg><span>Ver impacto<small>Clientes y servicios que pasan por aquí</small></span></button>
+    <button data-act="plusInc" style="color:var(--danger)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2 17 16H1z"/><path d="M9 7v4M9 13.5v.1"/></svg><span>Registrar incidencia<small style="color:var(--muted)">Con este equipo como afectado</small></span></button>`:''}
     <button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`;
   m.hidden=false;
-  const x=Math.min(ev.clientX-wr.left+10,wr.width-210),y=Math.min(ev.clientY-wr.top+10,wr.height-170);
+  const x=Math.min(ev.clientX-wr.left+10,wr.width-m.offsetWidth-6),y=Math.min(ev.clientY-wr.top+10,wr.height-m.offsetHeight-6);
   m.style.left=Math.max(6,x)+'px';m.style.top=Math.max(6,y)+'px';
 }
 document.addEventListener('pointerdown',e=>{const m=$('#plusMenu');if(!m.hidden&&!e.target.closest('#plusMenu')&&!e.target.closest('[data-plus]'))m.hidden=true;},true);
@@ -1033,17 +1054,25 @@ function renderInsp(){
   if(ui.sel.t==='node'){
     const n=D.nodes.find(x=>x.id===ui.sel.id);if(!n){ui.sel=null;return renderInsp();}
     if(!n.deviceId){
-      el.innerHTML=`${close}<span class="lbl">Texto</span><div class="fld"><textarea id="nTxt" rows="4">${esc(n.text)}</textarea></div><button class="btn sm dan" data-act="delSel">Eliminar texto</button>`;return;
+      el.innerHTML=`${close}<span class="lbl">Texto</span><div class="fld"><textarea id="nTxt" rows="4">${esc(n.text)}</textarea></div>
+        <div class="two"><div class="fld"><span class="lbl">Tamaño</span><select class="inp" id="nSize">${[[11,'Chico'],[13,'Normal'],[16,'Grande'],[20,'Título']].map(([v,l])=>`<option value="${v}"${(+n.size||13)===v?' selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="fld"><span class="lbl">Estilo</span><label class="chk" style="height:34px"><input type="checkbox" id="nBold"${n.bold?' checked':''}> Negritas</label></div></div>
+        <div class="fld"><span class="lbl">Color del texto</span>${swatches('data-tcol',n.color,'var(--ink)')}</div>
+        <button class="btn sm dan" data-act="delSel">Eliminar texto</button>`;return;
     }
     const d=devById(n.deviceId)||{};
     const conns=D.edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>{const mine=e.from===n.id?e.fp:e.tp,other=D.nodes.find(x=>x.id===(e.from===n.id?e.to:e.from)),od=other?.deviceId?devById(other.deviceId)?.name:'texto';return{e,mine,od};});
     const u=usage(d.id);
     el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0"><h3>${esc(d.name)}</h3><div class="sub mono">${esc(d.ip||'sin IP')}</div></div></div>
       <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${(d.sections||[]).length?`<dt>Red</dt><dd>${secChips(d)}</dd>`:''}${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}${d.location?`<dt>Ubicación</dt><dd>${esc(d.location)}</dd>`:''}<dt>Usado en</dt><dd>${u} diagrama${u===1?'':'s'}</dd></dl>
+      ${(()=>{const ps=devicePorts(d.id),used=new Set(conns.map(c=>norm(c.mine)).filter(Boolean));
+        return `<div class="portBox"><div class="head"><b>Puertos / IPs</b><span class="endHint">${ps.length} registrado${ps.length===1?'':'s'}</span></div>
+        ${ps.length?`<div class="pchips">${ps.map(p=>`<button type="button" class="pchip${used.has(norm(p))?' used':''}" data-imp="${d.id}" data-port="${esc(p)}" title="Ver impacto de ${esc(p)}">${esc(p)}</button>`).join('')}</div><span class="endHint">Los resaltados se usan en este diagrama. Toca uno para ver su impacto.</span>`:'<span class="endHint">Sin puertos ni IPs todavía.</span>'}
+        <div class="portAdd"><input class="inp mono" id="nPortAdd" placeholder="Agregar puerto o IP"><button class="btn sm" data-act="addPort" data-devid="${d.id}">Agregar</button></div>
+        ${conns.length?`<div class="kv" style="margin-top:2px">${conns.map(c=>`<dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd>`).join('')}</div>`:''}</div>`;})()}
       <div class="fld"><span class="lbl">Forma en este diagrama</span><select class="inp" id="nShape"><option value="">Según el tipo (${SHAPE_NAMES[SH[typeOf(d.type).shape]?typeOf(d.type).shape:'rect']})</option>${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${n.shape===k?' selected':''}>${v}</option>`).join('')}</select></div>
       ${accessBlock(d)}
-      ${conns.length?`<div class="acc"><span class="lbl">Puertos en este diagrama</span>${conns.map(c=>`<div class="kv"><dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd></div>`).join('')}</div>`:''}
-      ${devicePorts(d.id).length?`<div class="acc"><span class="lbl">Ver impacto por puerto</span><div class="chips">${devicePorts(d.id).map(p=>`<span class="chip" data-imp="${d.id}" data-port="${esc(p)}">${esc(p)}</span>`).join('')}</div></div>`:''}
+
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
       ${(()=>{const ai=activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)),all=S.incidents.filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)).length;
         return `<div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="sub">${all} en total para este equipo</span><button class="btn sm dan" data-act="incFromNode" data-devid="${d.id}">Registrar incidencia</button></div>`;})()}
@@ -1054,27 +1083,33 @@ function renderInsp(){
   const a=D.nodes.find(n=>n.id===e.from),b=D.nodes.find(n=>n.id===e.to);
   const nameOf=n=>n?.deviceId?devById(n.deviceId)?.name:'Texto';
   const endSel=(id,cur)=>`<select class="endSel" id="${id}" title="Elemento al que se conecta esta punta">${D.nodes.map(n=>`<option value="${n.id}"${n.id===cur?' selected':''}>${esc(n.deviceId?devById(n.deviceId)?.name||'?':'Texto: '+trunc(n.text,24))}</option>`).join('')}</select>`;
+  const pchips=(n,cur,end)=>{if(!n?.deviceId)return'';const ps=devicePorts(n.deviceId);
+    return ps.length?`<span class="endHint">Puertos / IPs registrados — toca uno para usarlo en el enlace:</span><div class="pchips">${ps.map(p=>`<button type="button" class="pchip${norm(p)===norm(cur)?' on':''}" data-eport="${end}" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>`:`<span class="endHint">Este equipo no tiene puertos ni IPs registrados; escribe uno arriba y se guardará.</span>`;};
   const dl=(id,n)=>n?.deviceId?`<datalist id="${id}">${devicePorts(n.deviceId).map(p=>`<option value="${esc(p)}">`).join('')}</datalist>`:'';
   el.innerHTML=`${close}<span class="lbl">Conexión</span>
     <div class="ends">
-      <div class="end">${endSel('eFrom',e.from)}<input class="inp mono" id="eFp" list="dlA" placeholder="Puerto de salida (ej. Gi0/1)" value="${esc(e.fp)}" ${a?.deviceId?'':'disabled'}>${dl('dlA',a)}</div>
+      <div class="end">${endSel('eFrom',e.from)}<input class="inp mono" id="eFp" list="dlA" placeholder="Puerto o IP (ej. Gi0/1, 201.x.x.10)" value="${esc(e.fp)}" ${a?.deviceId?'':'disabled'}>${dl('dlA',a)}${pchips(a,e.fp,'fp')}</div>
       <div style="text-align:center;color:var(--muted)">${e.dir==='both'?'⇅':'↓'}</div>
-      <div class="end">${endSel('eTo',e.to)}<input class="inp mono" id="eTp" list="dlB" placeholder="Puerto de llegada" value="${esc(e.tp)}" ${b?.deviceId?'':'disabled'}>${dl('dlB',b)}</div>
+      <div class="end">${endSel('eTo',e.to)}<input class="inp mono" id="eTp" list="dlB" placeholder="Puerto o IP" value="${esc(e.tp)}" ${b?.deviceId?'':'disabled'}>${dl('dlB',b)}${pchips(b,e.tp,'tp')}</div>
     </div>
     <div class="fld"><span class="lbl">Etiqueta</span><input class="inp" id="eLb" placeholder="VLAN, ONT, circuito…" value="${esc(e.label)}"></div>
     <div class="two"><div class="fld"><span class="lbl">Medio</span><select id="eMd">${Object.entries(MEDIA).map(([k,v])=>`<option value="${k}"${e.medium===k?' selected':''}>${v.l}</option>`).join('')}</select></div>
     <div class="fld"><span class="lbl">Flecha</span><select id="eDr"><option value="fwd"${e.dir==='fwd'?' selected':''}>Un sentido</option><option value="both"${e.dir==='both'?' selected':''}>Ambos sentidos</option><option value="none"${e.dir==='none'?' selected':''}>Sin flecha</option></select></div></div>
+    <div class="fld"><span class="lbl">Color de la línea</span>${swatches('data-ecol',e.color,'var(--edge)')}</div>
     <div class="fld"><label class="chk"><input type="checkbox" id="eDm"${e.demarc?' checked':''}> <b>Punto de demarcación</b></label></div>
     ${e.demarc?`<div class="fld"><span class="lbl">Posición en la línea</span><input type="range" id="eDp" min="0.1" max="0.9" step="0.05" value="${+e.demarcPos||.5}"></div>
     <div class="fld"><span class="lbl">Texto</span><input class="inp" id="eDl" value="${esc(e.demarcLabel??'Demarcación')}" placeholder="Demarcación"></div>
     <div class="two"><div class="fld"><span class="lbl">Lado ${esc(nameOf(a))}</span><input class="inp" id="eDa" value="${esc(e.demarcA||'')}" placeholder="Proveedor"></div><div class="fld"><span class="lbl">Lado ${esc(nameOf(b))}</span><input class="inp" id="eDb" value="${esc(e.demarcB||'')}" placeholder="Cliente"></div></div>`:''}
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="flip">Invertir sentido</button><button class="btn sm dan" data-act="delSel">Eliminar conexión</button></div>
     <p class="sub" style="margin:0">Para cambiar a qué elemento llega una punta, elígelo arriba o arrastra los círculos de los extremos de la línea hacia otro equipo.</p>
-    <p class="sub" style="margin:0">Los puertos que escribas se agregan al inventario del equipo y quedan disponibles para el análisis de impacto.</p>`;
+    <p class="sub" style="margin:0">Los puertos o IPs que escribas se agregan al equipo y quedan disponibles para el análisis de impacto.</p>`;
 }
 $('#insp').addEventListener('input',e=>{
   const D=ui.folder&&getDiag(ui.folder);if(!D||!ui.sel)return;
   if(e.target.id==='nTxt'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){n.text=e.target.value;save();rc();}return;}
+  if(e.target.matches('[data-ecol-custom]')){const ed=D.edges.find(x=>x.id===ui.sel.id);if(ed){ed.color=e.target.value;save();rc();}return;}
+  if(e.target.matches('[data-tcol-custom]')){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){n.color=e.target.value;save();rc();}return;}
+  if(e.target.id==='nSize'||e.target.id==='nBold'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='nSize')n.size=+e.target.value;else n.bold=e.target.checked;save();rc();}return;}
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
   if(ui.sel.t==='group'){const g=D.groups.find(x=>x.id===ui.sel.id);if(!g)return;const m={gLabel:'label',gKind:'kind',gNotes:'notes'}[e.target.id];if(m){g[m]=e.target.value;save();rc();}return;}
   if(ui.sel.t!=='edge')return;
@@ -1086,6 +1121,7 @@ $('#insp').addEventListener('input',e=>{
   const m={eFp:'fp',eTp:'tp',eLb:'label',eMd:'medium',eDr:'dir'}[e.target.id];if(!m)return;
   ed[m]=e.target.value.trim()===''&&m!=='label'?'':(m==='label'?e.target.value:e.target.value.trim());save();rc();
 });
+$('#insp').addEventListener('keydown',e=>{if(e.target.id==='nPortAdd'&&e.key==='Enter'){e.preventDefault();$('[data-act=addPort]')?.click();}});
 $('#insp').addEventListener('change',e=>{
   if(!['eFp','eTp'].includes(e.target.id))return;
   const D=getDiag(ui.folder),ed=D.edges.find(x=>x.id===ui.sel?.id);if(!ed)return;
@@ -1139,7 +1175,7 @@ function devModal(id,pre){
     <div class="fld"><span class="lbl">Acceso (puerto opcional)</span><div class="accEdit">
       ${['ssh','telnet','web'].map(p=>`<label class="chk"><input type="checkbox" id="dA_${p}"${acc(p)?' checked':''}> ${p.toUpperCase()}</label><input type="text" class="mono" id="dP_${p}" value="${esc(acc(p)?.port||'')}" placeholder="${p==='ssh'?'22':p==='telnet'?'23':'443'}">`).join('')}
     </div></div>
-    <div class="fld"><span class="lbl">Puertos / interfaces (uno por línea)</span><textarea id="dPorts" class="mono" rows="4" placeholder="Gi0/1&#10;Gi0/2&#10;Te1/1/1">${esc((d?.ports||[]).join('\n'))}</textarea></div>
+    <div class="fld"><span class="lbl">Puertos / IPs (uno por línea)</span><textarea id="dPorts" class="mono" rows="4" placeholder="Gi0/1&#10;Te1/1/1&#10;201.123.45.10">${esc((d?.ports||[]).join('\n'))}</textarea></div>
     <div class="fld"><span class="lbl">Notas</span><textarea id="dNotes" rows="2" placeholder="Usuario, contacto del sitio, observaciones…">${esc(d?.notes||'')}</textarea></div>
     <div id="dErr" class="err"></div>`,
     [...(d?[{l:'Eliminar',k:'dan',f:()=>delDevModal(d.id)}]:[]),{l:'Cancelar'},{l:d?'Guardar':'Agregar',k:'pri',f:()=>{
@@ -1287,7 +1323,7 @@ function parseCSV(text){
 }
 const COLS={name:['nombre','name','hostname','equipo','host','dispositivo'],ip:['ip','direccion ip','ip address','ip gestion','mgmt','ip de gestion'],type:['tipo','type','categoria'],
   brand:['marca','brand','fabricante','vendor'],model:['modelo','model'],access:['acceso','access','protocolo','protocolos'],aport:['puerto acceso','puerto de acceso','puerto gestion','port'],
-  location:['ubicacion','sitio','location','site','nodo'],sections:['seccion','red','section','area','secciones'],ports:['puertos','ports','interfaces','interfaz'],notes:['notas','notes','comentarios','observaciones']};
+  location:['ubicacion','sitio','location','site','nodo'],sections:['seccion','red','section','area','secciones'],ports:['puertos','ports','interfaces','interfaz','ips','puertos/ips','puertos / ips','puertos o ips'],notes:['notas','notes','comentarios','observaciones']};
 function csvRows(text){
   const rows=parseCSV(text);if(rows.length<2)return{err:'El archivo necesita una fila de encabezados y al menos un equipo.'};
   const head=rows[0].map(fold),idx={};
@@ -1308,7 +1344,7 @@ function csvModal(){
   modal('Importar inventario CSV',`<p>Exporta tu Excel como CSV. La primera fila debe tener encabezados; reconozco estos (en español o inglés):</p>
     <pre class="code">nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,red,puertos,notas
 AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,datos transporte,XGE0/0/1|XGE0/0/2,</pre>
-    <p class="sub" style="color:var(--muted)">Tipo: cualquiera de tus tipos de equipo; si no existe, se crea con un ícono sugerido que luego puedes cambiar. Acceso: ssh, telnet y/o web. Red: voz, transporte y/o datos. Puertos separados con <span class="mono">|</span>. Si la IP o el nombre ya existe, se actualiza en lugar de duplicarse.</p>
+    <p class="sub" style="color:var(--muted)">Tipo: cualquiera de tus tipos de equipo; si no existe, se crea con un ícono sugerido que luego puedes cambiar. Acceso: ssh, telnet y/o web. Red: voz, transporte y/o datos. Puertos o IPs separados con <span class="mono">|</span>. Si la IP o el nombre ya existe, se actualiza en lugar de duplicarse.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="csvPick">Elegir archivo CSV</button><button class="btn ghost" id="csvCopy">Copiar plantilla</button></div><div id="csvOut" style="margin-top:12px"></div>`,[{l:'Cerrar'}]);
   $('#csvPick').onclick=()=>{$('#fileCsv').value='';$('#fileCsv').click();};
   $('#csvCopy').onclick=()=>copyText('nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,red,puertos,notas\n');
@@ -1533,6 +1569,9 @@ document.addEventListener('click',e=>{
   const ac=t.closest('[data-addchild]');if(ac){const p=folById(ac.dataset.addchild);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
   const ef=t.closest('[data-editf]');if(ef){folderModal(ef.dataset.editf);return;}
   const ic=t.closest('[data-inc]');if(ic){incModal(ic.dataset.inc);return;}
+  const ecl=t.closest('[data-ecol]');if(ecl){const ed=getDiag(ui.folder).edges.find(x=>x.id===ui.sel?.id);if(ed){ed.color=ecl.dataset.ecol;save();renderInsp();rc();}return;}
+  const tcl=t.closest('[data-tcol]');if(tcl){const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.sel?.id);if(n){n.color=tcl.dataset.tcol;save();renderInsp();rc();}return;}
+  const ep=t.closest('[data-eport]');if(ep){const D=getDiag(ui.folder),ed=D.edges.find(x=>x.id===ui.sel?.id);if(ed){const k=ep.dataset.eport;ed[k]=norm(ed[k])===norm(ep.dataset.v)?'':ep.dataset.v;save();renderInsp();rc();}return;}
   const dsc=t.closest('[data-devsec]');if(dsc){ui.devSec=dsc.dataset.devsec;renderSide();return;}
   const gc=t.closest('[data-gcol]');if(gc){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){g.color=gc.dataset.gcol;save();renderInsp();rc();}return;}
   const icf=t.closest('[data-incf]');if(icf){ui.incFilter=icf.dataset.incf;renderSide();return;}
@@ -1555,6 +1594,10 @@ document.addEventListener('click',e=>{
     case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
     case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
       const t={id:uid('t'),text:'Nota',x:n.x,y:n.y+G.h+18};D.nodes.push(t);ui.multi=new Set([t.id]);ui.sel={t:'node',id:t.id};save();renderAll();setTimeout(()=>{const i=$('#nTxt');if(i){i.focus();i.select();}},30);break;}
+    case 'plusImp':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)setImpact(n.deviceId,'');break;}
+    case 'plusInc':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)incModal(null,[{dev:n.deviceId,port:''}]);break;}
+    case 'addPort':{const d=devById(a.dataset.devid),i=$('#nPortAdd'),v=i?.value.trim();if(!d||!v)break;
+      if(d.ports.some(p=>norm(p)===norm(v))){toast('Ya está registrado');break;}d.ports.push(v);save();renderInsp();renderSide();toast('Agregado a '+d.name);break;}
     case 'plusGrp':$('#plusMenu').hidden=true;groupFromSelection('edificio');break;
     case 'addTxt':addText();break;
     case 'addGrp':groupFromSelection('edificio');break;
