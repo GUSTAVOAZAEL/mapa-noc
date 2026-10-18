@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mapa NOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: consola de trabajo a pantalla completa — panel de carpetas/inventario | lienzo con rejilla | inspector */
+:root{
+  --bg:#E8ECF0; --panel:#FFFFFF; --panel-2:#F3F5F7; --ink:#15212C; --muted:#5A6978; --line:#D3DBE2;
+  --accent:#0A6C87; --accent-ink:#FFFFFF; --accent-soft:#DDEEF3;
+  --hit:#B05F00; --hit-soft:#FBE9CC; --danger:#B4321C; --danger-soft:#F7E1DC;
+  --grid:#C6D0D9; --edge:#536373; --node:#FFFFFF; --overlay:rgba(14,22,30,.42);
+  --f-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1318; --panel:#151E26; --panel-2:#1B2630; --ink:#E1E8EE; --muted:#8C9AA7; --line:#2A3845;
+  --accent:#4BB4D1; --accent-ink:#06222B; --accent-soft:#163743;
+  --hit:#F2A33A; --hit-soft:#3B2B13; --danger:#F07560; --danger-soft:#3A1D18;
+  --grid:#24323E; --edge:#93A4B3; --node:#18232D; --overlay:rgba(0,0,0,.55); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1318; --panel:#151E26; --panel-2:#1B2630; --ink:#E1E8EE; --muted:#8C9AA7; --line:#2A3845;
+  --accent:#4BB4D1; --accent-ink:#06222B; --accent-soft:#163743;
+  --hit:#F2A33A; --hit-soft:#3B2B13; --danger:#F07560; --danger-soft:#3A1D18;
+  --grid:#24323E; --edge:#93A4B3; --node:#18232D; --overlay:rgba(0,0,0,.55); color-scheme:dark}
+
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-ui);overflow:hidden}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+#app{height:100%;display:grid;grid-template-columns:290px minmax(0,1fr) 300px;grid-template-rows:auto minmax(0,1fr);gap:10px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+.top{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.brand{display:flex;align-items:center;gap:9px;font:600 17px/1 var(--f-cond);letter-spacing:.01em;white-space:nowrap}
+.brand svg{color:var(--accent)}
+.search{position:relative;flex:1 1 260px;min-width:0;max-width:520px}
+.search input{width:100%;height:36px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:0 12px 0 34px}
+.search>svg{position:absolute;left:11px;top:10px;color:var(--muted)}
+.sres{position:absolute;top:40px;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:30;max-height:60vh;overflow:auto;padding:4px}
+.sres button{display:flex;width:100%;text-align:left;gap:10px;align-items:center;border:0;background:none;padding:7px 9px;border-radius:5px;cursor:pointer}
+.sres button:hover,.sres button.on{background:var(--panel-2)}
+.sres .k{font:500 10.5px/1 var(--f-ui);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:58px;flex:none}
+.sres .sub{color:var(--muted);font-size:12px;margin-left:auto;font-family:var(--f-mono)}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+.status.warn i{background:var(--hit)}
+.acts{display:flex;gap:6px;margin-left:auto}
+
+.btn{height:34px;padding:0 12px;border:1px solid var(--line);background:var(--panel);border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn.dan{color:var(--danger);border-color:var(--danger)}
+.btn.sm{height:28px;padding:0 9px;font-size:12.5px}
+.btn.ic{width:34px;padding:0;justify-content:center}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--panel-2)}
+.btn[disabled]{opacity:.45;cursor:default}
+.menuBtn{display:none}
+
+.side,.insp,.stage{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:0;min-width:0}
+.side{display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 6px}
+.tabs button{flex:1;border:0;background:none;padding:11px 4px 9px;cursor:pointer;color:var(--muted);font:500 13px var(--f-ui);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{flex:1;overflow:auto;padding:10px}
+.paneHead{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.paneHead .grow{flex:1}
+.lbl{font:500 10.5px/1.2 var(--f-ui);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.note{background:var(--hit-soft);border-radius:6px;padding:9px 10px;font-size:12.5px;margin-bottom:10px;display:grid;gap:6px}
+.note b{font-weight:600}
+
+/* árbol */
+.tree,.tree ul{list-style:none;margin:0;padding:0}
+.tree ul{padding-left:14px;border-left:1px solid var(--line);margin-left:9px}
+.row{display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 4px;cursor:pointer;min-width:0}
+.row:hover{background:var(--panel-2)}
+.row.on{background:var(--accent-soft)}
+.row .car{width:18px;height:18px;border:0;background:none;padding:0;cursor:pointer;color:var(--muted);flex:none;display:grid;place-items:center}
+.row .car.none{visibility:hidden}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kind{font:500 9.5px/1 var(--f-mono);text-transform:uppercase;padding:3px 4px;border-radius:3px;border:1px solid var(--line);color:var(--muted);flex:none}
+.kind.cliente{color:var(--accent);border-color:var(--accent)}
+.row .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;opacity:.75}
+.row .ra{display:none;gap:2px}
+.row:hover .ra,.row.on .ra{display:flex}
+.ra button{width:24px;height:24px;border:0;background:none;border-radius:4px;cursor:pointer;color:var(--muted)}
+.ra button:hover{background:var(--panel);color:var(--ink)}
+.row.hit .nm{color:var(--hit);font-weight:500}
+
+/* inventario */
+.dlist{display:grid;gap:2px}
+.drow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px;border-radius:5px;cursor:pointer;border:0;background:none;text-align:left;width:100%}
+.drow:hover{background:var(--panel-2)}
+.drow .t{min-width:0}
+.drow .t div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drow .ip{font:12px var(--f-mono);color:var(--muted)}
+.drow .use{font:11px var(--f-mono);color:var(--muted)}
+.drow svg{color:var(--accent)}
+.fld{display:grid;gap:4px;margin-bottom:10px}
+.fld input,.fld select,.fld textarea,.inp{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 9px;min-width:0}
+.fld textarea{resize:vertical;min-height:70px}
+
+/* impacto */
+.imp{display:grid;gap:10px}
+.sum{display:flex;gap:16px;padding:10px;background:var(--hit-soft);border-radius:6px}
+.sum div{display:grid}
+.sum b{font:600 22px/1.1 var(--f-cond);color:var(--hit)}
+.sum span{font-size:11.5px;color:var(--muted)}
+.grp{display:grid;gap:3px}
+.grp h4{margin:6px 0 2px;font:600 13px var(--f-ui)}
+.irow{border:0;background:none;text-align:left;padding:6px 8px;border-radius:5px;cursor:pointer;display:grid;gap:2px;width:100%;border-left:2px solid var(--hit)}
+.irow:hover{background:var(--panel-2)}
+.irow .p{font-size:12px;color:var(--muted)}
+.irow .pp{font:11.5px var(--f-mono);color:var(--hit)}
+
+/* lienzo */
+.stage{position:relative;display:flex;flex-direction:column;overflow:hidden}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.crumb{flex:1;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;font-size:13px;color:var(--muted)}
+.crumb b{color:var(--ink);font:600 15px var(--f-cond);overflow:hidden;text-overflow:ellipsis}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.canvasWrap{position:relative;flex:1;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block;background:var(--panel-2)}
+#cv.panning{cursor:grabbing}
+.hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;pointer-events:none;max-width:calc(100% - 70px)}
+.impBanner{position:absolute;left:10px;top:10px;right:10px;display:flex;gap:10px;align-items:center;background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
+.impBanner b{color:var(--hit)}
+.impBanner .grow{flex:1}
+.empty{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;padding:20px}
+.empty div{max-width:340px;text-align:center;color:var(--muted);display:grid;gap:8px}
+.empty h3{margin:0;color:var(--ink);font:600 18px var(--f-cond)}
+.zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+
+/* svg */
+.node .nb{fill:var(--node);stroke:var(--line);stroke-width:1.2}
+.node .nm{font:600 13px var(--f-cond);fill:var(--ink)}
+.node .ipt{font:11px var(--f-mono);fill:var(--muted)}
+.node .gl{color:var(--accent)}
+.node .hd{fill:var(--panel);stroke:var(--accent);stroke-width:1.5;cursor:crosshair;opacity:.0;transition:opacity .12s}
+.node:hover .hd,.node.sel .hd{opacity:1}
+@media (hover:none){.node .hd{opacity:.9}}
+.node{cursor:move}
+.node.sel .nb{stroke:var(--accent);stroke-width:2}
+.node.hit .nb{stroke:var(--hit);stroke-width:2.5;fill:var(--hit-soft)}
+.node.dim{opacity:.38}
+.node.txt .tb{fill:transparent;stroke:transparent}
+.node.txt.sel .tb{stroke:var(--accent);stroke-dasharray:4 3}
+.node.txt text{font:13px var(--f-ui);fill:var(--ink)}
+.edge line.ln{stroke:var(--edge);stroke-width:1.8;fill:none}
+.edge.sel line.ln{stroke:var(--accent);stroke-width:2.6}
+.edge.hit line.ln{stroke:var(--hit);stroke-width:3}
+.edge.dim{opacity:.3}
+.edge .eh{stroke:transparent;stroke-width:14;cursor:pointer}
+.pl rect{fill:var(--panel);stroke:var(--line)}
+.pl text{font:10.5px var(--f-mono);fill:var(--ink)}
+.edge.hit .pl rect{stroke:var(--hit);fill:var(--hit-soft)}
+.edge.sel .pl rect{stroke:var(--accent)}
+.ml text{font:italic 11px var(--f-ui);fill:var(--muted)}
+.tmp{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4}
+
+/* inspector */
+.insp{overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.insp h3{margin:0;font:600 17px/1.2 var(--f-cond);overflow-wrap:anywhere}
+.insp .sub{color:var(--muted);font-size:12.5px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.acc{display:grid;gap:6px}
+.accRow{display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;gap:6px;align-items:center;background:var(--panel-2);border-radius:6px;padding:5px 6px}
+.accRow .pr{font:500 10.5px var(--f-mono);text-transform:uppercase;color:var(--accent)}
+.accRow code{font:12px var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.accRow a{font-size:12px;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:11.5px var(--f-mono);padding:2px 6px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line);cursor:pointer}
+.chip:hover{border-color:var(--hit);color:var(--hit)}
+.sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
+.ends{display:grid;gap:8px}
+.end{display:grid;gap:4px;padding:8px;border-radius:6px;background:var(--panel-2)}
+.end .who{font:600 13px var(--f-cond)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.insClose{display:none}
+
+/* modal y toast */
+.modal{position:fixed;inset:0;background:var(--overlay);display:grid;place-items:center;z-index:50;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+.mbox{background:var(--panel);border-radius:10px;width:min(560px,100%);max-height:calc(100% - 20px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);min-width:0}
+.mbox header{padding:16px 18px 4px;font:600 18px var(--f-cond)}
+.mbox .mb{padding:10px 18px;overflow:auto;min-width:0}
+.mbox footer{padding:12px 18px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.mbox p{margin:0 0 10px}
+.chk{display:flex;gap:8px;align-items:center}
+.accEdit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
+.accEdit input[type=text]{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 8px}
+.pick{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-top:8px}
+.pick button{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;width:100%;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;padding:8px;cursor:pointer}
+.pick button:hover{background:var(--panel-2)}
+.pick button[disabled]{opacity:.5}
+.pick svg{color:var(--accent)}
+pre.code{background:var(--panel-2);border-radius:6px;padding:9px;font:12px var(--f-mono);overflow:auto;white-space:pre;margin:0 0 10px}
+textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--panel-2)}
+.choice{display:grid;gap:8px}
+.choice button{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:12px;cursor:pointer;display:grid;gap:2px}
+.choice button:hover{border-color:var(--accent)}
+.choice b{font-weight:600}
+.choice span{color:var(--muted);font-size:12.5px}
+.err{color:var(--danger);font-size:12.5px}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:6px;font-size:13px;z-index:60;max-width:calc(100% - 32px)}
+.scrim{display:none}
+
+@media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
+@media (max-width:860px){
+  #app{grid-template-columns:minmax(0,1fr)}
+  .menuBtn{display:inline-flex}
+  .side{position:fixed;left:0;top:0;bottom:0;width:min(330px,88vw);z-index:40;border-radius:0;transform:translateX(-102%);transition:transform .2s;
+    padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px)}
+  body.showSide .side{transform:none}
+  body.showSide .scrim{display:block;position:fixed;inset:0;background:var(--overlay);z-index:35}
+  .insp{position:fixed;left:0;right:0;bottom:0;max-height:55%;z-index:30;border-radius:12px 12px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.2);
+    padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .insp.idle{display:none}
+  .insClose{display:inline-flex;align-self:flex-end}
+  .status{display:none}
+  .acts .lb{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <button class="btn ic menuBtn" id="menuBtn" aria-label="Abrir panel">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h12M3 9h12M3 13h12"/></svg>
+    </button>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="11" r="2.6"/><circle cx="17" cy="5" r="2.6"/><circle cx="17" cy="17" r="2.6"/><path d="M7.4 10 14.6 6.2M7.4 12l7.2 3.8"/></svg>
+      Mapa NOC
+    </div>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar equipo, IP o cliente…" autocomplete="off">
+      <div class="sres" id="sres" hidden></div>
+    </div>
+    <div class="status" id="status"><i></i><span></span></div>
+    <div class="acts">
+      <button class="btn" id="bImport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m-3-3 3 3 3-3M3 12v2h10v-2"/></svg><span class="lb">Importar</span></button>
+      <button class="btn pri" id="bExport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10V2M5 5l3-3 3 3M3 12v2h10v-2"/></svg><span class="lb">Exportar JSON</span></button>
+      <button class="btn ic" id="bSettings" aria-label="Ajustes"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
+    </div>
+  </header>
+
+  <aside class="side" id="side">
+    <nav class="tabs" role="tablist">
+      <button data-tab="clientes">Clientes</button>
+      <button data-tab="equipos">Equipos</button>
+      <button data-tab="impacto">Impacto</button>
+    </nav>
+    <div class="pane" id="pane"></div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="stage">
+    <div class="bar">
+      <div class="crumb" id="crumb"></div>
+      <div class="tools" id="tools">
+        <button class="btn sm" id="tAddDev">+ Equipo</button>
+        <button class="btn sm" id="tAddTxt">+ Texto</button>
+        <button class="btn sm" id="tFit">Ajustar vista</button>
+      </div>
+    </div>
+    <div class="canvasWrap">
+      <svg id="cv" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="gridp" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" style="fill:var(--grid)"/></pattern>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--edge)"/></marker>
+          <marker id="arS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--accent)"/></marker>
+          <marker id="arH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" style="fill:var(--hit)"/></marker>
+        </defs>
+        <rect id="gridbg" x="-50000" y="-50000" width="100000" height="100000" fill="url(#gridp)"/>
+        <g id="vp"></g>
+      </svg>
+      <div class="empty" id="empty" hidden></div>
+      <div class="impBanner" id="impBanner" hidden></div>
+      <div class="hint" id="hint">Arrastra el punto <b>●</b> del borde de un equipo hacia otro para conectarlos · rueda para zoom · arrastra el fondo para moverte</div>
+      <div class="zoom">
+        <button class="btn ic sm" id="zIn" aria-label="Acercar">+</button>
+        <button class="btn ic sm" id="zOut" aria-label="Alejar">−</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="insp" id="insp"></aside>
+</div>
+
+<div class="modal" id="modal" hidden><div class="mbox" role="dialog" aria-modal="true"><header id="mT"></header><div class="mb" id="mB"></div><footer id="mF"></footer></div></div>
+<div id="toast" hidden></div>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<input type="file" id="fileCsv" accept=".csv,.txt,text/csv" hidden>
+
+<script>
+"use strict";
+/* ---------- utilidades ---------- */
+const LS='mapa-noc-v1';
+const TYPES=['Router','Switch','OLT','Firewall','Servidor','Radio','CPE','Otro'];
+const MEDIA={fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radioenlace',d:'8 5'},logico:{l:'Lógico / VPN',d:'2 4'}};
+const KINDS={cliente:'Cliente',sitio:'Sitio',servicio:'Servicio',carpeta:'Carpeta'};
+const CHILD_KIND={cliente:'sitio',sitio:'servicio',servicio:'carpeta',carpeta:'carpeta'};
+const uid=p=>p+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s??'').trim().toLowerCase();
+const fold=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const ncmp=(a,b)=>String(a).localeCompare(String(b),'es',{numeric:true,sensitivity:'base'});
+const today=()=>new Date().toISOString().slice(0,10);
+
+function glyph(type){
+  const p={
+    Router:'<circle cx="9" cy="9" r="7.5"/><path d="M9 3.5v11M3.5 9h11M7 5.5 9 3.5l2 2M7 12.5l2 2 2-2M5.5 7 3.5 9l2 2M12.5 7l2 2-2 2"/>',
+    Switch:'<rect x="1" y="4" width="16" height="10" rx="1.5"/><path d="M4 7.5h8m-2-2 2 2-2 2M14 10.5H6m2-2-2 2 2 2"/>',
+    OLT:'<rect x="1" y="2" width="16" height="7" rx="1.2"/><path d="M4 5.5h1M7 5.5h1M10 5.5h1M9 9v3M9 12 4 16M9 12v4M9 12l5 4"/>',
+    Firewall:'<rect x="1" y="2" width="16" height="14" rx="1"/><path d="M1 6.7h16M1 11.3h16M6 2v4.7M12 2v4.7M9 6.7v4.6M4 11.3V16M14 11.3V16"/>',
+    Servidor:'<rect x="2" y="1.5" width="14" height="6" rx="1"/><rect x="2" y="10.5" width="14" height="6" rx="1"/><path d="M5 4.5h1M5 13.5h1M10 4.5h3M10 13.5h3"/>',
+    Radio:'<path d="M9 8v9M6 17h6M9 8 7 17M9 8l2 9"/><circle cx="9" cy="6" r="1.4"/><path d="M5.5 2.5a5 5 0 0 0 0 7M12.5 2.5a5 5 0 0 1 0 7M3 1a8 8 0 0 0 0 10M15 1a8 8 0 0 1 0 10"/>',
+    CPE:'<path d="M2 9 9 2.5 16 9M4 7.5V16h10V7.5"/><rect x="7" y="10.5" width="4" height="5.5"/>',
+    Otro:'<circle cx="9" cy="9" r="7.5"/><circle cx="9" cy="9" r="2"/>'
+  };
+  return `<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${p[type]||p.Otro}</g>`;
+}
+const gsvg=(t,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 18 18">${glyph(t)}</svg>`;
+
+/* ---------- datos ---------- */
+function emptyData(){return {app:'mapa-noc',version:1,meta:{owner:'',lastExport:null,dirty:0,example:false},devices:[],folders:[],diagrams:{}};}
+function sample(){
+  const d=emptyData(); d.meta.example=true;
+  const dev=(id,name,ip,type,brand,model,access,ports,location)=>({id,name,ip,type,brand,model,access,ports,location,notes:''});
+  d.devices=[
+    dev('dCORE','CORE-MTY-01','10.0.0.1','Router','Cisco','ASR 9001',[{p:'ssh',port:''}],['Te0/0/0/0','Te0/0/0/1','Te0/0/0/2','Te0/0/0/3'],'DC Monterrey'),
+    dev('dFW','FW-DC-01','10.0.0.5','Firewall','Fortinet','FG-200F',[{p:'web',port:'443'},{p:'ssh',port:''}],['port1','port2','port3','port4'],'DC Monterrey'),
+    dev('dAGG','AGG-GPE-02','10.0.1.2','Switch','Huawei','S6730-H',[{p:'ssh',port:''},{p:'telnet',port:''}],['XGE0/0/1','XGE0/0/2','XGE0/0/5','XGE0/0/7'],'Nodo Guadalupe'),
+    dev('dOLT','OLT-GPE-01','10.0.2.10','OLT','Huawei','MA5800-X7',[{p:'ssh',port:''},{p:'web',port:'443'}],['0/1/0','0/1/2','0/1/3','0/9/0'],'Nodo Guadalupe'),
+    dev('dPTP','PTP-CUMBRES-01','10.0.3.20','Radio','Ubiquiti','AF-5XHD',[{p:'web',port:'443'}],['eth0','air'],'Torre Cumbres'),
+    dev('dC1','CPE-ACME-PLANTA','172.16.10.2','CPE','MikroTik','RB4011',[{p:'ssh',port:'2222'},{p:'web',port:'80'}],['ether1','ether2'],'Planta Apodaca'),
+    dev('dC2','CPE-ACME-CEDIS','172.16.10.6','CPE','MikroTik','hEX S',[{p:'ssh',port:''}],['ether1'],'CEDIS Guadalupe'),
+    dev('dC3','CPE-FARMA-SUC12','172.16.20.2','CPE','Cisco','ISR 1111',[{p:'ssh',port:''}],['Gi0/0/0'],'Sucursal 12')
+  ];
+  const f=(id,name,kind,parentId)=>({id,name,kind,parentId});
+  d.folders=[
+    f('fA','Comercial ACME (ejemplo)','cliente',null),
+    f('fA1','Planta Apodaca','sitio','fA'),f('fA1a','Internet dedicado 200 Mbps','servicio','fA1'),f('fA1b','L2L Planta ↔ CEDIS','servicio','fA1'),
+    f('fA2','CEDIS Guadalupe','sitio','fA'),f('fA2a','Internet dedicado 100 Mbps','servicio','fA2'),
+    f('fB','Farmacias del Norte (ejemplo)','cliente',null),
+    f('fB1','Sucursal 12','sitio','fB'),f('fB1a','Internet + VPN','servicio','fB1')
+  ];
+  const N=(id,deviceId,x,y)=>({id,deviceId,x,y});
+  const T=(id,text,x,y)=>({id,text,x,y});
+  const E=(id,from,to,fp,tp,medium='fibra',label='',dir='fwd')=>({id,from,to,fp,tp,medium,label,dir});
+  d.diagrams.fA1a={nodes:[N('n1','dCORE',40,140),N('n2','dAGG',300,140),N('n3','dOLT',560,140),N('n4','dC1',820,140),T('t1','VLAN 120 · 200 Mbps\nIP pública 201.x.x.10/30',560,40)],
+    edges:[E('e1','n1','n2','Te0/0/0/1','XGE0/0/1'),E('e2','n2','n3','XGE0/0/5','0/9/0'),E('e3','n3','n4','0/1/2','ether1','fibra','ONT 7')]};
+  d.diagrams.fA1b={nodes:[N('n1','dC1',40,160),N('n2','dOLT',290,160),N('n3','dAGG',540,160),N('n4','dPTP',790,60),N('n5','dC2',790,260),T('t1','L2L VLAN 310',300,60)],
+    edges:[E('e1','n1','n2','ether2','0/1/2','fibra','','both'),E('e2','n2','n3','0/9/0','XGE0/0/5','fibra','','both'),E('e3','n3','n4','XGE0/0/7','eth0','cobre','','both'),E('e4','n4','n5','air','ether1','radio','','both')]};
+  d.diagrams.fA2a={nodes:[N('n1','dCORE',40,140),N('n2','dAGG',300,140),N('n3','dPTP',560,140),N('n4','dC2',820,140)],
+    edges:[E('e1','n1','n2','Te0/0/0/1','XGE0/0/1'),E('e2','n2','n3','XGE0/0/7','eth0','cobre'),E('e3','n3','n4','air','ether1','radio')]};
+  d.diagrams.fB1a={nodes:[N('n1','dCORE',40,160),N('n2','dFW',290,160),N('n3','dAGG',540,160),N('n4','dOLT',790,160),N('n5','dC3',790,330),T('t1','VPN IPsec hacia FW-DC-01',300,60)],
+    edges:[E('e1','n1','n2','Te0/0/0/2','port1'),E('e2','n2','n3','port3','XGE0/0/2'),E('e3','n3','n4','XGE0/0/5','0/9/0'),E('e4','n4','n5','0/1/3','Gi0/0/0','fibra','ONT 2'),E('e5','n5','n2','','', 'logico','IPsec','both')]};
+  return d;
+}
+function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r);if(d&&d.devices)return d;}}catch(e){}return null;}
+let S=load()||sample();
+let saveT=null,saveOk=true;
+function save(markDirty=true){
+  if(markDirty)S.meta.dirty=(S.meta.dirty||0)+1;
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(S));saveOk=true;}catch(e){saveOk=false;}renderStatus();},250);
+  renderStatus();
+}
+const devById=id=>S.devices.find(d=>d.id===id);
+const folById=id=>S.folders.find(f=>f.id===id);
+const kids=pid=>S.folders.filter(f=>(f.parentId||null)===(pid||null)).sort((a,b)=>ncmp(a.name,b.name));
+function getDiag(fid,create){if(!S.diagrams[fid]&&create)S.diagrams[fid]={nodes:[],edges:[]};return S.diagrams[fid]||{nodes:[],edges:[]};}
+function pathOf(fid){const out=[];let f=folById(fid);while(f){out.unshift(f);f=folById(f.parentId);}return out;}
+function clientOf(fid){const p=pathOf(fid);return p[0]||null;}
+function devicePorts(id){
+  const s=new Set((devById(id)?.ports)||[]);
+  for(const D of Object.values(S.diagrams)){const m={};D.nodes.forEach(n=>{if(n.deviceId===id)m[n.id]=1;});
+    D.edges.forEach(e=>{if(m[e.from]&&e.fp)s.add(e.fp);if(m[e.to]&&e.tp)s.add(e.tp);});}
+  return [...s].filter(Boolean).sort(ncmp);
+}
+function usage(id){let c=0;for(const D of Object.values(S.diagrams))if(D.nodes.some(n=>n.deviceId===id))c++;return c;}
+
+/* ---------- impacto ---------- */
+function impactOf(devId,port){
+  const pn=norm(port),items=[];
+  for(const [fid,D] of Object.entries(S.diagrams)){
+    if(!folById(fid))continue;
+    const nodes=D.nodes.filter(n=>n.deviceId===devId); if(!nodes.length)continue;
+    const ids=new Set(nodes.map(n=>n.id)),edges=new Set(),ports=new Set(),hitNodes=new Set();
+    D.edges.forEach(e=>{
+      const a=ids.has(e.from),b=ids.has(e.to); if(!a&&!b)return;
+      const ok=!pn||(a&&norm(e.fp)===pn)||(b&&norm(e.tp)===pn);
+      if(a&&e.fp)ports.add(e.fp); if(b&&e.tp)ports.add(e.tp);
+      if(ok){edges.add(e.id);hitNodes.add(a?e.from:e.to);}
+    });
+    if(!pn)nodes.forEach(n=>hitNodes.add(n.id));
+    if(pn&&!edges.size)continue;
+    items.push({fid,edges,nodes:hitNodes,ports:[...ports].sort(ncmp)});
+  }
+  return items;
+}
+
+/* ---------- estado de UI ---------- */
+const ui={tab:'clientes',folder:null,sel:null,collapsed:new Set(),vps:{},drag:null,impact:null,devQ:''};
+const firstLeaf=()=>{const s=S.folders.find(f=>S.diagrams[f.id]?.nodes.length);return s?s.id:(S.folders[0]?.id||null);};
+ui.folder=firstLeaf();
+
+/* ---------- barra superior ---------- */
+function renderStatus(){
+  const el=$('#status'),sp=el.querySelector('span');
+  if(!saveOk){el.className='status warn';sp.textContent='No se pudo guardar en este navegador. Exporta tu respaldo.';return;}
+  const le=S.meta.lastExport;
+  el.className='status'+((S.meta.dirty&&le)||(!le&&!S.meta.example)?' warn':'');
+  sp.textContent='Guardado en este navegador · '+(le?('respaldo '+le+(S.meta.dirty?` · ${S.meta.dirty} cambios sin exportar`:'')):'sin respaldo exportado');
+}
+
+/* ---------- panel lateral ---------- */
+function renderSide(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===ui.tab));
+  const pane=$('#pane');
+  if(ui.tab==='clientes')pane.innerHTML=sideClients();
+  else if(ui.tab==='equipos')pane.innerHTML=sideDevices();
+  else pane.innerHTML=sideImpact();
+  if(ui.tab==='equipos'){const i=$('#devQ');if(i){i.value=ui.devQ;}}
+}
+function exampleNote(){
+  return S.meta.example?`<div class="note"><span><b>Datos de ejemplo.</b> Clientes y equipos ficticios para que pruebes el flujo. Prueba el análisis de impacto en <span class="mono">AGG-GPE-02 · XGE0/0/5</span>.</span><div><button class="btn sm" data-act="wipe">Empezar vacío</button></div></div>`:'';
+}
+function sideClients(){
+  const hitF=new Set();
+  if(ui.impact)impactOf(ui.impact.dev,ui.impact.port).forEach(i=>pathOf(i.fid).forEach(f=>hitF.add(f.id)));
+  const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
+    return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
+      const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
+      return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}">
+        <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
+        <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>
+        <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
+        <span class="ra"><button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button></span>
+      </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
+  const tree=branch(null);
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="newClient">+ Cliente</button></div>`+
+    (tree||`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
+}
+function sideDevices(){
+  const q=fold(ui.devQ);
+  const list=S.devices.filter(d=>!q||fold([d.name,d.ip,d.brand,d.model,d.type,d.location].join(' ')).includes(q)).sort((a,b)=>ncmp(a.name,b.name));
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.devices.length} equipos</span><button class="btn sm" data-act="csv">CSV</button><button class="btn sm" data-act="newDev">+ Equipo</button></div>
+  <input class="inp" id="devQ" type="search" placeholder="Filtrar por nombre, IP, marca…" style="margin-bottom:8px">
+  <div class="dlist">${list.map(d=>{const u=usage(d.id);return `<button class="drow" data-dev="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)}</div><div class="ip">${esc(d.ip||'sin IP')} · ${esc([d.brand,d.model].filter(Boolean).join(' ')||d.type)}</div></div><span class="use" title="Servicios que lo usan">${u}</span></button>`;}).join('')||'<p class="sub">Sin resultados.</p>'}</div>`;
+}
+function sideImpact(){
+  const devs=[...S.devices].sort((a,b)=>ncmp(a.name,b.name));
+  const cur=ui.impact||{dev:'',port:''};
+  let html=`<div class="imp"><p style="margin:0;color:var(--muted);font-size:12.5px">Elige el equipo (y si quieres el puerto) que está fallando para ver todos los clientes y servicios que pasan por ahí.</p>
+  <div class="fld"><span class="lbl">Equipo</span><select id="impDev"><option value="">Selecciona…</option>${devs.map(d=>`<option value="${d.id}"${d.id===cur.dev?' selected':''}>${esc(d.name)} — ${esc(d.ip)}</option>`).join('')}</select></div>`;
+  if(cur.dev){
+    html+=`<div class="fld"><span class="lbl">Puerto</span><select id="impPort"><option value="">Todo el equipo</option>${devicePorts(cur.dev).map(p=>`<option${norm(p)===norm(cur.port)?' selected':''}>${esc(p)}</option>`).join('')}</select></div>`;
+    const items=impactOf(cur.dev,cur.port);
+    const byC={};items.forEach(i=>{const c=clientOf(i.fid);const k=c?c.id:'-';(byC[k]=byC[k]||{c,items:[]}).items.push(i);});
+    html+=`<div class="sum"><div><b>${Object.keys(byC).length}</b><span>clientes</span></div><div><b>${items.length}</b><span>servicios / diagramas</span></div></div>`;
+    if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Quitar resaltado</button></div>`;
+    html+=Object.values(byC).sort((a,b)=>ncmp(a.c?.name,b.c?.name)).map(g=>`<div class="grp"><h4>${esc(g.c?.name||'Sin cliente')}</h4>${g.items.map(i=>{
+      const p=pathOf(i.fid).slice(1).map(f=>f.name).join(' › ')||'(diagrama del cliente)';
+      return `<button class="irow" data-open="${i.fid}"><span>${esc(p)}</span><span class="pp">${esc(i.ports.join(', ')||'sin puertos registrados')}</span></button>`;}).join('')}</div>`).join('');
+    if(!items.length)html+=`<p class="sub" style="color:var(--muted)">Ningún diagrama usa ${cur.port?'ese puerto':'este equipo'} todavía.</p>`;
+  }
+  return html+'</div>';
+}
+
+/* ---------- lienzo ---------- */
+const svg=$('#cv'),vpG=$('#vp');
+const getVp=()=>ui.vps[ui.folder]||(ui.vps[ui.folder]={x:30,y:30,k:1});
+function dims(n){
+  if(n.deviceId)return{w:178,h:58};
+  const lines=String(n.text||' ').split('\n');
+  return{w:Math.max(60,Math.max(...lines.map(l=>l.length))*7.1+18),h:lines.length*18+12};
+}
+function clip(n,tx,ty,off){
+  const {w,h}=dims(n);const cx=n.x+w/2+off[0],cy=n.y+h/2+off[1];const dx=tx-cx,dy=ty-cy;
+  if(!dx&&!dy)return[cx,cy];
+  const sx=dx?(w/2)/Math.abs(dx):1e9,sy=dy?(h/2)/Math.abs(dy):1e9,s=Math.min(sx,sy,1);
+  return[cx+dx*s,cy+dy*s];
+}
+function trunc(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
+function lbl(x,y,t,cls){const w=t.length*6.4+10;return `<g class="${cls}"><rect x="${x-w/2}" y="${y-9}" width="${w}" height="17" rx="3"/><text x="${x}" y="${y+3.5}" text-anchor="middle">${esc(t)}</text></g>`;}
+function renderCanvas(){
+  const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
+  const tools=$('#tools');tools.style.visibility=fid?'visible':'hidden';
+  if(!fid){vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
+  const D=getDiag(fid),vp=getVp();
+  vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
+  const path=pathOf(fid);
+  $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span>${esc(f.name)}</span><span>›</span>`).join('')+`<b>${esc(path.at(-1)?.name||'')}</b>`;
+  // impacto en este diagrama
+  let hit=null;
+  if(ui.impact){const it=impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
+    const d=devById(ui.impact.dev),all=impactOf(ui.impact.dev,ui.impact.port);
+    ib.hidden=false;ib.innerHTML=`<span>Impacto: <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b> — ${all.length} servicio${all.length===1?'':'s'}${it?'':' (no pasa por este diagrama)'}</span><span class="grow"></span><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm ghost" data-act="clearImp">Quitar</button>`;
+  }else ib.hidden=true;
+  const nm={};D.nodes.forEach(n=>nm[n.id]=n);
+  // aristas paralelas
+  const pairs={};D.edges.forEach(e=>{const k=[e.from,e.to].sort().join('|');(pairs[k]=pairs[k]||[]).push(e.id);});
+  let out='';
+  D.edges.forEach(e=>{
+    const a=nm[e.from],b=nm[e.to];if(!a||!b)return;
+    const da=dims(a),db=dims(b);
+    const ax=a.x+da.w/2,ay=a.y+da.h/2,bx=b.x+db.w/2,by=b.y+db.h/2;
+    const k=[e.from,e.to].sort().join('|'),grp=pairs[k],i=grp.indexOf(e.id),o=(i-(grp.length-1)/2)*22;
+    const L=Math.hypot(bx-ax,by-ay)||1;let px=-(by-ay)/L*o,py=(bx-ax)/L*o;if(e.from>e.to){px=-px;py=-py;}
+    const off=[px,py];
+    const [x1,y1]=clip(a,bx+px,by+py,off),[x2,y2]=clip(b,ax+px,ay+py,off);
+    const sel=ui.sel?.t==='edge'&&ui.sel.id===e.id,h=hit?.edges.has(e.id);
+    const mk=h?'arH':sel?'arS':'ar';
+    const cls='edge'+(sel?' sel':'')+(h?' hit':'')+(hit&&!h?' dim':'');
+    const dash=MEDIA[e.medium]?.d||'';
+    const ms=e.dir==='both'?`marker-start="url(#${mk})"`:'',me=e.dir==='none'?'':`marker-end="url(#${mk})"`;
+    let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
+    const len=Math.hypot(x2-x1,y2-y1),t=Math.min(.3,Math.max(.12,46/(len||1)));
+    if(e.fp)s+=lbl(x1+(x2-x1)*t,y1+(y2-y1)*t,trunc(e.fp,16),'pl');
+    if(e.tp)s+=lbl(x1+(x2-x1)*(1-t),y1+(y2-y1)*(1-t),trunc(e.tp,16),'pl');
+    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2;s+=`<g class="ml"><text x="${mx}" y="${my-8}" text-anchor="middle">${esc(trunc(e.label,30))}</text></g>`;}
+    s+=`<line class="eh" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></g>`;
+    out+=s;
+  });
+  D.nodes.forEach(n=>{
+    const {w,h}=dims(n),sel=ui.sel?.t==='node'&&ui.sel.id===n.id,hn=hit?.nodes.has(n.id);
+    const cls='node'+(n.deviceId?'':' txt')+(sel?' sel':'')+(hn?' hit':'')+(hit&&!hn&&n.deviceId?' dim':'');
+    let s=`<g class="${cls}" data-node="${n.id}" transform="translate(${n.x},${n.y})">`;
+    if(n.deviceId){const d=devById(n.deviceId)||{name:'(equipo eliminado)',ip:'',type:'Otro'};
+      s+=`<rect class="nb" width="${w}" height="${h}" rx="7"/><g class="gl" transform="translate(11,20)">${glyph(d.type)}</g>
+      <text class="nm" x="40" y="25">${esc(trunc(d.name,19))}</text><text class="ipt" x="40" y="43">${esc(trunc(d.ip||d.type,22))}</text>`;
+    }else{
+      s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0">${String(n.text||'').split('\n').map((l,i)=>`<tspan x="5" dy="${i?18:18}">${esc(l)||' '}</tspan>`).join('')}</text>`;
+    }
+    s+=`<circle class="hd" data-handle="${n.id}" cx="${w}" cy="${h/2}" r="6.5"/></g>`;
+    out+=s;
+  });
+  if(ui.drag?.kind==='link'){const a=nm[ui.drag.from];if(a){const d=dims(a);out+=`<line class="tmp" x1="${a.x+d.w}" y1="${a.y+d.h/2}" x2="${ui.drag.x}" y2="${ui.drag.y}"/>`;}}
+  vpG.innerHTML=out;
+  emp.hidden=D.nodes.length>0;
+  if(!D.nodes.length)emp.innerHTML=`<div><h3>Diagrama vacío</h3><span>Agrega los equipos de este ${esc((KINDS[folById(fid)?.kind]||'elemento').toLowerCase())} con <b>+ Equipo</b> y conéctalos arrastrando el punto del borde.</span></div>`;
+}
+let raf=0;const rc=()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderCanvas();});};
+function toWorld(e){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(e.clientX-r.left-vp.x)/vp.k,y:(e.clientY-r.top-vp.y)/vp.k};}
+function fit(){
+  if(!ui.folder)return;const D=getDiag(ui.folder),vp=getVp();const r=svg.getBoundingClientRect();
+  if(!D.nodes.length){vp.x=30;vp.y=30;vp.k=1;rc();return;}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;D.nodes.forEach(n=>{const d=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+d.w);y1=Math.max(y1,n.y+d.h);});
+  const pad=50,k=Math.max(.25,Math.min(1.4,Math.min((r.width-pad*2)/(x1-x0||1),(r.height-pad*2-40)/(y1-y0||1))));
+  vp.k=k;vp.x=(r.width-(x1-x0)*k)/2-x0*k;vp.y=(r.height-(y1-y0)*k)/2-y0*k+16;rc();
+}
+function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.2,Math.min(2.5,vp.k*f));vp.x=cx-(cx-vp.x)*k/vp.k;vp.y=cy-(cy-vp.y)*k/vp.k;vp.k=k;rc();}
+
+svg.addEventListener('pointerdown',e=>{
+  if(!ui.folder||e.button>0)return;
+  const pt=toWorld(e),D=getDiag(ui.folder,true);
+  const h=e.target.closest('[data-handle]');
+  if(h){ui.drag={kind:'link',from:h.dataset.handle,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);e.preventDefault();return;}
+  const n=e.target.closest('[data-node]');
+  if(n){const nd=D.nodes.find(x=>x.id===n.dataset.node);ui.sel={t:'node',id:nd.id};ui.drag={kind:'node',id:nd.id,ox:pt.x-nd.x,oy:pt.y-nd.y,moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();return;}
+  const ed=e.target.closest('[data-edge]');
+  if(ed){ui.sel={t:'edge',id:ed.dataset.edge};renderInsp();rc();return;}
+  if(ui.sel){ui.sel=null;renderInsp();rc();}
+  const vp=getVp();ui.drag={kind:'pan',sx:e.clientX,sy:e.clientY,vx:vp.x,vy:vp.y};svg.classList.add('panning');svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener('pointermove',e=>{
+  const g=ui.drag;if(!g)return;
+  if(g.kind==='pan'){const vp=getVp();vp.x=g.vx+e.clientX-g.sx;vp.y=g.vy+e.clientY-g.sy;rc();return;}
+  const pt=toWorld(e);
+  if(g.kind==='node'){const nd=getDiag(ui.folder).nodes.find(x=>x.id===g.id);if(!nd)return;nd.x=Math.round((pt.x-g.ox)/8)*8;nd.y=Math.round((pt.y-g.oy)/8)*8;g.moved=true;rc();}
+  if(g.kind==='link'){g.x=pt.x;g.y=pt.y;rc();}
+});
+function endDrag(e){
+  const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
+  if(g.kind==='node'&&g.moved)save();
+  if(g.kind==='link'){
+    const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-node]');
+    if(t&&t.dataset.node!==g.from){
+      const D=getDiag(ui.folder,true),a=D.nodes.find(n=>n.id===g.from),b=D.nodes.find(n=>n.id===t.dataset.node);
+      const medium=(a?.deviceId&&b?.deviceId)?'fibra':'logico';
+      const ed={id:uid('e'),from:g.from,to:t.dataset.node,fp:'',tp:'',medium,label:'',dir:a?.deviceId&&b?.deviceId?'fwd':'none'};
+      D.edges.push(ed);ui.sel={t:'edge',id:ed.id};save();renderInsp();renderSide();
+      setTimeout(()=>{const f=$('#eFp');if(f&&matchMedia('(min-width:861px)').matches)f.focus();},30);
+    }
+  }
+  rc();
+}
+svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
+svg.addEventListener('wheel',e=>{if(!ui.folder)return;e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!n)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===n.dataset.node);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd)devModal(nd.deviceId);});
+$('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,r.height/2);};
+$('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
+$('#tFit').onclick=fit;
+function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
+$('#tAddTxt').onclick=()=>{if(!ui.folder)return;const D=getDiag(ui.folder,true),c=centerPt();const n={id:uid('t'),text:'Nota',x:Math.round(c.x-30),y:Math.round(c.y-15)};D.nodes.push(n);ui.sel={t:'node',id:n.id};save();renderCanvas();renderInsp();setTimeout(()=>{const t=$('#nTxt');if(t){t.focus();t.select();}},30);};
+$('#tAddDev').onclick=()=>pickDevModal();
+
+function addDeviceNode(devId){
+  const D=getDiag(ui.folder,true),ex=D.nodes.find(n=>n.deviceId===devId);
+  if(ex){ui.sel={t:'node',id:ex.id};renderCanvas();renderInsp();toast('Ese equipo ya está en el diagrama');return;}
+  const c=centerPt(),k=D.nodes.length%5;
+  const n={id:uid('n'),deviceId:devId,x:Math.round((c.x-89+k*24)/8)*8,y:Math.round((c.y-29+k*24)/8)*8};
+  D.nodes.push(n);ui.sel={t:'node',id:n.id};save();renderCanvas();renderInsp();renderSide();
+}
+
+/* ---------- inspector ---------- */
+function accessCmd(d,a){
+  const ip=d.ip||'';
+  if(a.p==='ssh')return{cmd:`ssh ${ip}${a.port&&a.port!=='22'?' -p '+a.port:''}`,url:`ssh://${ip}${a.port?':'+a.port:''}`};
+  if(a.p==='telnet')return{cmd:`telnet ${ip}${a.port&&a.port!=='23'?' '+a.port:''}`,url:`telnet://${ip}${a.port?':'+a.port:''}`};
+  const http=a.port==='80'||a.port==='8080';const u=`${http?'http':'https'}://${ip}${a.port&&a.port!=='80'&&a.port!=='443'?':'+a.port:''}`;return{cmd:u,url:u};
+}
+function accessBlock(d){
+  if(!d.access?.length)return'';
+  return `<div class="acc"><span class="lbl">Acceso</span>${d.access.map(a=>{const c=accessCmd(d,a);return `<div class="accRow"><span class="pr">${esc(a.p)}</span><code title="${esc(c.cmd)}">${esc(c.cmd)}</code><button class="btn sm" data-copy="${esc(c.cmd)}">Copiar</button><a href="${esc(c.url)}" target="_blank" rel="noopener">Abrir</a></div>`;}).join('')}</div>`;
+}
+function renderInsp(){
+  const el=$('#insp'),close='<button class="btn sm ghost insClose" data-act="desel">Cerrar ✕</button>';
+  const D=ui.folder?getDiag(ui.folder):null;
+  el.classList.toggle('idle',!ui.sel);
+  if(!D||!ui.sel){
+    if(!ui.folder){el.innerHTML=`<h3>Mapa NOC</h3><p class="sub">Selecciona un servicio para ver su diagrama.</p>`;return;}
+    const f=folById(ui.folder),devs=[...new Set(D.nodes.filter(n=>n.deviceId).map(n=>n.deviceId))].map(devById).filter(Boolean);
+    el.innerHTML=`<div><span class="lbl">${esc(KINDS[f?.kind]||'')}</span><h3>${esc(f?.name)}</h3></div>
+      <dl class="kv"><dt>Equipos</dt><dd>${devs.length}</dd><dt>Conexiones</dt><dd>${D.edges.length}</dd></dl>
+      ${devs.length?`<div class="acc"><span class="lbl">Equipos en el camino</span>${devs.map(d=>`<button class="drow" data-selnode="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)}</div><div class="ip">${esc(d.ip)}</div></div><span></span></button>`).join('')}</div>`:''}
+      <hr class="sep"><p class="sub" style="margin:0">Haz clic en un equipo o en una línea para ver su detalle, puertos y acceso. <kbd>Supr</kbd> elimina lo seleccionado del diagrama.</p>`;
+    return;
+  }
+  if(ui.sel.t==='node'){
+    const n=D.nodes.find(x=>x.id===ui.sel.id);if(!n){ui.sel=null;return renderInsp();}
+    if(!n.deviceId){
+      el.innerHTML=`${close}<span class="lbl">Texto</span><div class="fld"><textarea id="nTxt" rows="4">${esc(n.text)}</textarea></div><button class="btn sm dan" data-act="delSel">Eliminar texto</button>`;return;
+    }
+    const d=devById(n.deviceId)||{};
+    const conns=D.edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>{const mine=e.from===n.id?e.fp:e.tp,other=D.nodes.find(x=>x.id===(e.from===n.id?e.to:e.from)),od=other?.deviceId?devById(other.deviceId)?.name:'texto';return{e,mine,od};});
+    const u=usage(d.id);
+    el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0"><h3>${esc(d.name)}</h3><div class="sub mono">${esc(d.ip||'sin IP')}</div></div></div>
+      <dl class="kv"><dt>Tipo</dt><dd>${esc(d.type)}</dd>${d.brand||d.model?`<dt>Modelo</dt><dd>${esc([d.brand,d.model].filter(Boolean).join(' '))}</dd>`:''}${d.location?`<dt>Ubicación</dt><dd>${esc(d.location)}</dd>`:''}<dt>Usado en</dt><dd>${u} diagrama${u===1?'':'s'}</dd></dl>
+      ${accessBlock(d)}
+      ${conns.length?`<div class="acc"><span class="lbl">Puertos en este diagrama</span>${conns.map(c=>`<div class="kv"><dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd></div>`).join('')}</div>`:''}
+      ${devicePorts(d.id).length?`<div class="acc"><span class="lbl">Ver impacto por puerto</span><div class="chips">${devicePorts(d.id).map(p=>`<span class="chip" data-imp="${d.id}" data-port="${esc(p)}">${esc(p)}</span>`).join('')}</div></div>`:''}
+      ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button><button class="btn sm dan" data-act="delSel">Quitar del diagrama</button></div>`;
+    return;
+  }
+  const e=D.edges.find(x=>x.id===ui.sel.id);if(!e){ui.sel=null;return renderInsp();}
+  const a=D.nodes.find(n=>n.id===e.from),b=D.nodes.find(n=>n.id===e.to);
+  const nameOf=n=>n?.deviceId?devById(n.deviceId)?.name:'Texto';
+  const dl=(id,n)=>n?.deviceId?`<datalist id="${id}">${devicePorts(n.deviceId).map(p=>`<option value="${esc(p)}">`).join('')}</datalist>`:'';
+  el.innerHTML=`${close}<span class="lbl">Conexión</span>
+    <div class="ends">
+      <div class="end"><span class="who">${esc(nameOf(a))}</span><input class="inp mono" id="eFp" list="dlA" placeholder="Puerto de salida (ej. Gi0/1)" value="${esc(e.fp)}" ${a?.deviceId?'':'disabled'}>${dl('dlA',a)}</div>
+      <div style="text-align:center;color:var(--muted)">${e.dir==='both'?'⇅':'↓'}</div>
+      <div class="end"><span class="who">${esc(nameOf(b))}</span><input class="inp mono" id="eTp" list="dlB" placeholder="Puerto de llegada" value="${esc(e.tp)}" ${b?.deviceId?'':'disabled'}>${dl('dlB',b)}</div>
+    </div>
+    <div class="fld"><span class="lbl">Etiqueta</span><input class="inp" id="eLb" placeholder="VLAN, ONT, circuito…" value="${esc(e.label)}"></div>
+    <div class="two"><div class="fld"><span class="lbl">Medio</span><select id="eMd">${Object.entries(MEDIA).map(([k,v])=>`<option value="${k}"${e.medium===k?' selected':''}>${v.l}</option>`).join('')}</select></div>
+    <div class="fld"><span class="lbl">Flecha</span><select id="eDr"><option value="fwd"${e.dir==='fwd'?' selected':''}>Un sentido</option><option value="both"${e.dir==='both'?' selected':''}>Ambos sentidos</option><option value="none"${e.dir==='none'?' selected':''}>Sin flecha</option></select></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="flip">Invertir sentido</button><button class="btn sm dan" data-act="delSel">Eliminar conexión</button></div>
+    <p class="sub" style="margin:0">Los puertos que escribas se agregan al inventario del equipo y quedan disponibles para el análisis de impacto.</p>`;
+}
+$('#insp').addEventListener('input',e=>{
+  const D=ui.folder&&getDiag(ui.folder);if(!D||!ui.sel)return;
+  if(e.target.id==='nTxt'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){n.text=e.target.value;save();rc();}return;}
+  const ed=D.edges.find(x=>x.id===ui.sel.id);if(!ed)return;
+  const m={eFp:'fp',eTp:'tp',eLb:'label',eMd:'medium',eDr:'dir'}[e.target.id];if(!m)return;
+  ed[m]=e.target.value.trim()===''&&m!=='label'?'':(m==='label'?e.target.value:e.target.value.trim());save();rc();
+});
+$('#insp').addEventListener('change',e=>{
+  if(!['eFp','eTp'].includes(e.target.id))return;
+  const D=getDiag(ui.folder),ed=D.edges.find(x=>x.id===ui.sel?.id);if(!ed)return;
+  const n=D.nodes.find(x=>x.id===(e.target.id==='eFp'?ed.from:ed.to)),d=n&&devById(n.deviceId),v=e.target.value.trim();
+  if(d&&v&&!d.ports.some(p=>norm(p)===norm(v))){d.ports.push(v);save();}
+  if(e.target.id==='eDr')renderInsp();
+  renderSide();
+});
+
+/* ---------- modales ---------- */
+function modal(title,body,actions){
+  $('#mT').textContent=title;$('#mB').innerHTML=body;
+  const f=$('#mF');f.innerHTML='';
+  actions.forEach(a=>{const b=document.createElement('button');b.className='btn '+(a.k||'');b.textContent=a.l;b.onclick=a.f||closeModal;f.appendChild(b);});
+  $('#modal').hidden=false;setTimeout(()=>{const i=$('#mB').querySelector('input:not([type=checkbox]),select,textarea');if(i&&matchMedia('(min-width:861px)').matches)i.focus();},20);
+}
+function closeModal(){$('#modal').hidden=true;}
+$('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal')closeModal();});
+let toastT;function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2600);}
+
+function folderModal(id,parentId,kind){
+  const f=id?folById(id):null;
+  const k=f?f.kind:kind;
+  modal(f?'Editar '+KINDS[k].toLowerCase():'Nuevo '+KINDS[k].toLowerCase(),
+    `<div class="fld"><span class="lbl">Nombre</span><input id="fName" value="${esc(f?.name||'')}" placeholder="${k==='cliente'?'Razón social o nombre corto':k==='sitio'?'Sucursal, planta, oficina…':'Internet dedicado, L2L, MPLS…'}"></div>
+     <div class="fld"><span class="lbl">Tipo</span><select id="fKind">${Object.entries(KINDS).map(([v,l])=>`<option value="${v}"${v===k?' selected':''}>${l}</option>`).join('')}</select></div>
+     <div id="fErr" class="err"></div>`,
+    [...(f?[{l:'Eliminar',k:'dan',f:()=>delFolderModal(f.id)}]:[]),{l:'Cancelar'},{l:f?'Guardar':'Crear',k:'pri',f:()=>{
+      const name=$('#fName').value.trim();if(!name){$('#fErr').textContent='Escribe un nombre.';return;}
+      if(f){f.name=name;f.kind=$('#fKind').value;}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null};S.folders.push(nf);ui.folder=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
+      save();closeModal();renderAll();requestAnimationFrame(fit);}}]);
+  $('#fName').onkeydown=e=>{if(e.key==='Enter')$('#mF .pri').click();};
+}
+function subtree(id){const out=[id];kids(id).forEach(k=>out.push(...subtree(k.id)));return out;}
+function delFolderModal(id){
+  const ids=subtree(id),f=folById(id);
+  modal('Eliminar '+f.name,`<p>Se eliminará <b>${esc(f.name)}</b>${ids.length>1?` y ${ids.length-1} elemento${ids.length>2?'s':''} dentro`:''}, con sus diagramas. Los equipos siguen en el inventario.</p>`,
+    [{l:'Cancelar'},{l:'Eliminar',k:'dan pri',f:()=>{S.folders=S.folders.filter(x=>!ids.includes(x.id));ids.forEach(i=>delete S.diagrams[i]);if(ids.includes(ui.folder)){ui.folder=null;ui.sel=null;}save();closeModal();renderAll();}}]);
+}
+function devModal(id){
+  const d=id?devById(id):null;
+  const acc=p=>d?.access?.find(a=>a.p===p);
+  modal(d?'Editar equipo':'Nuevo equipo',`
+    <div class="two"><div class="fld"><span class="lbl">Nombre / hostname</span><input id="dName" value="${esc(d?.name||'')}" placeholder="AGG-GPE-02"></div>
+    <div class="fld"><span class="lbl">IP de gestión</span><input id="dIp" class="mono" value="${esc(d?.ip||'')}" placeholder="10.0.1.2"></div></div>
+    <div class="two"><div class="fld"><span class="lbl">Tipo</span><select id="dType">${TYPES.map(t=>`<option${(d?.type||'Switch')===t?' selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="fld"><span class="lbl">Ubicación / nodo</span><input id="dLoc" value="${esc(d?.location||'')}"></div></div>
+    <div class="two"><div class="fld"><span class="lbl">Marca</span><input id="dBrand" value="${esc(d?.brand||'')}"></div>
+    <div class="fld"><span class="lbl">Modelo</span><input id="dModel" value="${esc(d?.model||'')}"></div></div>
+    <div class="fld"><span class="lbl">Acceso (puerto opcional)</span><div class="accEdit">
+      ${['ssh','telnet','web'].map(p=>`<label class="chk"><input type="checkbox" id="dA_${p}"${acc(p)?' checked':''}> ${p.toUpperCase()}</label><input type="text" class="mono" id="dP_${p}" value="${esc(acc(p)?.port||'')}" placeholder="${p==='ssh'?'22':p==='telnet'?'23':'443'}">`).join('')}
+    </div></div>
+    <div class="fld"><span class="lbl">Puertos / interfaces (uno por línea)</span><textarea id="dPorts" class="mono" rows="4" placeholder="Gi0/1&#10;Gi0/2&#10;Te1/1/1">${esc((d?.ports||[]).join('\n'))}</textarea></div>
+    <div class="fld"><span class="lbl">Notas</span><textarea id="dNotes" rows="2" placeholder="Usuario, contacto del sitio, observaciones…">${esc(d?.notes||'')}</textarea></div>
+    <div id="dErr" class="err"></div>`,
+    [...(d?[{l:'Eliminar',k:'dan',f:()=>delDevModal(d.id)}]:[]),{l:'Cancelar'},{l:d?'Guardar':'Agregar',k:'pri',f:()=>{
+      const name=$('#dName').value.trim(),ip=$('#dIp').value.trim();
+      if(!name){$('#dErr').textContent='El nombre es obligatorio.';return;}
+      const dup=S.devices.find(x=>x.id!==d?.id&&((ip&&x.ip===ip)||norm(x.name)===norm(name)));
+      if(dup&&!$('#dErr').dataset.ok){$('#dErr').textContent=`Ya existe ${dup.name} (${dup.ip}) con ese nombre o IP. Presiona de nuevo para guardar de todos modos.`;$('#dErr').dataset.ok=1;return;}
+      const obj=d||{id:uid('d')};
+      Object.assign(obj,{name,ip,type:$('#dType').value,location:$('#dLoc').value.trim(),brand:$('#dBrand').value.trim(),model:$('#dModel').value.trim(),
+        access:['ssh','telnet','web'].filter(p=>$('#dA_'+p).checked).map(p=>({p,port:$('#dP_'+p).value.trim()})),
+        ports:[...new Set($('#dPorts').value.split(/\n|,/).map(s=>s.trim()).filter(Boolean))],notes:$('#dNotes').value.trim()});
+      if(!d)S.devices.push(obj);
+      save();closeModal();renderAll();
+      if(!d&&ui.addAfterCreate){ui.addAfterCreate=false;addDeviceNode(obj.id);}
+    }}]);
+}
+function delDevModal(id){
+  const d=devById(id),u=usage(id);
+  modal('Eliminar '+d.name,`<p>${u?`Este equipo aparece en <b>${u} diagrama${u>1?'s':''}</b>; se quitará de todos junto con sus conexiones.`:'El equipo no se usa en ningún diagrama.'}</p>`,
+    [{l:'Cancelar'},{l:'Eliminar equipo',k:'dan pri',f:()=>{
+      for(const D of Object.values(S.diagrams)){const rm=new Set(D.nodes.filter(n=>n.deviceId===id).map(n=>n.id));D.nodes=D.nodes.filter(n=>!rm.has(n.id));D.edges=D.edges.filter(e=>!rm.has(e.from)&&!rm.has(e.to));}
+      S.devices=S.devices.filter(x=>x.id!==id);if(ui.impact?.dev===id)ui.impact=null;ui.sel=null;save();closeModal();renderAll();}}]);
+}
+function pickDevModal(){
+  if(!ui.folder)return;
+  const D=getDiag(ui.folder),inD=new Set(D.nodes.map(n=>n.deviceId));
+  const draw=q=>{q=fold(q);$('#pickL').innerHTML=S.devices.filter(d=>!q||fold(d.name+' '+d.ip+' '+d.model+' '+d.location).includes(q)).sort((a,b)=>ncmp(a.name,b.name)).slice(0,200)
+    .map(d=>`<button data-pick="${d.id}"${inD.has(d.id)?' disabled':''}>${gsvg(d.type)}<span>${esc(d.name)} <span class="mono" style="color:var(--muted);font-size:12px">${esc(d.ip)}</span></span><span style="font-size:11.5px;color:var(--muted)">${inD.has(d.id)?'ya agregado':esc(d.type)}</span></button>`).join('')||'<p style="padding:10px;margin:0;color:var(--muted)">No hay coincidencias.</p>';};
+  modal('Agregar equipo al diagrama',`<input class="inp" id="pickQ" type="search" placeholder="Buscar en el inventario…"><div class="pick" id="pickL"></div>`,
+    [{l:'Nuevo equipo',f:()=>{ui.addAfterCreate=true;devModal(null);}},{l:'Cerrar'}]);
+  draw('');$('#pickQ').oninput=e=>draw(e.target.value);
+  $('#pickL').onclick=e=>{const b=e.target.closest('[data-pick]');if(b&&!b.disabled){addDeviceNode(b.dataset.pick);closeModal();}};
+}
+
+/* ---------- exportar / importar ---------- */
+async function getCap(name){try{if(window.claude&&window.claude.use)return await window.claude.use(name);}catch(e){}return null;}
+async function exportJSON(){
+  const data=JSON.stringify({...S,meta:{...S.meta,exportedAt:new Date().toISOString()}},null,1);
+  const owner=fold(S.meta.owner||'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const filename=`mapa-noc${owner?'-'+owner:''}-${today()}.json`;
+  const done=()=>{S.meta.lastExport=today();S.meta.dirty=0;save(false);toast('Respaldo exportado');};
+  if(window.claude){
+    const dl=await getCap('downloads');
+    if(dl){try{await dl.save({filename,data});done();return;}catch(err){if(err&&err.code==='declined')return;}}
+    modal('Copia tu respaldo',`<p>Esta vista no permite descargar archivos. Copia el JSON y guárdalo como <span class="mono">${esc(filename)}</span>.</p><textarea class="big" id="expTa" readonly>${esc(data)}</textarea>`,
+      [{l:'Cerrar'},{l:'Copiar JSON',k:'pri',f:()=>{copyText(data,$('#expTa'));done();}}]);
+    return;
+  }
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=filename;document.body.appendChild(a);a.click();a.remove();done();}catch(e){toast('No se pudo descargar');}
+}
+function copyText(t,fallbackEl){
+  const ok=()=>toast('Copiado');
+  try{navigator.clipboard.writeText(t).then(ok,()=>sel());}catch(e){sel();}
+  function sel(){const ta=fallbackEl||Object.assign(document.createElement('textarea'),{value:t});if(!fallbackEl){ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);}ta.focus();ta.select();try{document.execCommand('copy');ok();}catch(e){toast('Selecciona el texto y cópialo');}if(!fallbackEl)ta.remove();}
+}
+function importModal(){
+  modal('Importar',`<div class="choice">
+    <button data-imp-k="file"><b>Archivo JSON de un compañero</b><span>Combínalo con tus diagramas o reemplaza todo.</span></button>
+    <button data-imp-k="paste"><b>Pegar JSON</b><span>Si te lo enviaron como texto.</span></button>
+    <button data-imp-k="csv"><b>Inventario de equipos en CSV</b><span>Desde Excel: nombre, IP, tipo, marca, modelo, acceso, puertos…</span></button></div>`,[{l:'Cerrar'}]);
+  $('#mB').onclick=e=>{const b=e.target.closest('[data-imp-k]');if(!b)return;const k=b.dataset.impK;
+    if(k==='file'){$('#fileJson').value='';$('#fileJson').click();}
+    if(k==='csv')csvModal();
+    if(k==='paste')modal('Pegar JSON',`<textarea class="big" id="pasteTa" placeholder="{ &quot;app&quot;: &quot;mapa-noc&quot;, … }"></textarea><div class="err" id="pErr"></div>`,[{l:'Cancelar'},{l:'Continuar',k:'pri',f:()=>{try{askMerge(JSON.parse($('#pasteTa').value));}catch(err){$('#pErr').textContent='El texto no es un JSON válido.';}}}]);
+  };
+}
+$('#fileJson').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{askMerge(JSON.parse(r.result));}catch(err){modal('Archivo no válido','<p>No se pudo leer el archivo como JSON.</p>',[{l:'Cerrar'}]);}};r.readAsText(f);};
+function askMerge(inc){
+  if(!inc||!Array.isArray(inc.devices)||!Array.isArray(inc.folders)){modal('Archivo no válido','<p>El JSON no tiene el formato de Mapa NOC.</p>',[{l:'Cerrar'}]);return;}
+  const who=inc.meta?.owner?` de <b>${esc(inc.meta.owner)}</b>`:'';
+  modal('Importar datos',`<p>El archivo${who} trae <b>${inc.devices.length}</b> equipos, <b>${inc.folders.length}</b> carpetas y <b>${Object.keys(inc.diagrams||{}).length}</b> diagramas.</p>
+    <div class="choice"><button data-m="merge"><b>Combinar con lo mío</b><span>Los equipos se empatan por IP o nombre. Agrega carpetas, diagramas y conexiones que no tengas; lo tuyo no se borra.</span></button>
+    <button data-m="replace"><b>Reemplazar todo</b><span>Tu información actual se sustituye por la del archivo. Exporta un respaldo antes.</span></button></div>`,[{l:'Cancelar'}]);
+  $('#mB').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;
+    if(b.dataset.m==='replace'){const owner=S.meta.owner;S={...emptyData(),...inc,meta:{...emptyData().meta,owner,lastExport:S.meta.lastExport}};S.diagrams=S.diagrams||{};ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save();closeModal();renderAll();requestAnimationFrame(fit);toast('Datos reemplazados');}
+    else{const r=mergeData(inc);closeModal();renderAll();modal('Combinación lista',`<dl class="kv"><dt>Equipos nuevos</dt><dd>${r.dev}</dd><dt>Equipos empatados</dt><dd>${r.devMatch}</dd><dt>Carpetas nuevas</dt><dd>${r.fol}</dd><dt>Conexiones nuevas</dt><dd>${r.edges}</dd></dl>`,[{l:'Listo',k:'pri'}]);}
+  };
+}
+function mergeData(inc){
+  const r={dev:0,devMatch:0,fol:0,edges:0},dm={},fm={};
+  inc.devices.forEach(d=>{
+    let m=devById(d.id)&&(!d.ip||devById(d.id).ip===d.ip)?devById(d.id):null;
+    if(!m&&d.ip)m=S.devices.find(x=>x.ip===d.ip);
+    if(!m)m=S.devices.find(x=>norm(x.name)===norm(d.name));
+    if(m){dm[d.id]=m.id;r.devMatch++;m.ports=[...new Set([...(m.ports||[]),...(d.ports||[])])];
+      ['ip','type','brand','model','location','notes'].forEach(k=>{if(!m[k]&&d[k])m[k]=d[k];});
+      (d.access||[]).forEach(a=>{if(!(m.access||[]).some(x=>x.p===a.p))(m.access=m.access||[]).push(a);});}
+    else{const nd={...d,ports:[...(d.ports||[])],access:[...(d.access||[])]};if(devById(nd.id))nd.id=uid('d');S.devices.push(nd);dm[d.id]=nd.id;r.dev++;}
+  });
+  const pending=[...inc.folders];let guard=0;
+  while(pending.length&&guard++<5000){
+    const f=pending.shift();
+    if(f.parentId&&!(f.parentId in fm)&&pending.some(p=>p.id===f.parentId)){pending.push(f);continue;}
+    const pid=f.parentId?(fm[f.parentId]||null):null;
+    let m=folById(f.id);
+    if(!m)m=S.folders.find(x=>(x.parentId||null)===pid&&norm(x.name)===norm(f.name));
+    if(m){fm[f.id]=m.id;}else{const nf={...f,parentId:pid};if(folById(nf.id))nf.id=uid('f');S.folders.push(nf);fm[f.id]=nf.id;r.fol++;}
+  }
+  Object.entries(inc.diagrams||{}).forEach(([fid,ID])=>{
+    const tf=fm[fid];if(!tf||!ID)return;
+    const D=getDiag(tf,true),nmap={};
+    (ID.nodes||[]).forEach(n=>{
+      if(n.deviceId){const did=dm[n.deviceId];if(!did)return;const ex=D.nodes.find(x=>x.deviceId===did);
+        if(ex){nmap[n.id]=ex.id;}else{const nn={id:D.nodes.some(x=>x.id===n.id)?uid('n'):n.id,deviceId:did,x:n.x,y:n.y};D.nodes.push(nn);nmap[n.id]=nn.id;}}
+      else{const ex=D.nodes.find(x=>!x.deviceId&&x.text===n.text);if(ex)nmap[n.id]=ex.id;else{const nn={...n,id:D.nodes.some(x=>x.id===n.id)?uid('t'):n.id};D.nodes.push(nn);nmap[n.id]=nn.id;}}
+    });
+    (ID.edges||[]).forEach(e=>{const a=nmap[e.from],b=nmap[e.to];if(!a||!b)return;
+      const dup=D.edges.some(x=>((x.from===a&&x.to===b&&norm(x.fp)===norm(e.fp)&&norm(x.tp)===norm(e.tp))||(x.from===b&&x.to===a&&norm(x.fp)===norm(e.tp)&&norm(x.tp)===norm(e.fp))));
+      if(!dup){D.edges.push({...e,id:D.edges.some(x=>x.id===e.id)?uid('e'):e.id,from:a,to:b});r.edges++;}});
+  });
+  S.meta.example=S.meta.example&&!r.dev&&!r.fol;
+  if(!ui.folder)ui.folder=firstLeaf();
+  save();return r;
+}
+/* CSV */
+function parseCSV(text){
+  text=text.replace(/^﻿/,'');const first=text.split(/\r?\n/)[0]||'';
+  const delim=[';','\t',','].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"')q=true;else if(c===delim){row.push(f);f='';}else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}else if(c!=='\r')f+=c;}
+  if(f||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.some(x=>x.trim()));
+}
+const COLS={name:['nombre','name','hostname','equipo','host','dispositivo'],ip:['ip','direccion ip','ip address','ip gestion','mgmt','ip de gestion'],type:['tipo','type','categoria'],
+  brand:['marca','brand','fabricante','vendor'],model:['modelo','model'],access:['acceso','access','protocolo','protocolos'],aport:['puerto acceso','puerto de acceso','puerto gestion','port'],
+  location:['ubicacion','sitio','location','site','nodo'],ports:['puertos','ports','interfaces','interfaz'],notes:['notas','notes','comentarios','observaciones']};
+function csvRows(text){
+  const rows=parseCSV(text);if(rows.length<2)return{err:'El archivo necesita una fila de encabezados y al menos un equipo.'};
+  const head=rows[0].map(fold),idx={};
+  Object.entries(COLS).forEach(([k,al])=>{const i=head.findIndex(h=>al.includes(h));if(i>=0)idx[k]=i;});
+  if(idx.name==null&&idx.ip==null)return{err:'No encontré columnas de nombre o IP. Revisa los encabezados.'};
+  const g=(r,k)=>idx[k]!=null?(r[idx[k]]||'').trim():'';
+  const list=rows.slice(1).map(r=>{
+    const t=g(r,'type'),type=TYPES.find(x=>fold(t).startsWith(fold(x).slice(0,4)))||(t?'Otro':'Switch');
+    const accTxt=fold(g(r,'access')),aport=g(r,'aport');
+    const access=['ssh','telnet','web'].filter(p=>accTxt.includes(p)||(p==='web'&&/http/.test(accTxt))).map(p=>({p,port:aport}));
+    return{name:g(r,'name')||g(r,'ip'),ip:g(r,'ip'),type,brand:g(r,'brand'),model:g(r,'model'),access,location:g(r,'location'),
+      ports:[...new Set(g(r,'ports').split(/[|;,\n]/).map(s=>s.trim()).filter(Boolean))],notes:g(r,'notes')};
+  }).filter(d=>d.name);
+  return{list,cols:Object.keys(idx)};
+}
+function csvModal(){
+  modal('Importar inventario CSV',`<p>Exporta tu Excel como CSV. La primera fila debe tener encabezados; reconozco estos (en español o inglés):</p>
+    <pre class="code">nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,puertos,notas
+AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,</pre>
+    <p class="sub" style="color:var(--muted)">Tipo: ${TYPES.join(', ')}. Acceso: ssh, telnet y/o web. Puertos separados con <span class="mono">|</span>. Si la IP o el nombre ya existe, se actualiza en lugar de duplicarse.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="csvPick">Elegir archivo CSV</button><button class="btn ghost" id="csvCopy">Copiar plantilla</button></div><div id="csvOut" style="margin-top:12px"></div>`,[{l:'Cerrar'}]);
+  $('#csvPick').onclick=()=>{$('#fileCsv').value='';$('#fileCsv').click();};
+  $('#csvCopy').onclick=()=>copyText('nombre,ip,tipo,marca,modelo,acceso,puerto acceso,ubicacion,puertos,notas\n');
+}
+$('#fileCsv').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{
+  const res=csvRows(String(rd.result)),out=$('#csvOut');if(!out)return;
+  if(res.err){out.innerHTML=`<p class="err">${esc(res.err)}</p>`;return;}
+  const match=d=>S.devices.find(x=>(d.ip&&x.ip===d.ip)||norm(x.name)===norm(d.name));
+  const nNew=res.list.filter(d=>!match(d)).length;
+  out.innerHTML=`<p><b>${res.list.length}</b> equipos encontrados: ${nNew} nuevos y ${res.list.length-nNew} que ya existen y se actualizarán.</p><div class="pick">${res.list.slice(0,60).map(d=>`<button disabled>${gsvg(d.type)}<span>${esc(d.name)} <span class="mono" style="font-size:12px">${esc(d.ip)}</span></span><span style="font-size:11.5px">${match(d)?'actualizar':'nuevo'}</span></button>`).join('')}</div>`;
+  const f=$('#mF');f.innerHTML='';const c=document.createElement('button');c.className='btn';c.textContent='Cancelar';c.onclick=closeModal;
+  const ok=document.createElement('button');ok.className='btn pri';ok.textContent=`Importar ${res.list.length} equipos`;
+  ok.onclick=()=>{res.list.forEach(d=>{const m=match(d);if(m){m.ports=[...new Set([...(m.ports||[]),...d.ports])];['ip','brand','model','location','notes'].forEach(k=>{if(d[k])m[k]=d[k];});if(d.type)m.type=d.type;d.access.forEach(a=>{if(!m.access.some(x=>x.p===a.p))m.access.push(a);});}else S.devices.push({id:uid('d'),...d});});
+    save();closeModal();ui.tab='equipos';renderAll();toast(`${res.list.length} equipos importados`);};
+  f.append(c,ok);
+};rd.readAsText(f);};
+
+function settingsModal(){
+  modal('Ajustes',`<div class="fld"><span class="lbl">Tu nombre</span><input id="sOwner" value="${esc(S.meta.owner||'')}" placeholder="Se usa en el nombre del archivo exportado"></div>
+    <p class="sub" style="color:var(--muted)">Tu información vive solo en este navegador. Si borras los datos del sitio o cambias de equipo, la recuperas importando tu último JSON exportado.</p>
+    <hr class="sep"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn dan" id="sWipe">Borrar todo y empezar vacío</button><button class="btn" id="sSample">Cargar datos de ejemplo</button></div>`,
+    [{l:'Cerrar'},{l:'Guardar',k:'pri',f:()=>{S.meta.owner=$('#sOwner').value.trim();save(false);closeModal();toast('Ajustes guardados');}}]);
+  $('#sWipe').onclick=()=>wipeModal();
+  $('#sSample').onclick=()=>modal('Cargar ejemplo','<p>Se reemplazará lo que tienes por los datos de ejemplo. Exporta un respaldo antes si lo necesitas.</p>',[{l:'Cancelar'},{l:'Cargar ejemplo',k:'pri',f:()=>{const o=S.meta.owner;S=sample();S.meta.owner=o;ui.folder=firstLeaf();ui.sel=null;ui.impact=null;save(false);closeModal();renderAll();requestAnimationFrame(fit);}}]);
+}
+function wipeModal(){
+  const real=!S.meta.example;
+  modal('Empezar vacío',`<p>${real?'Se borrarán <b>todos tus equipos, clientes y diagramas</b> de este navegador. Exporta un respaldo antes si lo necesitas.':'Se quitan los datos de ejemplo para que captures los tuyos.'}</p>`,
+    [{l:'Cancelar'},{l:'Borrar',k:'dan pri',f:()=>{const o=S.meta.owner;S=emptyData();S.meta.owner=o;ui.folder=null;ui.sel=null;ui.impact=null;save(false);closeModal();renderAll();}}]);
+}
+
+/* ---------- búsqueda global ---------- */
+const qI=$('#q'),sres=$('#sres');
+function runSearch(){
+  const q=fold(qI.value);if(!q){sres.hidden=true;return;}
+  const devs=S.devices.filter(d=>fold(d.name+' '+d.ip+' '+d.model+' '+d.location).includes(q)).slice(0,8);
+  const fols=S.folders.filter(f=>fold(f.name).includes(q)).slice(0,8);
+  const ports=[];S.devices.forEach(d=>devicePorts(d.id).forEach(p=>{if(fold(p)===q||(q.length>=3&&fold(p).includes(q)))ports.push([d,p]);}));
+  let h=devs.map(d=>`<button data-sdev="${d.id}"><span class="k">Equipo</span><span>${esc(d.name)}</span><span class="sub">${esc(d.ip)}</span></button>`).join('');
+  h+=fols.map(f=>`<button data-open="${f.id}"><span class="k">${esc(KINDS[f.kind])}</span><span>${esc(f.name)}</span><span class="sub" style="font-family:var(--f-ui)">${esc(pathOf(f.id).slice(0,-1).map(x=>x.name).join(' › '))}</span></button>`).join('');
+  h+=ports.slice(0,6).map(([d,p])=>`<button data-imp="${d.id}" data-port="${esc(p)}"><span class="k">Puerto</span><span class="mono">${esc(p)}</span><span class="sub">${esc(d.name)}</span></button>`).join('');
+  sres.innerHTML=h||'<p style="margin:8px;color:var(--muted)">Sin resultados.</p>';sres.hidden=false;
+}
+qI.addEventListener('input',runSearch);qI.addEventListener('focus',runSearch);
+qI.addEventListener('keydown',e=>{if(e.key==='Escape'){qI.value='';sres.hidden=true;qI.blur();}if(e.key==='Enter'){sres.querySelector('button')?.click();}});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search'))sres.hidden=true;});
+
+/* ---------- delegación de clics ---------- */
+function openFolder(fid){ui.folder=fid;ui.sel=null;document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
+function setImpact(dev,port){ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
+document.addEventListener('click',e=>{
+  const t=e.target;
+  const tab=t.closest('[data-tab]');if(tab){ui.tab=tab.dataset.tab;renderSide();return;}
+  const tog=t.closest('[data-tog]');if(tog){e.stopPropagation();const id=tog.dataset.tog;ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}
+  const ac=t.closest('[data-addchild]');if(ac){const p=folById(ac.dataset.addchild);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
+  const ef=t.closest('[data-editf]');if(ef){folderModal(ef.dataset.editf);return;}
+  const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
+  const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
+  const op=t.closest('[data-open]');if(op){sres.hidden=true;openFolder(op.dataset.open);return;}
+  const dv=t.closest('[data-dev]');if(dv){devModal(dv.dataset.dev);return;}
+  const sn=t.closest('[data-selnode]');if(sn){const n=getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
+  const cp=t.closest('[data-copy]');if(cp){copyText(cp.dataset.copy);return;}
+  const a=t.closest('[data-act]');if(!a)return;
+  const D=ui.folder&&getDiag(ui.folder);
+  switch(a.dataset.act){
+    case 'newClient':folderModal(null,null,'cliente');break;
+    case 'newDev':ui.addAfterCreate=false;devModal(null);break;
+    case 'csv':csvModal();break;
+    case 'wipe':wipeModal();break;
+    case 'clearImp':ui.impact=null;renderAll();break;
+    case 'showImp':ui.tab='impacto';document.body.classList.add('showSide');renderSide();break;
+    case 'desel':ui.sel=null;renderInsp();rc();break;
+    case 'flip':{const ed=D.edges.find(x=>x.id===ui.sel.id);[ed.from,ed.to,ed.fp,ed.tp]=[ed.to,ed.from,ed.tp,ed.fp];save();renderInsp();rc();break;}
+    case 'delSel':delSel();break;
+    case 'copyImp':{const items=impactOf(ui.impact.dev,ui.impact.port),d=devById(ui.impact.dev);
+      const txt=`Impacto ${d.name} (${d.ip})${ui.impact.port?' puerto '+ui.impact.port:''}: ${items.length} servicios\n`+items.map(i=>'- '+pathOf(i.fid).map(f=>f.name).join(' › ')+(i.ports.length?` [${i.ports.join(', ')}]`:'')).join('\n');
+      copyText(txt);break;}
+  }
+});
+$('#pane').addEventListener('input',e=>{if(e.target.id==='devQ'){ui.devQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#devQ');i.focus();i.setSelectionRange(p,p);}});
+$('#pane').addEventListener('change',e=>{
+  if(e.target.id==='impDev'){ui.impact=e.target.value?{dev:e.target.value,port:''}:null;renderAll();}
+  if(e.target.id==='impPort'){ui.impact.port=e.target.value;renderAll();}
+});
+function delSel(){
+  const D=getDiag(ui.folder);if(!ui.sel)return;
+  if(ui.sel.t==='node'){D.nodes=D.nodes.filter(n=>n.id!==ui.sel.id);D.edges=D.edges.filter(e=>e.from!==ui.sel.id&&e.to!==ui.sel.id);}
+  else D.edges=D.edges.filter(e=>e.id!==ui.sel.id);
+  ui.sel=null;save();renderAll();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(!$('#modal').hidden)closeModal();else if(ui.sel){ui.sel=null;renderInsp();rc();}document.body.classList.remove('showSide');}
+  if((e.key==='Delete'||e.key==='Backspace')&&ui.sel&&!e.target.closest('input,textarea,select')&&$('#modal').hidden){e.preventDefault();delSel();}
+});
+$('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
+$('#menuBtn').onclick=()=>document.body.classList.toggle('showSide');
+$('#scrim').onclick=()=>document.body.classList.remove('showSide');
+window.addEventListener('resize',()=>rc());
+
+function renderAll(){renderSide();renderCanvas();renderInsp();renderStatus();}
+renderAll();
+requestAnimationFrame(()=>requestAnimationFrame(fit));
+</script>
+
+</body>
+</html>
