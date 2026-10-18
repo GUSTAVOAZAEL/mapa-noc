@@ -28,9 +28,11 @@ Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **E
 - Tarjetas agrupadas en **Red de voz**, **Red de transporte** y **Red de datos** (y *Sin red*), con filtro por red, buscador (nombre, IP o puerto) y **Solo con incidencia**.
 - Al tocar una tarjeta se abre la **ficha del equipo**: datos, acceso, puertos/IPs, diagramas donde aparece, incidencias, ubicación física, color de la tarjeta, editar y ver impacto.
 
-## Ubicación física (ciudad › edificio › piso › sala › gabinete › rack)
+## Ubicación física (ciudad › edificio › sitio › piso › sala › gabinete › rack)
 
-Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio › Piso › Sala › Gabinete › Rack** (puedes saltarte niveles).
+Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio › Sitio › Piso › Sala › Gabinete › Rack** (puedes saltarte niveles). Un rack está en un gabinete, un gabinete en una sala, una sala en un piso, un piso en un sitio, un sitio en un edificio y un edificio en una ciudad. En **Sitio** también aparecen como opción los sitios de tus clientes (*Cliente/Sitio*); al elegir uno queda ligado y sus equipos se agregan a ese sitio.
+
+- **Sin encimarse**: al abrir un diagrama, al agregar un equipo o al soltar uno, los recuadros de ubicación se acomodan solos: los del mismo nivel quedan lado a lado, cada uno dentro del de arriba, y los equipos que no pertenecen a una ubicación se sacan de su recuadro. Un equipo nuevo que ya tiene ubicación aparece dentro de su grupo.
 
 - **Grupos del diagrama**: al seleccionar un grupo eliges su **Tipo** y luego el lugar de la lista. Cada opción muestra su ruta (por ejemplo *Monterrey › DC Norte › Piso 2*) para distinguir una "Sala 5" de Monterrey de otra en Querétaro. Si no existe, escríbelo y créalo indicando **dentro de** qué lugar va.
 - Al elegir un nivel bajo (por ejemplo un gabinete), la ruta completa se toma automáticamente y se muestra debajo como **Ruta de la ubicación**.
@@ -45,7 +47,7 @@ Las ubicaciones forman un catálogo único y ordenado: **Ciudad › Edificio ›
 
 ## Equipos en tabla
 
-En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tabla editas directo en cada celda (nombre, IP, tipo, marca, modelo, referencia, acceso, puertos/IPs, notas); el cambio se guarda al salir de la celda (**Enter** baja a la fila siguiente, **Esc** deshace). Las redes **V / T / D** se activan con un clic, **📍** abre el catálogo de ubicaciones, y clic en el título de una columna ordena. El acceso se escribe como `ssh, telnet:2323, web:8443`. **＋ Fila nueva** agrega un equipo en blanco. Los filtros de red, búsqueda y "solo con incidencia" también aplican a la tabla, y se recuerda la vista que elegiste.
+En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tabla editas directo en cada celda (nombre, IP, tipo, marca, modelo, referencia, acceso, puertos/IPs, notas); el cambio se guarda al salir de la celda (**Enter** baja a la fila siguiente, **Esc** deshace). Las redes **V / T / D** se activan con un clic. La ubicación va en columnas **Ciudad, Edificio, Sitio, Piso, Sala, Gabinete y Rack**: escribe o elige de la lista (solo muestra lo que existe dentro del nivel de arriba); si capturas directo un nivel bajo que ya existe, los de arriba se llenan solos, y si llenas un nivel intermedio que faltaba, queda insertado para todos los equipos de ese lugar. **📍** abre el catálogo, y clic en el título de una columna ordena. El acceso se escribe como `ssh, telnet:2323, web:8443`. **＋ Fila nueva** agrega un equipo en blanco. Los filtros de red, búsqueda y "solo con incidencia" también aplican a la tabla, y se recuerda la vista que elegiste.
 
 ## Mapa general
 

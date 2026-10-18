@@ -695,8 +695,8 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 const LS='mapa-noc-v1';
 const MEDIA={privada:{l:'Línea privada (L2L)',d:'12 4 2 4'},fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radioenlace',d:'8 5'},logico:{l:'Lógico / VPN',d:'2 4'}};
 const SECTIONS={voz:{l:'Voz',k:'V',c:'#8A45C9'},transporte:{l:'Transporte',k:'T',c:'#2F6FD6'},datos:{l:'Datos',k:'D',c:'#23875A'}};
-const PKINDS=['ciudad','edificio','piso','sala','gabinete','rack'];
-const GKINDS={ciudad:'Ciudad',edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',sitio:'Sitio',zona:'Zona'};
+const PKINDS=['ciudad','edificio','sitio','piso','sala','gabinete','rack'];
+const GKINDS={ciudad:'Ciudad',edificio:'Edificio',sitio:'Sitio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',zona:'Zona'};
 const GDASH={ciudad:'14 6',edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',sitio:'10 4',zona:'2 5'};
 const COLORS=['','#C2361F','#B86A00','#23875A','#0F8A80','#2F6FD6','#7A4FC9','#C2367A','#5A6978','#15212C'];
 const swatches=(attr,cur,def)=>`<div class="sw">${COLORS.map(c=>`<button type="button" ${attr}="${c}" class="${c===(cur||'')?'on':''}" style="background:${c||def}" aria-label="${c||'Color por defecto'}"></button>`).join('')}<input type="color" ${attr}-custom value="${cur||'#2f6fd6'}" title="Otro color"></div>`;
@@ -818,6 +818,39 @@ function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x
 const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
 function placeChain(id){const out=[];let x=placeById(id),gd=0;while(x&&gd++<20){out.unshift(x);x=placeById(x.parentId);}return out;}
 const placePath=id=>placeChain(id).map(x=>x.name).join(' › ');
+function migrateSitio(d){d.places=d.places||[];Object.values(d.diagrams||{}).forEach(D=>(D.groups||[]).forEach(g=>{if(g.kind!=='sitio'||g.placeId)return;
+    const name=g.siteId&&folById(g.siteId)?sitePath(g.siteId):(g.label||'').trim();if(!name)return;
+    let pl=d.places.find(x=>x.kind==='sitio'&&(g.siteId?x.siteId===g.siteId:fold(x.name)===fold(name)));
+    if(!pl){pl={id:uid('p'),kind:'sitio',name,parentId:null};if(g.siteId)pl.siteId=g.siteId;d.places.push(pl);}g.placeId=pl.id;g.label=pl.name;}));
+  Object.values(d.diagrams||{}).forEach(D=>applyGroupPlaces(D,d));}
+function locBoxes(D){return [...(D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)).map(g=>({pid:g.placeId,x:g.x,y:g.y,w:g.w,h:g.h,ex:true,g})),...autoGroups(D).map(a=>({pid:a.placeId,x:a.x,y:a.y,w:a.w,h:a.h}))];}
+function shiftPlace(D,pid,dx,dy){dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
+  D.nodes.forEach(n=>{const dv=n.deviceId&&devById(n.deviceId);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
+  (D.groups||[]).forEach(g=>{if(g.placeId&&(g.placeId===pid||placeUnder(g.placeId,pid))){g.x+=dx;g.y+=dy;}});}
+/* Separa los grupos de ubicación para que no se encimen: hermanos lado a lado y equipos ajenos fuera */
+function fixLoc(D){if(!D||ui.folder===MAP)return 0;let moves=0;const G=18;
+  for(let it=0;it<80;it++){const B=locBoxes(D);if(!B.length)break;const byP={};B.forEach(b=>byP[b.pid]=b);
+    const parentOf=b=>{let p=placeById(placeById(b.pid)?.parentId),gd=0;while(p&&gd++<20){if(byP[p.id])return p.id;p=placeById(p.parentId);}return '';};
+    const sib={};B.forEach(b=>{const k=parentOf(b);(sib[k]=sib[k]||[]).push(b);});let did=false;
+    for(const L of Object.values(sib)){if(did)break;L.sort((a,b)=>a.x-b.x||a.y-b.y);
+      for(let i=0;i<L.length&&!did;i++)for(let j=i+1;j<L.length&&!did;j++){const a=L[i],b=L[j];
+        if(a.x<b.x+b.w+G&&b.x<a.x+a.w+G&&a.y<b.y+b.h+G&&b.y<a.y+a.h+G){const dx=a.x+a.w+G-b.x,dy=a.y+a.h+G-b.y;if(dx<=dy)shiftPlace(D,b.pid,dx,0);else shiftPlace(D,b.pid,0,dy);did=true;}}}
+    if(!did)for(const n of D.nodes){if(!n.deviceId)continue;const dv=devById(n.deviceId),d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;
+      const bad=B.filter(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h&&!(dv&&dv.place&&(dv.place===b.pid||placeUnder(dv.place,b.pid))));
+      if(!bad.length)continue;const t=bad.sort((a,b)=>b.w*b.h-a.w*a.h)[0];
+      const opts=[[t.x+t.w+G-n.x,0],[0,t.y+t.h+G-n.y],[t.x-G-d.w-n.x,0],[0,t.y-G-d.h-n.y]].sort((a,b)=>Math.abs(a[0])+Math.abs(a[1])-Math.abs(b[0])-Math.abs(b[1]));
+      n.x=Math.round((n.x+opts[0][0])/8)*8;n.y=Math.round((n.y+opts[0][1])/8)*8;did=true;break;}
+    if(!did)for(const n of D.nodes){const dv=n.deviceId&&devById(n.deviceId);if(!dv||!dv.place)continue;const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);
+      if(!b||!b.ex)continue;const d=dims(n),g=b.g,P=14,x0=Math.min(g.x,n.x-P),y0=Math.min(g.y,n.y-34),x1=Math.max(g.x+g.w,n.x+d.w+P),y1=Math.max(g.y+g.h,n.y+d.h+P);
+      if(x0===g.x&&y0===g.y&&x1===g.x+g.w&&y1===g.y+g.h)continue;g.x=Math.floor(x0/8)*8;g.y=Math.floor(y0/8)*8;g.w=Math.ceil((x1-g.x)/8)*8;g.h=Math.ceil((y1-g.y)/8)*8;did=true;break;}
+    if(!did)break;moves++;}
+  return moves;}
+function placeNewNode(D,n){const dv=devById(n.deviceId);if(!dv||!dv.place)return false;const B=locBoxes(D);
+  const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);if(!b)return false;const gn=SH[shapeOf(n)];
+  const hit=(x,y)=>D.nodes.some(o=>{const d=dims(o);return x<o.x+d.w+16&&x+gn.w+16>o.x&&y<o.y+d.h+16&&y+gn.h+16>o.y;});
+  if(b.ex){for(let y=b.y+36;y+gn.h<=b.y+b.h-8;y+=24)for(let x=b.x+16;x+gn.w<=b.x+b.w-8;x+=24)if(!hit(x,y)){n.x=Math.round(x/8)*8;n.y=Math.round(y/8)*8;return true;}}
+  let x=b.x+b.w-14+24,y=b.y+36;if(!b.ex){/* junto a los demás equipos de esa ubicación */}
+  let gd=0;while(hit(x,y)&&gd++<30)y+=gn.h+24;n.x=Math.round(x/8)*8;n.y=Math.round(y/8)*8;return true;}
 function placeColor(pid){for(const D of Object.values(S.diagrams||{}))for(const g of (D.groups||[]))if(g.placeId===pid&&g.color)return g.color;return '';}
 function autoGroups(D){if(!D||ui.folder===MAP||S.meta.autoLoc===false)return [];
   const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)).map(g=>g.placeId)),box={},dep={};
@@ -1243,7 +1276,7 @@ function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]))
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);save();renderInsp();rc();}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);save();renderInsp();rc();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1335,8 +1368,8 @@ function addDeviceNode(devId){
     n.x=Math.round((from.x+gf.w+110)/8)*8;n.y=Math.round((from.y+gf.c[1]-gn.c[1])/8)*8;
     const hitsAny=()=>D.nodes.some(o=>{const d=dims(o);return n.x<o.x+d.w+20&&n.x+gn.w+20>o.x&&n.y<o.y+d.h+20&&n.y+gn.h+20>o.y;});
     let guard=0;while(hitsAny()&&guard++<30)n.y+=Math.max(48,gn.h+24);
-  }else{const c=centerPt(),k=D.nodes.length%5;n.x=Math.round((c.x-89+k*24)/8)*8;n.y=Math.round((c.y-29+k*24)/8)*8;}
-  D.nodes.push(n);
+  }else if(!placeNewNode(D,n)){const c=centerPt(),k=D.nodes.length%5;n.x=Math.round((c.x-89+k*24)/8)*8;n.y=Math.round((c.y-29+k*24)/8)*8;}
+  D.nodes.push(n);fixLoc(D);
   if(from){const ed=link(from,n);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};}
   else{ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};}
   save();renderAll();showNode(n);
@@ -1507,7 +1540,7 @@ function mapInspector(){
 }
 
 /* ---------- ubicaciones físicas ---------- */
-const GRANK={ciudad:0,sitio:0.5,edificio:1,zona:1.5,piso:2,sala:3,gabinete:4,rack:5};
+const GRANK={ciudad:0,edificio:1,sitio:2,zona:2.5,piso:3,sala:4,gabinete:5,rack:6};
 function collectLocations(){
   const L=new Map();(S.places||[]).forEach(x=>L.set(x.id,{key:x.id,kind:x.kind,label:x.name,color:'',notes:'',devs:new Set(),fids:new Set(),parent:x.parentId||null}));
   S.devices.forEach(d=>{if(d.place&&L.has(d.place))L.get(d.place).devs.add(d.id);});
@@ -1720,11 +1753,11 @@ function deviceCards(){
     <button class="btn pri" data-act="newDev">+ Equipo</button></div>
     ${body||`<p class="emptyNote">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</p>`}`;
 }
-const DT_COLS=[['name','Nombre'],['ip','IP de gestión'],['type','Tipo'],['brand','Marca'],['model','Modelo'],['sections','Red'],['place','Ubicación física'],['location','Referencia'],['access','Acceso'],['ports','Puertos / IPs'],['notes','Notas'],['use','Diagramas']];
+const DT_COLS=[['name','Nombre'],['ip','IP de gestión'],['type','Tipo'],['brand','Marca'],['model','Modelo'],['sections','Red'],...PKINDS.map(k=>['lv_'+k,GKINDS[k]]),['location','Referencia'],['access','Acceso'],['ports','Puertos / IPs'],['notes','Notas'],['use','Diagramas']];
 function accStr(d){return (d.access||[]).map(a=>a.p+(a.port?':'+a.port:'')).join(', ');}
 function parseAcc(v){return String(v||'').split(/[,;\s]+/).map(x=>x.trim().toLowerCase()).filter(Boolean).map(x=>{const [p,port]=x.split(':');return{p,port:port||''};}).filter(a=>['ssh','telnet','web'].includes(a.p)).filter((a,i,arr)=>arr.findIndex(b=>b.p===a.p)===i);}
 function deviceTable(list){const so=ui.dtSort||{k:'name',dir:1};
-  const val=(d,k)=>k==='place'?placePath(d.place):k==='sections'?(d.sections||[]).join(','):k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):k==='use'?usage(d.id):(d[k]||'');
+  const val=(d,k)=>k.startsWith('lv_')?(placeChain(d.place).find(x=>x.kind===k.slice(3))?.name||''):k==='place'?placePath(d.place):k==='sections'?(d.sections||[]).join(','):k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):k==='use'?usage(d.id):(d[k]||'');
   const L=[...list].sort((a,b)=>{const x=val(a,so.k),y=val(b,so.k);return (typeof x==='number'?x-y:ncmp(String(x),String(y)))*so.dir||ncmp(a.name,b.name);});
   const types=S.types.map(t=>t.name).sort(ncmp);
   const row=d=>{const ty=types.some(t=>norm(t)===norm(d.type))?types:[d.type,...types];const ic=devIncCount(d.id);
@@ -1735,16 +1768,38 @@ function deviceTable(list){const so=ui.dtSort||{k:'name',dir:1};
     <td><input class="c" data-dt="brand" value="${esc(d.brand||'')}" style="min-width:80px"></td>
     <td><input class="c" data-dt="model" value="${esc(d.model||'')}" style="min-width:90px"></td>
     <td><div class="secs">${SEC_ORDER.map(k=>{const on=(d.sections||[]).includes(k);return `<button type="button" data-dtsec="${k}" class="${on?'on':''}" style="${on?'background:'+SECTIONS[k].c:''}" title="${SECTIONS[k].l}">${SECTIONS[k].l[0]}</button>`;}).join('')}</div></td>
-    <td><button type="button" class="plc${d.place?'':' none'}" data-dtplace="${d.id}" title="${esc(placePath(d.place)||'Asignar ubicación')}" style="min-width:190px">📍 ${esc(placePath(d.place)||'Asignar…')}</button></td>
+    ${PKINDS.map(k=>{const pl=placeChain(d.place).find(x=>x.kind===k);return `<td class="lvc"><input class="c" data-dtlv="${k}" value="${esc(pl?.name||'')}" placeholder="—" title="${esc(pl?placePath(pl.id):GKINDS[k])}" style="min-width:${k==='sitio'?150:k==='ciudad'||k==='edificio'?110:80}px"></td>`;}).join('')}
     <td><input class="c" data-dt="location" value="${esc(d.location||'')}" style="min-width:110px"></td>
     <td><input class="c mono" data-dt="access" value="${esc(accStr(d))}" placeholder="ssh, web:8443" style="min-width:120px"></td>
     <td><textarea class="c mono" data-dt="ports" style="min-width:200px" placeholder="Gi0/1, Te1/1/1">${esc((d.ports||[]).join(', '))}</textarea></td>
     <td><textarea class="c" data-dt="notes" style="min-width:170px">${esc(d.notes||'')}</textarea></td>
     <td class="num">${usage(d.id)}</td>
-    <td><div class="ico"><button type="button" data-dcard="${d.id}" title="Ver ficha">🗂</button><button type="button" data-dtcopy="${d.id}" title="Copiar IP">⧉</button><button type="button" data-dtdel="${d.id}" title="Eliminar equipo">🗑</button></div></td></tr>`;};
+    <td><div class="ico"><button type="button" data-dtplace="${d.id}" title="${esc(placePath(d.place)||'Elegir ubicación del catálogo')}">📍</button><button type="button" data-dcard="${d.id}" title="Ver ficha">🗂</button><button type="button" data-dtcopy="${d.id}" title="Copiar IP">⧉</button><button type="button" data-dtdel="${d.id}" title="Eliminar equipo">🗑</button></div></td></tr>`;};
   return `<div class="dtWrap"><table class="dtab"><thead><tr>${DT_COLS.map(([k,l])=>`<th data-dtsort="${k}"${k==='name'?' class="first" style="left:0;z-index:3"':''}>${l}${so.k===k?` <span class="ar">${so.dir>0?'▲':'▼'}</span>`:''}</th>`).join('')}<th class="nos"></th></tr></thead>
-    <tbody>${L.map(row).join('')||`<tr><td colspan="13" style="padding:16px;color:var(--muted)">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</td></tr>`}</tbody></table></div>
-    <div class="dtFoot"><button class="btn sm" data-act="dtAdd">＋ Fila nueva</button><span>${L.length} equipo${L.length===1?'':'s'} · Los cambios se guardan al salir de cada celda · Acceso: <span class="mono">ssh, telnet:2323, web:8443</span> · Puertos separados por coma</span></div>`;}
+    <tbody>${L.map(row).join('')||`<tr><td colspan="${DT_COLS.length+1}" style="padding:16px;color:var(--muted)">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</td></tr>`}</tbody></table></div>
+    <div class="dtFoot"><button class="btn sm" data-act="dtAdd">＋ Fila nueva</button><span>${L.length} equipo${L.length===1?'':'s'} · Los cambios se guardan al salir de cada celda · Acceso: <span class="mono">ssh, telnet:2323, web:8443</span> · Puertos separados por coma · Ubicación: escribe o elige de la lista en cualquier nivel; los niveles de arriba se llenan solos</span></div><datalist id="dtDL"></datalist>`;}
+function dtRowHTML(d){return deviceTable([d]).match(/<tr data-drow[\s\S]*?<\/tr>/)[0];}
+function lvCands(d,k){const ch=placeChain(d.place),ki=PKINDS.indexOf(k),anc=[...ch].reverse().find(x=>PKINDS.indexOf(x.kind)<ki);
+  return {anc,list:(S.places||[]).filter(x=>x.kind===k&&(!anc||placeUnder(x.id,anc.id)))};}
+const ppath=x=>placeChain(x.id).slice(0,-1).map(y=>y.name).join(' › ');
+function lvOptions(d,k){const {anc,list}=lvCands(d,k);const dupN=n=>list.filter(x=>fold(x.name)===fold(n)).length>1;
+  let o=list.map(x=>({v:(!anc||dupN(x.name))&&ppath(x)?x.name+' — '+ppath(x):x.name,l:placePath(x.id)}));
+  if(k==='sitio'){const have=new Set((S.places||[]).filter(x=>x.siteId).map(x=>x.siteId));o=o.concat(S.folders.filter(f=>f.kind==='sitio'&&!have.has(f.id)).map(f=>({v:sitePath(f.id),l:'Sitio de cliente'})));}
+  return o.sort((a,b)=>ncmp(a.v,b.v)).map(x=>`<option value="${esc(x.v)}">${esc(x.l)}</option>`).join('');}
+function lvCommit(inp){const tr=inp.closest('[data-drow]'),d=tr&&devById(tr.dataset.drow);if(!d)return;const k=inp.dataset.dtlv,ki=PKINDS.indexOf(k),v=inp.value.trim();
+  const ch=placeChain(d.place),cur=ch.find(x=>x.kind===k);if(cur&&fold(cur.name)===fold(v)&&!v.includes(' — '))return;
+  const deeper=ch.filter(x=>PKINDS.indexOf(x.kind)>ki);
+  if(!v){const up=[...ch].reverse().find(x=>PKINDS.indexOf(x.kind)<ki);if(up)d.place=up.id;else delete d.place;if(deeper.length)toast('También se quitaron los niveles de abajo: '+deeper.map(x=>x.name).join(' › '));}
+  else{const [nm,pp]=v.split(' — ').map(x=>x.trim());const {anc,list}=lvCands(d,k);
+    let m=list.filter(x=>fold(x.name)===fold(nm)&&(!pp||fold(ppath(x))===fold(pp)));
+    if(m.length>1){inp.classList.add('bad');toast(`Hay ${m.length} «${nm}» en lugares distintos: elige la opción con su ruta`);return;}
+    let pl=m[0];
+    if(!pl){const sf=k==='sitio'&&S.folders.find(f=>f.kind==='sitio'&&fold(sitePath(f.id))===fold(nm));pl={id:uid('p'),kind:k,name:nm,parentId:anc?anc.id:null};if(sf)pl.siteId=sf.id;S.places.push(pl);toast(`Nuevo ${GKINDS[k].toLowerCase()}: ${placePath(pl.id)}`);}
+    if(!cur&&deeper.length&&(deeper[0].parentId||null)===(anc?anc.id:null)&&deeper[0].id!==pl.id){deeper[0].parentId=pl.id;toast(`${GKINDS[deeper[0].kind]} ${deeper[0].name} ahora queda dentro de ${pl.name} (para todos sus equipos)`);}
+    else if(!(d.place&&placeUnder(d.place,pl.id))){d.place=pl.id;if(deeper.length&&!deeper.every(x=>placeUnder(x.id,pl.id)))toast('Se quitaron los niveles de abajo que pertenecían al lugar anterior');}}
+  save();rc();
+  const ae=document.activeElement,sel=ae&&ae.closest&&ae.closest('[data-drow]')===tr?(ae.dataset.dtlv?`[data-dtlv="${ae.dataset.dtlv}"]`:ae.dataset.dt?`[data-dt="${ae.dataset.dt}"]`:''):'';
+  tr.outerHTML=dtRowHTML(d);if(sel){const n=document.querySelector(`[data-drow="${d.id}"] ${sel}`);if(n)n.focus();}}
 function dtCommit(inp){const tr=inp.closest('[data-drow]'),d=tr&&devById(tr.dataset.drow);if(!d)return;const k=inp.dataset.dt,v=inp.value.trim();inp.classList.remove('bad');
   if(k==='name'){if(!v){inp.value=d.name;toast('El nombre es obligatorio');return;}const dup=S.devices.find(x=>x.id!==d.id&&norm(x.name)===norm(v));if(dup){inp.classList.add('bad');toast(`Ya existe un equipo llamado ${dup.name}`);return;}d.name=v;}
   else if(k==='ip'){const dup=v&&S.devices.find(x=>x.id!==d.id&&x.ip===v);d.ip=v;if(dup)toast(`Aviso: la IP ${v} también la tiene ${dup.name}`);}
@@ -1785,6 +1840,9 @@ function placeListHTML(g){const q=fold(ui.gq||''),kind=g.kind;
   const list=(S.places||[]).filter(x=>x.kind===kind&&(!q||fold(placePath(x.id)).includes(q))).sort((a,b)=>ncmp(placePath(a.id),placePath(b.id)));
   const exact=list.some(x=>fold(x.name)===q);
   let h=list.map(x=>`<button type="button" class="pitem${x.id===g.placeId?' on':''}" data-gplace="${x.id}"><b>${esc(x.name)}</b><span>${esc(placeChain(x.id).slice(0,-1).map(y=>y.name).join(' › ')||'nivel principal')}</span></button>`).join('');
+  if(kind==='sitio'){const have=new Set((S.places||[]).filter(x=>x.siteId).map(x=>x.siteId));
+    h+=S.folders.filter(f=>f.kind==='sitio'&&!have.has(f.id)).map(f=>({f,p:sitePath(f.id)})).filter(o=>{const fp=fold(o.p);return !q||fp.includes(q)||q.split(/[\s/›>]+/).filter(Boolean).every(w=>fp.includes(w));}).sort((a,b)=>ncmp(a.p,b.p)).slice(0,40)
+      .map(o=>`<button type="button" class="pitem" data-gsitenew="${o.f.id}"><b>${esc(o.p)}</b><span>Sitio de cliente · se agrega al catálogo${defaultParentFor(g,'sitio')?' dentro de '+esc(placePath(defaultParentFor(g,'sitio'))):''}</span></button>`).join('');}
   if(q&&!exact)h+=`<div class="pnew"><span>＋ Crear <b>«${esc(ui.gq.trim())}»</b> como ${esc(GKINDS[kind].toLowerCase())}${kind==='ciudad'?'':' dentro de:'}</span>${kind==='ciudad'?'':`<select class="inp" id="gNewParent">${parentOptions(kind,defaultParentFor(g,kind))}</select>`}<button type="button" class="btn sm pri" data-gcreate="1">Crear y asignar</button></div>`;
   if(!h)h=`<span class="endHint">No hay ${esc(GKINDS[kind].toLowerCase())}s registrados. Escribe el nombre para crear uno.</span>`;
   return h;}
@@ -1795,7 +1853,8 @@ function siteListHTML(g){const raw=(ui.sq??'').trim(),q=fold(raw);
   if(raw&&!list.some(o=>fold(o.p)===q))h+=`<div class="pnew"><span>Usar <b>«${esc(raw)}»</b> como nombre libre (sin ligar a un sitio de cliente)</span><button type="button" class="btn sm" data-gsitefree="1">Usar texto</button></div>`;
   if(!h)h=`<span class="endHint">No hay sitios de clientes registrados. Escribe un nombre libre o crea el sitio en la vista Clientes.</span>`;
   return h;}
-function linkSiteDevs(D){const fs=S.folders;(D.groups||[]).forEach(g=>{if(g.kind!=='sitio'||!g.siteId)return;const st=fs.find(f=>f.id===g.siteId);if(!st)return;
+function linkSiteDevs(D){const fs=S.folders;
+  (D.nodes||[]).forEach(n=>{const dv=n.deviceId&&devById(n.deviceId);if(!dv||!dv.place)return;placeChain(dv.place).forEach(pl=>{if(!pl.siteId)return;const st=fs.find(f=>f.id===pl.siteId);if(!st)return;st.devs=st.devs||[];if(!st.devs.includes(dv.id))st.devs.push(dv.id);});});(D.groups||[]).forEach(g=>{if(g.kind!=='sitio'||!g.siteId)return;const st=fs.find(f=>f.id===g.siteId);if(!st)return;
   (D.nodes||[]).forEach(n=>{if(!n.deviceId)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;if(!(cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h))return;st.devs=st.devs||[];if(!st.devs.includes(n.deviceId))st.devs.push(n.deviceId);});});}
 function assignGroupSite(g,fid){g.siteId=fid;g.placeId=null;g.kind='sitio';g.label=sitePath(fid);ui.sq=null;linkSiteDevs(getDiag(ui.folder));save();renderInsp();rc();toast(`Sitio ligado: ${sitePath(fid)}`);}
 function assignGroupPlace(g,pid){const pl=placeById(pid);if(!pl)return;g.placeId=pid;g.kind=pl.kind;g.label=pl.name;ui.gq='';applyGroupPlaces(getDiag(ui.folder));save();renderInsp();rc();toast(`Ubicación asignada: ${placePath(pid)}`);}
@@ -1979,7 +2038,7 @@ $('#insp').addEventListener('input',e=>{
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
   if(e.target.id==='gSiteQ'){ui.sq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gSlist').innerHTML=siteListHTML(g);return;}
   if(e.target.id==='gPlaceQ'){ui.gq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gPlist').innerHTML=placeListHTML(g);return;}
-  if(e.target.id==='gKind'){const g=D.groups.find(x=>x.id===ui.sel.id);if(g){g.kind=e.target.value;const pl=placeById(g.placeId);if(pl&&pl.kind!==g.kind)g.placeId=null;if(g.kind!=='sitio')g.siteId=null;else{g.placeId=null;if(!g.siteId)g.label='';}ui.gq='';ui.sq=null;save();renderInsp();rc();}return;}
+  if(e.target.id==='gKind'){const g=D.groups.find(x=>x.id===ui.sel.id);if(g){g.kind=e.target.value;const pl=placeById(g.placeId);if(pl&&pl.kind!==g.kind)g.placeId=null;g.siteId=null;ui.gq='';ui.sq=null;save();renderInsp();rc();}return;}
   if(ui.sel.t==='group'){const g=D.groups.find(x=>x.id===ui.sel.id);if(!g)return;const m={gLabel:'label',gKind:'kind',gNotes:'notes'}[e.target.id];if(m){g[m]=e.target.value;save();rc();}return;}
   if(ui.sel.t!=='edge')return;
   if(e.target.id==='eFrom'||e.target.id==='eTo'){reconnect(ui.sel.id,e.target.id==='eFrom'?'from':'to',e.target.value);return;}
@@ -2465,7 +2524,7 @@ qI.addEventListener('keydown',e=>{if(e.key==='Escape'){qI.value='';sres.hidden=t
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search'))sres.hidden=true;});
 
 /* ---------- delegación de clics ---------- */
-function openFolder(fid){ui.diagSeen=1;ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
+function openFolder(fid){ui.diagSeen=1;if(fid&&fid!==MAP&&S.diagrams[fid]&&fixLoc(S.diagrams[fid]))save();ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
 function setImpact(dev,port){ui.view='diagram';if(!$('#modal').hidden)closeModal();ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
 document.addEventListener('click',e=>{
   const t=e.target;
@@ -2476,6 +2535,7 @@ document.addEventListener('click',e=>{
   const gst=t.closest('[data-gsite]');if(gst){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g)assignGroupSite(g,gst.dataset.gsite);return;}
   const gsf=t.closest('[data-gsitefree]');if(gsf){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){g.siteId=null;g.label=(ui.sq||'').trim();ui.sq=null;save();renderInsp();rc();}return;}
   const gsc=t.closest('[data-gositeclient]');if(gsc){if(gsc.dataset.gositeclient){setView('clients');ui.cliPage=gsc.dataset.gositeclient;renderAll();}return;}
+  const gsn=t.closest('[data-gsitenew]');if(gsn){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){const pl={id:uid('p'),kind:'sitio',name:sitePath(gsn.dataset.gsitenew),siteId:gsn.dataset.gsitenew,parentId:defaultParentFor(g,'sitio')||null};S.places.push(pl);assignGroupPlace(g,pl.id);}return;}
   const gcr=t.closest('[data-gcreate]');if(gcr){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);const name=(ui.gq||'').trim();if(g&&name){const pl={id:uid('p'),kind:g.kind,name,parentId:g.kind==='ciudad'?null:($('#gNewParent')?.value||null)};S.places.push(pl);assignGroupPlace(g,pl.id);}return;}
   const ppk=t.closest('[data-placepick]');if(ppk){placePicker(ppk.dataset.placepick,ppk.dataset.ctx);return;}
   const cip=t.closest('[data-copyip]');if(cip){const d=devById(cip.dataset.copyip);if(d){if(d.ip)copyIp(d);else toast(d.name+' no tiene IP registrada');}return;}
@@ -2592,9 +2652,10 @@ document.addEventListener('keydown',e=>{
 });
 
 $('#cardsView').addEventListener('input',e=>{if(e.target.id==='cvQ'){ui.cvQ=e.target.value;ui.cvFocus=true;renderView();}});
-$('#cardsView').addEventListener('change',e=>{if(e.target.id==='devIncOnly'){ui.devInc=e.target.checked;renderView();return;}if(e.target.dataset.dt)dtCommit(e.target);});
-$('#cardsView').addEventListener('keydown',e=>{const t=e.target;if(!t.dataset||!t.dataset.dt)return;
-  if(e.key==='Escape'){const d=devById(t.closest('[data-drow]').dataset.drow);const k=t.dataset.dt;t.value=k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):(d[k]||'');t.blur();return;}
+$('#cardsView').addEventListener('change',e=>{if(e.target.id==='devIncOnly'){ui.devInc=e.target.checked;renderView();return;}if(e.target.dataset.dt)dtCommit(e.target);else if(e.target.dataset.dtlv)lvCommit(e.target);});
+$('#cardsView').addEventListener('focusin',e=>{const t=e.target;if(!t.dataset||!t.dataset.dtlv)return;const d=devById(t.closest('[data-drow]').dataset.drow);const dl=$('#dtDL');if(!dl||!d)return;dl.innerHTML=lvOptions(d,t.dataset.dtlv);t.setAttribute('list','dtDL');});
+$('#cardsView').addEventListener('keydown',e=>{const t=e.target;if(!t.dataset||!(t.dataset.dt||t.dataset.dtlv))return;
+  if(e.key==='Escape'){const d=devById(t.closest('[data-drow]').dataset.drow);const k=t.dataset.dt;t.value=t.dataset.dtlv?(placeChain(d.place).find(x=>x.kind===t.dataset.dtlv)?.name||''):k==='access'?accStr(d):k==='ports'?(d.ports||[]).join(', '):(d[k]||'');t.blur();return;}
   if(e.key==='Enter'&&t.tagName==='INPUT'){e.preventDefault();const td=t.closest('td'),ci=[...td.parentNode.children].indexOf(td),nx=t.closest('tr').nextElementSibling;const n=nx&&nx.children[ci]&&nx.children[ci].querySelector('.c');t.blur();if(n)n.focus();}});
 $('#cardsView').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cpage],[data-dcard],.svrow')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-dcol-custom]')&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=e.target.value;save();renderView();}}});
@@ -2631,7 +2692,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;try{migratePlaces(S);}catch(e){console.error(e);}
+S_READY=true;try{migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
