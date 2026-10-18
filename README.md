@@ -124,8 +124,10 @@ Selecciona una conexión y activa **Punto de demarcación**. Se dibuja una barra
 Para englobar equipos que están en el mismo lugar físico:
 
 1. Selecciona varios equipos con **Shift+clic**, o con **Shift+arrastrar** sobre el fondo para hacer un recuadro.
-2. En el panel derecho elige el tipo (Edificio, Piso, Sala, Gabinete, Rack o Zona) y presiona **Crear grupo**. También puedes usar **+ Grupo** en la barra.
+2. En el panel derecho elige el tipo (Ciudad, Edificio, Piso, Sala, Gabinete, Rack, Sitio o Zona) y presiona **Crear grupo**. También puedes usar **+ Grupo** en la barra.
 3. Ponle nombre, color y notas (dirección, acceso, contacto).
+
+**Grupo tipo Sitio:** escribe parte del nombre (por ejemplo *Est…*) y aparecen los sitios de tus clientes como `Cliente/Sitio` (*Estafeta/CEDIS Guadalupe*, *Estafeta/Planta Apodaca*…). Puedes escribir varias palabras (`est apo`). Al elegir uno, los equipos dentro del grupo se agregan a los equipos de ese sitio (se ven en su tarjeta de cliente). Si no existe, puedes usar el texto como nombre libre.
 
 Los grupos se pueden anidar (un rack dentro de una sala dentro de un edificio). Arrastra la franja del título para mover el grupo con todo lo que contiene y usa la esquina inferior derecha para cambiar su tamaño. Si un equipo dentro del grupo tiene una incidencia, el contorno del grupo se marca en rojo.
 

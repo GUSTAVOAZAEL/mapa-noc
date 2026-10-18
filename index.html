@@ -668,8 +668,8 @@ const LS='mapa-noc-v1';
 const MEDIA={privada:{l:'Línea privada (L2L)',d:'12 4 2 4'},fibra:{l:'Fibra',d:''},cobre:{l:'Cobre / UTP',d:''},radio:{l:'Radioenlace',d:'8 5'},logico:{l:'Lógico / VPN',d:'2 4'}};
 const SECTIONS={voz:{l:'Voz',k:'V',c:'#8A45C9'},transporte:{l:'Transporte',k:'T',c:'#2F6FD6'},datos:{l:'Datos',k:'D',c:'#23875A'}};
 const PKINDS=['ciudad','edificio','piso','sala','gabinete','rack'];
-const GKINDS={ciudad:'Ciudad',edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',zona:'Zona'};
-const GDASH={ciudad:'14 6',edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',zona:'2 5'};
+const GKINDS={ciudad:'Ciudad',edificio:'Edificio',piso:'Piso',sala:'Sala',gabinete:'Gabinete',rack:'Rack',sitio:'Sitio',zona:'Zona'};
+const GDASH={ciudad:'14 6',edificio:'',piso:'8 5',sala:'6 4',gabinete:'3 3',rack:'',sitio:'10 4',zona:'2 5'};
 const COLORS=['','#C2361F','#B86A00','#23875A','#0F8A80','#2F6FD6','#7A4FC9','#C2367A','#5A6978','#15212C'];
 const swatches=(attr,cur,def)=>`<div class="sw">${COLORS.map(c=>`<button type="button" ${attr}="${c}" class="${c===(cur||'')?'on':''}" style="background:${c||def}" aria-label="${c||'Color por defecto'}"></button>`).join('')}<input type="color" ${attr}-custom value="${cur||'#2f6fd6'}" title="Otro color"></div>`;
 const secChips=d=>(d.sections||[]).filter(k=>SECTIONS[k]).length?`<span class="secs">${d.sections.filter(k=>SECTIONS[k]).map(k=>`<span class="sec" style="background:${SECTIONS[k].c}">${SECTIONS[k].l}</span>`).join('')}</span>`:'';
@@ -1058,7 +1058,7 @@ function renderCanvas(){
   [...D.groups].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
     const col=g.color||'var(--muted)',sel=ui.sel?.t==='group'&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
-    const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.label||'');
+    const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.kind==='sitio'&&folById(g.siteId)?sitePath(g.siteId):(g.label||''));
     const dash=GDASH[gk]||'';
     out+=`<g class="grp${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${gk==='rack'||gk==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
       <rect class="gh" data-ghead="${g.id}" x="${g.x}" y="${g.y}" width="${g.w}" height="26"/>
@@ -1190,7 +1190,7 @@ svg.addEventListener('pointermove',e=>{
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){applyGroupPlaces(getDiag(ui.folder));save();}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){applyGroupPlaces(getDiag(ui.folder));linkSiteDevs(getDiag(ui.folder));save();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1453,7 +1453,7 @@ function mapInspector(){
 }
 
 /* ---------- ubicaciones físicas ---------- */
-const GRANK={ciudad:0,edificio:1,zona:1.5,piso:2,sala:3,gabinete:4,rack:5};
+const GRANK={ciudad:0,sitio:0.5,edificio:1,zona:1.5,piso:2,sala:3,gabinete:4,rack:5};
 function collectLocations(){
   const L=new Map();(S.places||[]).forEach(x=>L.set(x.id,{key:x.id,kind:x.kind,label:x.name,color:'',notes:'',devs:new Set(),fids:new Set(),parent:x.parentId||null}));
   S.devices.forEach(d=>{if(d.place&&L.has(d.place))L.get(d.place).devs.add(d.id);});
@@ -1699,6 +1699,16 @@ function placeListHTML(g){const q=fold(ui.gq||''),kind=g.kind;
   if(q&&!exact)h+=`<div class="pnew"><span>＋ Crear <b>«${esc(ui.gq.trim())}»</b> como ${esc(GKINDS[kind].toLowerCase())}${kind==='ciudad'?'':' dentro de:'}</span>${kind==='ciudad'?'':`<select class="inp" id="gNewParent">${parentOptions(kind,defaultParentFor(g,kind))}</select>`}<button type="button" class="btn sm pri" data-gcreate="1">Crear y asignar</button></div>`;
   if(!h)h=`<span class="endHint">No hay ${esc(GKINDS[kind].toLowerCase())}s registrados. Escribe el nombre para crear uno.</span>`;
   return h;}
+const sitePath=fid=>pathOf(fid).map(f=>f.name).join('/');
+function siteListHTML(g){const raw=(ui.sq??'').trim(),q=fold(raw);
+  const list=S.folders.filter(f=>f.kind==='sitio').map(f=>({f,p:sitePath(f.id)})).filter(o=>{const fp=fold(o.p);return !q||fp.includes(q)||q.split(/[\s/›>]+/).filter(Boolean).every(w=>fp.includes(w));}).sort((a,b)=>ncmp(a.p,b.p));
+  let h=list.slice(0,60).map(o=>{const c=pathOf(o.f.id)[0];return `<button type="button" class="pitem${o.f.id===g.siteId?' on':''}" data-gsite="${o.f.id}"><b>${esc(o.p)}</b><span>${esc(kids(o.f.id).length+' servicio'+(kids(o.f.id).length===1?'':'s'))}${c?.vip?' · ★ VIP':''}</span></button>`;}).join('');
+  if(raw&&!list.some(o=>fold(o.p)===q))h+=`<div class="pnew"><span>Usar <b>«${esc(raw)}»</b> como nombre libre (sin ligar a un sitio de cliente)</span><button type="button" class="btn sm" data-gsitefree="1">Usar texto</button></div>`;
+  if(!h)h=`<span class="endHint">No hay sitios de clientes registrados. Escribe un nombre libre o crea el sitio en la vista Clientes.</span>`;
+  return h;}
+function linkSiteDevs(D){const fs=S.folders;(D.groups||[]).forEach(g=>{if(g.kind!=='sitio'||!g.siteId)return;const st=fs.find(f=>f.id===g.siteId);if(!st)return;
+  (D.nodes||[]).forEach(n=>{if(!n.deviceId)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;if(!(cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h))return;st.devs=st.devs||[];if(!st.devs.includes(n.deviceId))st.devs.push(n.deviceId);});});}
+function assignGroupSite(g,fid){g.siteId=fid;g.placeId=null;g.kind='sitio';g.label=sitePath(fid);ui.sq=null;linkSiteDevs(getDiag(ui.folder));save();renderInsp();rc();toast(`Sitio ligado: ${sitePath(fid)}`);}
 function assignGroupPlace(g,pid){const pl=placeById(pid);if(!pl)return;g.placeId=pid;g.kind=pl.kind;g.label=pl.name;ui.gq='';applyGroupPlaces(getDiag(ui.folder));save();renderInsp();rc();toast(`Ubicación asignada: ${placePath(pid)}`);}
 function placeSection(d,ctx){const ch=placeChain(d.place);
   return `<div class="locBox" id="locBox"><div class="head"><b>Ubicación física</b><button class="btn sm" data-placepick="${d.id}" data-ctx="${ctx||''}">${ch.length?'Cambiar':'Asignar'}</button></div>
@@ -1760,6 +1770,8 @@ function renderInsp(){
       <div class="fld"><span class="lbl">Tipo</span><select class="inp" id="gKind">${Object.entries(GKINDS).map(([k,v])=>`<option value="${k}"${g.kind===k?' selected':''}>${v}</option>`).join('')}</select></div>
       ${isP?`<div class="fld"><span class="lbl">${esc(GKINDS[g.kind])}</span><input class="inp" id="gPlaceQ" placeholder="Buscar o escribir ${esc(GKINDS[g.kind].toLowerCase())}…" value="${esc(ui.gq||'')}" autocomplete="off"><div class="plist" id="gPlist">${placeListHTML(g)}</div></div>
         ${gpl?`<div class="pathBox"><span class="lbl">Ruta de la ubicación</span>${pathHTML(gpl.id)}</div>`:'<p class="endHint" style="margin:0">Elige una opción de la lista o crea una nueva. Al elegirla, los equipos dentro del grupo guardan esta ubicación.</p>'}`
+      :g.kind==='sitio'?`<div class="fld"><span class="lbl">Sitio de cliente</span><input class="inp" id="gSiteQ" placeholder="Escribe: Est… → Estafeta/CEDIS Guadalupe" value="${esc(ui.sq??(folById(g.siteId)?sitePath(g.siteId):g.label||''))}" autocomplete="off"><div class="plist" id="gSlist">${siteListHTML(g)}</div></div>
+        ${folById(g.siteId)?`<div class="pathBox"><span class="lbl">Sitio ligado</span><div class="pathTxt mono">🏢 ${esc(sitePath(g.siteId))}</div><button type="button" class="btn sm" data-gositeclient="${pathOf(g.siteId)[0]?.id||''}" style="margin-top:6px">Ver cliente</button></div>`:g.label?`<p class="endHint" style="margin:0">Nombre libre: <b>${esc(g.label)}</b> (no ligado a un sitio de cliente).</p>`:'<p class="endHint" style="margin:0">Elige un sitio: los equipos dentro del grupo se agregan a los equipos de ese sitio.</p>'}`
       :`<div class="fld"><span class="lbl">Nombre</span><input class="inp" id="gLabel" value="${esc(g.label)}" placeholder="Zona norte"></div>`}
       <div class="fld"><span class="lbl">Color</span><div class="sw">${TYPE_COLORS.map(c=>`<button data-gcol="${c}" class="${c===(g.color||'')?'on':''}" style="background:${c||'var(--muted)'}" aria-label="${c||'Gris'}"></button>`).join('')}</div></div>
       <div class="fld"><span class="lbl">Notas</span><textarea class="inp" id="gNotes" rows="2" placeholder="Dirección, acceso al sitio, contacto…">${esc(g.notes||'')}</textarea></div>
@@ -1850,8 +1862,9 @@ $('#insp').addEventListener('input',e=>{
   if(e.target.id==='nSize'||e.target.id==='nBold'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='nSize')n.size=+e.target.value;else n.bold=e.target.checked;save();rc();}return;}
   if(['elLabel','elSub','elShape','elNotes'].includes(e.target.id)||e.target.matches('[data-elcol-custom]')){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){const k={elLabel:'label',elSub:'sub',elShape:'shape',elNotes:'notes'}[e.target.id]||'color';n[k]=e.target.value;save();rc();}return;}
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
+  if(e.target.id==='gSiteQ'){ui.sq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gSlist').innerHTML=siteListHTML(g);return;}
   if(e.target.id==='gPlaceQ'){ui.gq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gPlist').innerHTML=placeListHTML(g);return;}
-  if(e.target.id==='gKind'){const g=D.groups.find(x=>x.id===ui.sel.id);if(g){g.kind=e.target.value;const pl=placeById(g.placeId);if(pl&&pl.kind!==g.kind)g.placeId=null;ui.gq='';save();renderInsp();rc();}return;}
+  if(e.target.id==='gKind'){const g=D.groups.find(x=>x.id===ui.sel.id);if(g){g.kind=e.target.value;const pl=placeById(g.placeId);if(pl&&pl.kind!==g.kind)g.placeId=null;if(g.kind!=='sitio')g.siteId=null;else{g.placeId=null;if(!g.siteId)g.label='';}ui.gq='';ui.sq=null;save();renderInsp();rc();}return;}
   if(ui.sel.t==='group'){const g=D.groups.find(x=>x.id===ui.sel.id);if(!g)return;const m={gLabel:'label',gKind:'kind',gNotes:'notes'}[e.target.id];if(m){g[m]=e.target.value;save();rc();}return;}
   if(ui.sel.t!=='edge')return;
   if(e.target.id==='eFrom'||e.target.id==='eTo'){reconnect(ui.sel.id,e.target.id==='eFrom'?'from':'to',e.target.value);return;}
@@ -2066,7 +2079,7 @@ function mergeData(inc){
   Object.entries(inc.diagrams||{}).forEach(([fid,ID])=>{
     const tf=fm[fid];if(!tf||!ID)return;
     const D=getDiag(tf,true),nmap={};
-    (ID.groups||[]).forEach(g=>{if(!D.groups.some(x=>x.id===g.id||(norm(x.label)===norm(g.label)&&x.kind===g.kind&&g.label)))D.groups.push({...g,placeId:g.placeId?pm[g.placeId]:undefined});});
+    (ID.groups||[]).forEach(g=>{if(!D.groups.some(x=>x.id===g.id||(norm(x.label)===norm(g.label)&&x.kind===g.kind&&g.label)))D.groups.push({...g,placeId:g.placeId?pm[g.placeId]:undefined,siteId:g.siteId?(fm[g.siteId]||undefined):undefined});});
     (ID.nodes||[]).forEach(n=>{
       if(n.deviceId){const did=dm[n.deviceId];if(!did)return;const ex=D.nodes.find(x=>x.deviceId===did);
         if(ex){nmap[n.id]=ex.id;}else{const nn={id:D.nodes.some(x=>x.id===n.id)?uid('n'):n.id,deviceId:did,x:n.x,y:n.y};D.nodes.push(nn);nmap[n.id]=nn.id;}}
@@ -2342,6 +2355,9 @@ document.addEventListener('click',e=>{
   const sda=t.closest('[data-sitedevadd]');if(sda){siteDevPicker(sda.dataset.sitedevadd);return;}
   const sga=t.closest('[data-sugadd]');if(sga){ui.addFrom=null;addDeviceNode(sga.dataset.sugadd);return;}
   const gpi=t.closest('[data-gplace]');if(gpi){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g)assignGroupPlace(g,gpi.dataset.gplace);return;}
+  const gst=t.closest('[data-gsite]');if(gst){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g)assignGroupSite(g,gst.dataset.gsite);return;}
+  const gsf=t.closest('[data-gsitefree]');if(gsf){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){g.siteId=null;g.label=(ui.sq||'').trim();ui.sq=null;save();renderInsp();rc();}return;}
+  const gsc=t.closest('[data-gositeclient]');if(gsc){if(gsc.dataset.gositeclient){setView('clients');ui.cliPage=gsc.dataset.gositeclient;renderAll();}return;}
   const gcr=t.closest('[data-gcreate]');if(gcr){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);const name=(ui.gq||'').trim();if(g&&name){const pl={id:uid('p'),kind:g.kind,name,parentId:g.kind==='ciudad'?null:($('#gNewParent')?.value||null)};S.places.push(pl);assignGroupPlace(g,pl.id);}return;}
   const ppk=t.closest('[data-placepick]');if(ppk){placePicker(ppk.dataset.placepick,ppk.dataset.ctx);return;}
   const cip=t.closest('[data-copyip]');if(cip){const d=devById(cip.dataset.copyip);if(d){if(d.ip)copyIp(d);else toast(d.name+' no tiene IP registrada');}return;}
