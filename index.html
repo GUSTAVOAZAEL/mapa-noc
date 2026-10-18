@@ -460,12 +460,19 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .ccard:hover .cedit,.ccard:focus-within .cedit{opacity:1}
 @media (hover:none){.ccard .cedit{opacity:1}}
 .ccard.inc{border-color:var(--danger)}
+.ccard.vip{border:2px solid #D9A400;box-shadow:0 0 0 3px color-mix(in srgb,#D9A400 22%,transparent)}
+.ccard.vip::before{background:linear-gradient(90deg,#D9A400,#F3C94B)}
+.vipTag{position:absolute;top:14px;right:84px;font:700 11px/1 var(--f-ui);letter-spacing:.05em;color:#6B4E00;background:#FBE39A;border-radius:4px;padding:4px 7px}
+.vipBtn{position:absolute;top:12px;right:46px;width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel);cursor:pointer;color:var(--muted);font-size:16px;line-height:1;opacity:0;transition:opacity .12s}
+.ccard:hover .vipBtn,.ccard:focus-within .vipBtn,.vipBtn.on{opacity:1}
+.vipBtn.on{color:#C99700;border-color:#D9A400}
+@media (hover:none){.vipBtn{opacity:1}}
 .cpHead{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:16px;border-radius:12px;background:color-mix(in srgb,var(--cc,var(--accent)) 9%,var(--panel));border:1px solid var(--line);border-top:5px solid var(--cc,var(--accent));margin-bottom:16px}
 .cpHead .cimg{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;background:var(--panel);color:var(--cc,var(--accent))}
 .cpHead .cimg img{width:46px;height:46px;object-fit:contain}
 .cpHead h2{margin:0;font:600 calc(var(--cli-fs,22px) + 2px) var(--f-cond);color:var(--cli-col,var(--ink))}
 .cpHead .grow{flex:1;min-width:160px}
-.sitegrid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:18px 56px}
+.sitegrid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:44px 64px}
 .sitebox{border:1px solid var(--line);border-radius:10px;background:var(--panel);display:grid;align-content:start;overflow:hidden}
 .sitebox .sh{display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--panel-2);border-bottom:1px solid var(--line)}
 .sitebox .sh b{font:600 var(--site-fs,15px) var(--f-cond);color:var(--site-col,var(--ink));flex:1;min-width:0;overflow-wrap:anywhere}
@@ -550,9 +557,9 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
       Mapa NOC
     </div>
     <div class="viewSeg" role="tablist" aria-label="Vista">
-      <button data-view="diagram" title="Diagramas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v3.5a2 2 0 0 0 2 2h3.5"/></svg><span>Diagramas</span></button>
       <button data-view="clients" title="Clientes en tarjetas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2"/></svg><span>Clientes</span></button>
       <button data-view="devices" title="Equipos en tarjetas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4.5" width="14" height="7" rx="1.5"/><path d="M4 8h1M7 8h1M11 8h2"/></svg><span>Equipos</span></button>
+      <button data-view="diagram" title="Diagramas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v3.5a2 2 0 0 0 2 2h3.5"/></svg><span>Diagramas</span></button>
     </div>
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
@@ -858,7 +865,7 @@ function impactOf(devId,port){
 }
 
 /* ---------- estado de UI ---------- */
-const ui={multi:new Set(),tab:'clientes',folder:null,sel:null,collapsed:new Set(),vps:{},drag:null,impact:null,devQ:''};
+const ui={view:'clients',multi:new Set(),tab:'clientes',folder:null,sel:null,collapsed:new Set(),vps:{},drag:null,impact:null,devQ:''};
 const firstLeaf=()=>{const s=S.folders.find(f=>S.diagrams[f.id]?.nodes.length);return s?s.id:(S.folders[0]?.id||null);};
 ui.folder=firstLeaf();
 
@@ -897,7 +904,7 @@ function sideClients(){
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
       return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="Arrastra para mover a otro cliente o sitio">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
-        <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>
+        <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${(f.alsoIn||[]).length?`<span title="Línea privada: también en ${esc(f.alsoIn.map(x=>folById(x)?.name).filter(Boolean).join(', '))}" style="color:var(--accent);font-size:12px">↔</span>`:''}${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
         <span class="ra"><button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button></span>
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
@@ -1467,7 +1474,7 @@ function drawLoc(){
 
 /* ---------- vistas de tarjetas: clientes y equipos ---------- */
 const SEC_ORDER=['voz','transporte','datos'];
-function setView(v){ui.view=v;if(v!=='clients')ui.cliPage=null;renderAll();if(v==='diagram')requestAnimationFrame(()=>rc());}
+function setView(v){ui.view=v;if(v!=='clients')ui.cliPage=null;renderAll();if(v==='diagram')requestAnimationFrame(()=>{if(!ui.diagSeen){ui.diagSeen=1;fit();}else rc();});}
 function renderView(){
   const v=ui.view||'diagram',cv=$('#cardsView');
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
@@ -1484,16 +1491,17 @@ const incFolders=()=>{const s=new Map();activeIncs().forEach(i=>incAffect(i).fid
 const devIncCount=id=>activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===id)).length;
 function cliIcon(f,sz){if(f.img)return `<img src="${esc(f.img)}" alt="">`;return `<svg width="${sz}" height="${sz}" viewBox="0 0 18 18">${glyph(f.icon||'Edificio',(1.5*18/sz*1.4).toFixed(2))}</svg>`;}
 function clientCards(){
-  const q=fold(ui.cvQ||''),onlyInc=ui.cliFilter==='inc',ic=incClients();
-  const all=S.folders.filter(f=>!f.parentId).sort((a,b)=>ncmp(a.name,b.name));
-  const list=all.filter(f=>!q||fold(f.name).includes(q)).filter(f=>!onlyInc||ic.has(f.id));
+  const q=fold(ui.cvQ||''),onlyInc=ui.cliFilter==='inc',onlyVip=ui.cliFilter==='vip',ic=incClients();
+  const all=S.folders.filter(f=>!f.parentId).sort((a,b)=>(!!b.vip-!!a.vip)||ncmp(a.name,b.name));const nVip=all.filter(f=>f.vip).length;
+  const list=all.filter(f=>!q||fold(f.name).includes(q)).filter(f=>!onlyInc||ic.has(f.id)).filter(f=>!onlyVip||f.vip);
   const nInc=all.filter(f=>ic.has(f.id)).length;
   return `<div class="cvHead"><h2>Clientes</h2><span class="grow"></span>
     <input class="inp" id="cvQ" type="search" placeholder="Buscar cliente" value="${esc(ui.cvQ||'')}">
-    <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc?'':'on'}">Todos (${all.length})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
+    <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc||onlyVip?'':'on'}">Todos (${all.length})</button><button data-clif="vip" class="${onlyVip?'on':''}">★ Destacados (${nVip})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
     <button class="btn" data-act="cliText" title="Tamaño y color de los nombres">Aa Texto</button><button class="btn pri" data-act="newClient">+ Cliente</button></div>
   ${list.length?`<div class="cgrid cli">${list.map(f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
-    return `<div class="ccard${n?' inc':''}" role="button" tabindex="0" data-cpage="${f.id}" style="--cc:${f.color||'var(--accent)'}">
+    return `<div class="ccard${n?' inc':''}${f.vip?' vip':''}" role="button" tabindex="0" data-cpage="${f.id}" style="--cc:${f.color||'var(--accent)'}">
+      ${f.vip?'<span class="vipTag">★ VIP</span>':''}<button class="vipBtn${f.vip?' on':''}" data-vip="${f.id}" title="${f.vip?'Quitar de destacados':'Marcar como destacado (VIP)'}" aria-label="Destacar">${f.vip?'★':'☆'}</button>
       <span class="cimg">${cliIcon(f,48)}</span><span class="cname">${esc(f.name)}</span>
       <span class="cmeta">${sites} sitio${sites===1?'':'s'} · ${svc} servicio${svc===1?'':'s'}</span>
       ${n?`<span class="cinc">⚠ ${n} incidencia${n===1?'':'s'} activa${n===1?'':'s'}</span>`:''}
@@ -1528,13 +1536,14 @@ function drawL2L(){
   let out='',lane=0;
   Object.values(by).forEach(list=>{if(list.length<2)return;const A=R(list[0]),BA=R(list[0].closest('.sitebox'));
     list.slice(1).forEach(el=>{const B=R(el),BB=R(el.closest('.sitebox'));lane++;
-      const off=((lane%3)-1)*5;
+      const off=((lane%5)-2)*5;
+      const rowBottom=t=>Math.max(...[...g.querySelectorAll('.sitebox')].map(R).filter(x=>Math.abs(x.t-t)<4).map(x=>x.b));
       const toRight=BB.l>BA.r-2,toLeft=BB.r<BA.l+2,sameRow=Math.abs(BA.t-BB.t)<4;
       const ax=toLeft?BA.l:BA.r,xg1=toLeft?BA.l-cg/2+off:BA.r+cg/2+off;
       const bx=toRight?BB.l:BB.r,xg2=toRight?BB.l-cg/2+off:BB.r+cg/2+off;
       let P;
       if(Math.abs(xg1-xg2)<2)P=[[ax,A.cy],[xg1,A.cy],[xg1,B.cy],[bx,B.cy]];
-      else{let L;if(sameRow)L=Math.min(BA.t,BB.t)-rg/2;else if(BB.t>BA.t)L=BB.t-rg/2;else L=BA.t-rg/2;L+=off*0.4;
+      else{let L;if(sameRow)L=rowBottom(BA.t)+rg/2;else if(BB.t>BA.t)L=rowBottom(BA.t)+rg/2;else L=rowBottom(BB.t)+rg/2;L+=off*0.8;
         P=[[ax,A.cy],[xg1,A.cy],[xg1,L],[xg2,L],[xg2,B.cy],[bx,B.cy]];}
       // adyacentes en la misma fila: línea directa por el hueco
       if(sameRow&&((toRight&&Math.abs(BB.l-BA.r-cg)<3)||(toLeft&&Math.abs(BA.l-BB.r-cg)<3)))P=[[ax,A.cy],[xg1,A.cy],[xg1,B.cy],[bx,B.cy]];
@@ -1578,14 +1587,16 @@ function clientPage(id){
       :`<p class="emptyNote">Este cliente aún no tiene sitios. Agrega uno con <b>+ Sitio</b>.</p>`}`;
 }
 function clientModal(id){
-  const f=folById(id);if(!f)return;const d={name:f.name,color:f.color||'',icon:f.icon||'Edificio',img:f.img||''};
+  const f=folById(id);if(!f)return;const d={name:f.name,color:f.color||'',icon:f.icon||'Edificio',img:f.img||'',vip:!!f.vip};
   const draw=()=>{const b=$('#cmBody');if(!b)return;
     b.innerHTML=`<div class="ccard" style="--cc:${d.color||'var(--accent)'};max-width:260px;margin:0 auto 14px;cursor:default"><span class="cimg">${cliIcon(d,30)}</span><span class="cname">${esc(d.name||'Cliente')}</span><span class="cmeta">Vista previa</span></div>
       <div class="fld"><span class="lbl">Nombre</span><input id="cmName" value="${esc(d.name)}"></div>
+      <label class="chk" style="margin-bottom:10px"><input type="checkbox" id="cmVip"${d.vip?' checked':''}> <b>★ Cliente destacado (VIP)</b> — aparece primero y resaltado</label>
       <div class="fld"><span class="lbl">Color de la tarjeta</span>${swatches('data-cmcol',d.color,'var(--accent)')}</div>
       <div class="fld"><span class="lbl">Imagen o logo</span><div class="imgRow"><span class="imgPrev">${d.img?`<img src="${esc(d.img)}" alt="">`:'<span style="color:var(--muted);font-size:11px">sin imagen</span>'}</span><button class="btn sm" id="cmUp">${d.img?'Cambiar imagen':'Subir imagen'}</button>${d.img?'<button class="btn sm ghost" id="cmRm">Quitar imagen</button>':''}</div></div>
       <div class="fld" ${d.img?'style="opacity:.45"':''}><span class="lbl">O elige un ícono</span><div class="igrid">${Object.keys(GLYPHS).map(k=>`<button data-cmgl="${k}" class="${k===d.icon?'on':''}"><svg width="22" height="22" viewBox="0 0 18 18">${glyph(k)}</svg>${GLYPH_NAMES[k]}</button>`).join('')}</div></div>
       <div class="err" id="cmErr"></div>`;
+    $('#cmVip').onchange=e=>{d.vip=e.target.checked;};
     $('#cmName').oninput=e=>{d.name=e.target.value;b.querySelector('.cname').textContent=d.name||'Cliente';};
     b.querySelectorAll('[data-cmcol]').forEach(x=>x.onclick=()=>{d.color=x.dataset.cmcol;draw();});
     b.querySelector('[data-cmcol-custom]').onchange=e=>{d.color=e.target.value;draw();};
@@ -1594,7 +1605,7 @@ function clientModal(id){
     if($('#cmRm'))$('#cmRm').onclick=()=>{d.img='';draw();};};
   modal('Personalizar cliente','<div id="cmBody"></div>',[{l:'Cancelar'},{l:'Guardar',k:'pri',f:()=>{
     if(!d.name.trim()){$('#cmErr').textContent='Escribe el nombre del cliente.';return;}
-    Object.assign(f,{name:d.name.trim(),color:d.color,icon:d.icon,img:d.img});save();closeModal();renderAll();toast('Tarjeta actualizada');}}]);
+    Object.assign(f,{name:d.name.trim(),color:d.color,icon:d.icon,img:d.img,vip:d.vip});save();closeModal();renderAll();toast('Tarjeta actualizada');}}]);
   draw();
 }
 function devCard(d){const n=devIncCount(d.id),u=usage(d.id),col=d.color||'';
@@ -2248,7 +2259,7 @@ qI.addEventListener('keydown',e=>{if(e.key==='Escape'){qI.value='';sres.hidden=t
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search'))sres.hidden=true;});
 
 /* ---------- delegación de clics ---------- */
-function openFolder(fid){ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
+function openFolder(fid){ui.diagSeen=1;ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
 function setImpact(dev,port){ui.view='diagram';if(!$('#modal').hidden)closeModal();ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
 document.addEventListener('click',e=>{
   const t=e.target;
@@ -2259,6 +2270,7 @@ document.addEventListener('click',e=>{
   const vw=t.closest('[data-view]');if(vw){setView(vw.dataset.view);return;}
   const ce=t.closest('[data-cedit]');if(ce){e.stopPropagation();clientModal(ce.dataset.cedit);return;}
   const dco=t.closest('[data-dcol-open]');if(dco){deviceSheet(dco.dataset.dcolOpen);return;}
+  const vb=t.closest('[data-vip]');if(vb){const f=folById(vb.dataset.vip);if(f){f.vip=!f.vip;save();renderAll();toast(f.vip?`${f.name} marcado como destacado`:`${f.name} ya no está destacado`);}return;}
   const cpg=t.closest('[data-cpage]');if(cpg){ui.cliPage=cpg.dataset.cpage;renderView();$('#cardsView').scrollTop=0;return;}
   const dcd=t.closest('[data-dcard]');if(dcd){deviceSheet(dcd.dataset.dcard);return;}
   const clf=t.closest('[data-clif]');if(clf){ui.cliFilter=clf.dataset.clif;renderView();return;}

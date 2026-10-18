@@ -14,9 +14,10 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 
 ## Vistas de tarjetas: Clientes y Equipos
 
-Arriba a la izquierda puedes cambiar entre **Diagramas** (la vista de siempre), **Clientes** y **Equipos**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
+Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
 
 **Clientes**
+- La estrella **☆** de cada tarjeta (o *Personalizar*) marca al cliente como **destacado / VIP**: aparece primero, con borde dorado y la etiqueta ★ VIP; el filtro **★ Destacados** muestra solo esos.
 - **Aa Texto** ajusta el tamaño y color de los nombres de cliente, sitio y servicio (aplica a todos).
 - Una tarjeta por cliente con su ícono o logo, color, número de sitios y servicios, y aviso si tiene incidencias activas.
 - El filtro **Con incidencia activa** muestra solo los clientes afectados.
@@ -81,7 +82,7 @@ Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme,
 ## Líneas privadas entre sitios
 
 - Al editar un servicio (lápiz o ⋯), en **Línea privada: también llega a** marca los otros sitios del cliente por los que pasa. El servicio aparece en la página del cliente bajo cada sitio con la marca **↔ Línea privada con…**, y en el árbol con **↔**.
-- En la página del cliente, el mismo servicio en dos sitios se marca con la etiqueta **L2L**, fondo amarillo y una **línea amarilla con dos puntos** que une ambos sitios, rodeando las tarjetas por los espacios entre ellas.
+- En la página del cliente, el mismo servicio en dos sitios se marca con la etiqueta **L2L**, fondo amarillo y una **línea amarilla con dos puntos** que une ambos sitios, rodeando las tarjetas por debajo, por los espacios entre ellas.
 - En las líneas del diagrama hay un medio nuevo, **Línea privada (L2L)**, que se dibuja con trazo de raya y punto.
 
 ## Equipos en cada sitio
