@@ -445,7 +445,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cgrid.cli .ccard{padding:20px 16px 16px;gap:8px}
 .cgrid.cli .ccard .cimg{width:84px;height:84px;border-radius:18px}
 .cgrid.cli .ccard .cimg img{width:68px;height:68px}
-.cgrid.cli .ccard .cname{font:600 22px/1.15 var(--f-cond)}
+.cgrid.cli .ccard .cname{font:600 var(--cli-fs,22px)/1.15 var(--f-cond);color:var(--cli-col,var(--ink))}
 .ccard{position:relative;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--cc,var(--accent)) 7%,var(--panel));padding:16px 14px 14px;cursor:pointer;display:grid;gap:6px;text-align:left;min-width:0;overflow:hidden;transition:transform .12s,box-shadow .12s}
 .ccard::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--cc,var(--accent))}
 .ccard:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-1px)}
@@ -463,16 +463,23 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cpHead{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:16px;border-radius:12px;background:color-mix(in srgb,var(--cc,var(--accent)) 9%,var(--panel));border:1px solid var(--line);border-top:5px solid var(--cc,var(--accent));margin-bottom:16px}
 .cpHead .cimg{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;background:var(--panel);color:var(--cc,var(--accent))}
 .cpHead .cimg img{width:46px;height:46px;object-fit:contain}
-.cpHead h2{margin:0;font:600 24px var(--f-cond)}
+.cpHead h2{margin:0;font:600 calc(var(--cli-fs,22px) + 2px) var(--f-cond);color:var(--cli-col,var(--ink))}
 .cpHead .grow{flex:1;min-width:160px}
-.sitegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:14px}
+.sitegrid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:18px 56px}
 .sitebox{border:1px solid var(--line);border-radius:10px;background:var(--panel);display:grid;align-content:start;overflow:hidden}
 .sitebox .sh{display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--panel-2);border-bottom:1px solid var(--line)}
-.sitebox .sh b{font:600 15px var(--f-cond);flex:1;min-width:0;overflow-wrap:anywhere}
+.sitebox .sh b{font:600 var(--site-fs,15px) var(--f-cond);color:var(--site-col,var(--ink));flex:1;min-width:0;overflow-wrap:anywhere}
 .svrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer;width:100%}
 .svrow:last-child{border-bottom:0}
 .svrow:hover{background:var(--accent-soft)}
-.svrow .t{font-weight:500;overflow-wrap:anywhere}
+.svrow .t{font-weight:500;overflow-wrap:anywhere;font-size:var(--svc-fs,14px);color:var(--svc-col,var(--ink))}
+.svrow.l2l{box-shadow:inset 4px 0 0 #E2A400;background:color-mix(in srgb,#E2A400 7%,var(--panel))}
+.l2ltag{display:inline-block;font:700 10px/1 var(--f-ui);letter-spacing:.06em;color:#7A5800;background:#FBE7A6;border-radius:3px;padding:3px 5px;margin-right:4px;vertical-align:1px}
+.l2lsvg{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:2}
+.l2lsvg path{fill:none;stroke:#E2A400;stroke-width:3;stroke-linecap:round}
+.l2lsvg circle{fill:#E2A400;stroke:var(--panel);stroke-width:2}
+.tsRow{display:grid;grid-template-columns:110px minmax(0,1fr) 56px;gap:10px;align-items:center;margin-bottom:6px}
+.tsRow input[type=range]{width:100%}
 .svrow .m{font-size:12px;color:var(--muted);grid-column:1}
 .svrow{position:relative}
 .sdevs{padding:10px 12px;border-top:1px dashed var(--line);display:grid;gap:6px;background:color-mix(in srgb,var(--panel-2) 60%,var(--panel))}
@@ -1443,8 +1450,11 @@ function renderView(){
   const v=ui.view||'diagram',cv=$('#cardsView');
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   document.body.classList.toggle('viewCards',v!=='diagram');cv.hidden=v==='diagram';
+  const cs=S.meta.cliStyle||{};cv.style.setProperty('--cli-fs',(cs.cliSize||22)+'px');cv.style.setProperty('--site-fs',(cs.siteSize||15)+'px');cv.style.setProperty('--svc-fs',(cs.svcSize||14)+'px');
+  ['cli','site','svc'].forEach(k=>{if(cs[k+'Color'])cv.style.setProperty('--'+k+'-col',cs[k+'Color']);else cv.style.removeProperty('--'+k+'-col');});
   if(v==='clients')cv.innerHTML=ui.cliPage&&folById(ui.cliPage)?clientPage(ui.cliPage):clientCards();
   else if(v==='devices')cv.innerHTML=deviceCards();
+  if(v==='clients'&&ui.cliPage)requestAnimationFrame(drawL2L);
   const q=cv.querySelector('#cvQ');if(q&&ui.cvFocus){q.focus();q.setSelectionRange(q.value.length,q.value.length);ui.cvFocus=false;}
 }
 const incClients=()=>{const s=new Map();activeIncs().forEach(i=>incAffect(i).clients.forEach(c=>s.set(c,(s.get(c)||0)+1)));return s;};
@@ -1459,7 +1469,7 @@ function clientCards(){
   return `<div class="cvHead"><h2>Clientes</h2><span class="grow"></span>
     <input class="inp" id="cvQ" type="search" placeholder="Buscar cliente" value="${esc(ui.cvQ||'')}">
     <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc?'':'on'}">Todos (${all.length})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
-    <button class="btn pri" data-act="newClient">+ Cliente</button></div>
+    <button class="btn" data-act="cliText" title="Tamaño y color de los nombres">Aa Texto</button><button class="btn pri" data-act="newClient">+ Cliente</button></div>
   ${list.length?`<div class="cgrid cli">${list.map(f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
     return `<div class="ccard${n?' inc':''}" role="button" tabindex="0" data-cpage="${f.id}" style="--cc:${f.color||'var(--accent)'}">
       <span class="cimg">${cliIcon(f,48)}</span><span class="cname">${esc(f.name)}</span>
@@ -1481,16 +1491,46 @@ function siteDevPicker(stId){const st=folById(stId);if(!st)return;
   modal('Equipos en '+st.name,`<input class="inp" id="sdQ" type="search" placeholder="Buscar equipo"><div class="pick" id="sdL"></div><p class="mapNote">Toca los equipos que están en este sitio. Puedes agregar varios.</p>`,[{l:'Listo',k:'pri',f:()=>{closeModal();renderAll();}}]);
   draw('');$('#sdQ').oninput=e=>draw(e.target.value);
   $('#sdL').onclick=e=>{const b=e.target.closest('[data-sdpick]');if(!b||b.disabled)return;st.devs=[...new Set([...(st.devs||[]),b.dataset.sdpick])];save();draw($('#sdQ').value);renderView();};}
+
+function drawL2L(){
+  const g=document.querySelector('#cardsView .sitegrid');if(!g)return;g.querySelector('.l2lsvg')?.remove();
+  const rows=[...g.querySelectorAll('[data-l2l]')],by={};rows.forEach(r=>(by[r.dataset.l2l]=by[r.dataset.l2l]||[]).push(r));
+  const gr=g.getBoundingClientRect();let out='';
+  Object.values(by).forEach(list=>{if(list.length<2)return;const a=list[0].getBoundingClientRect();
+    list.slice(1).forEach(el=>{const b=el.getBoundingClientRect();
+      const ax=a.left-gr.left,ay=a.top-gr.top+a.height/2,bx=b.left-gr.left,by2=b.top-gr.top+b.height/2;
+      let x1,x2,d;
+      if(Math.abs(ax-bx)<20){x1=ax+a.width;x2=bx+b.width;const k=Math.max(x1,x2)+34;d=`M${x1} ${ay}C${k} ${ay} ${k} ${by2} ${x2} ${by2}`;}
+      else if(ax<bx){x1=ax+a.width;x2=bx;const m=(x1+x2)/2;d=`M${x1} ${ay}C${m} ${ay} ${m} ${by2} ${x2} ${by2}`;}
+      else{x1=ax;x2=bx+b.width;const m=(x1+x2)/2;d=`M${x1} ${ay}C${m} ${ay} ${m} ${by2} ${x2} ${by2}`;}
+      out+=`<path d="${d}"/><circle cx="${x1}" cy="${ay}" r="5.5"/><circle cx="${x2}" cy="${by2}" r="5.5"/>`;});});
+  if(!out)return;
+  const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.setAttribute('class','l2lsvg');sv.setAttribute('width',g.scrollWidth);sv.setAttribute('height',g.scrollHeight);sv.innerHTML=out;g.appendChild(sv);
+}
+function cliTextModal(){
+  const cs={cliSize:22,siteSize:15,svcSize:14,cliColor:'',siteColor:'',svcColor:'',...(S.meta.cliStyle||{})};
+  const rows=[['cli','Cliente',14,40],['site','Sitio',11,28],['svc','Servicio',11,26]];
+  const apply=()=>{S.meta.cliStyle={...cs};renderView();};
+  const draw=()=>{$('#tsBody').innerHTML=rows.map(([k,l,mn,mx])=>`<div class="fld"><span class="lbl">Nombre de ${l.toLowerCase()}</span>
+      <div class="tsRow"><span style="font:600 ${cs[k+'Size']}px var(--f-cond);color:${cs[k+'Color']||'var(--ink)'};overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${l}</span><input type="range" min="${mn}" max="${mx}" step="1" value="${cs[k+'Size']}" data-tsz="${k}"><span class="mono">${cs[k+'Size']}px</span></div>
+      ${swatches('data-tcl-'+k,cs[k+'Color'],'var(--ink)')}</div>`).join('')+`<p class="mapNote">Se aplica a todos los clientes, sitios y servicios en la vista Clientes.</p>`;
+    $('#tsBody').querySelectorAll('[data-tsz]').forEach(r=>r.oninput=()=>{cs[r.dataset.tsz+'Size']=+r.value;apply();draw();});
+    rows.forEach(([k])=>{$('#tsBody').querySelectorAll(`[data-tcl-${k}]`).forEach(b=>b.onclick=()=>{cs[k+'Color']=b.getAttribute('data-tcl-'+k);apply();draw();});
+      const cu=$('#tsBody').querySelector(`[data-tcl-${k}-custom]`);if(cu)cu.onchange=e=>{cs[k+'Color']=e.target.value;apply();draw();};});};
+  modal('Texto de la vista Clientes','<div id="tsBody"></div>',[{l:'Restablecer',f:()=>{Object.assign(cs,{cliSize:22,siteSize:15,svcSize:14,cliColor:'',siteColor:'',svcColor:''});apply();draw();}},{l:'Listo',k:'pri',f:()=>{save(false);closeModal();}}]);
+  draw();
+}
 function clientPage(id){
   const f=folById(id),fi=incFolders(),ic=incClients().get(id)||0;
   const row=(x,linkedFrom)=>{const D=S.diagrams[x.id],ne=D?D.nodes.filter(n=>n.deviceId).length:0,n=fi.get(x.id)||0,sub=linkedFrom?'':pathOf(x.id).slice(2,-1).map(y=>y.name).join(' › ');
     const others=[x.parentId,...(x.alsoIn||[])].filter(o=>o&&o!==ui._siteNow).map(o=>folById(o)?.name).filter(Boolean);
     const lp=(x.alsoIn||[]).length?`<span style="color:var(--accent);font-weight:600">↔ Línea privada${others.length?' con '+esc(others.join(', ')):''}</span> · `:'';
-    return `<div class="svrow" role="button" tabindex="0" data-open="${x.id}"><span class="t">${esc(x.name)}</span><span class="acts2"><button class="ed" data-editf="${x.id}" title="Renombrar, mover o eliminar" aria-label="Editar">${PENCIL}</button><span class="go">${ne?'Abrir diagrama →':'Empezar diagrama →'}</span></span>
+    const isL=(x.alsoIn||[]).length>0;
+    return `<div class="svrow${isL?' l2l':''}" role="button" tabindex="0" data-open="${x.id}"${isL?` data-l2l="${x.id}"`:''}><span class="t">${isL?'<span class="l2ltag">L2L</span>':''}${esc(x.name)}</span><span class="acts2"><button class="ed" data-editf="${x.id}" title="Renombrar, mover o eliminar" aria-label="Editar">${PENCIL}</button><span class="go">${ne?'Abrir diagrama →':'Empezar diagrama →'}</span></span>
       <span class="m"><span class="kind ${x.kind}">${esc(KINDS[x.kind]||'')}</span> ${lp}${sub?esc(sub)+' · ':''}${ne} equipo${ne===1?'':'s'}${n?` · <span class="ib">⚠ ${n} activa${n===1?'':'s'}</span>`:''}</span></div>`;};
   const sites=kids(id);
   const own=S.diagrams[id]?.nodes.length?`<div class="sitebox" style="margin-bottom:14px"><div class="sh"><b>Diagrama general del cliente</b></div>${row(f)}</div>`:'';
-  return `<div class="cvHead"><button class="btn" data-act="cliBack">← Todos los clientes</button><span class="grow"></span></div>
+  return `<div class="cvHead"><button class="btn" data-act="cliBack">← Todos los clientes</button><span class="grow"></span><button class="btn" data-act="cliText" title="Tamaño y color de los nombres">Aa Texto</button></div>
     <div class="cpHead" style="--cc:${f.color||'var(--accent)'}"><span class="cimg">${cliIcon(f,36)}</span><div class="grow"><span class="lbl">Cliente</span><h2>${esc(f.name)}</h2>
       <span class="mapNote">${sites.length} sitio${sites.length===1?'':'s'}${ic?` · <b style="color:var(--danger)">⚠ ${ic} incidencia${ic===1?'':'s'} activa${ic===1?'':'s'}</b>`:''}</span></div>
       <button class="btn" data-cedit="${id}">Personalizar</button><button class="btn pri" data-addsite="${id}">+ Sitio</button></div>
@@ -2219,6 +2259,7 @@ document.addEventListener('click',e=>{
     case 'csv':csvModal();break;
     case 'openMap':openMap();break;
     case 'newInc':incModal(null);break;
+    case 'cliText':cliTextModal();break;
     case 'cliBack':ui.cliPage=null;renderView();break;
     case 'incFromSheet':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
     case 'mapAll':S.meta.mapSel=null;save(false);refreshMap(true);break;
@@ -2313,7 +2354,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
     el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);});
   el.addEventListener('dblclick',()=>{if(el.dataset.rz==='L')delete S.meta.lw;else delete S.meta.rw;save(false);applyPanels();});
 });
-window.addEventListener('resize',()=>{applyPanels();rc();});
+window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
 renderAll();applyPanels();

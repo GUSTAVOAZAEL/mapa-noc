@@ -17,6 +17,7 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 Arriba a la izquierda puedes cambiar entre **Diagramas** (la vista de siempre), **Clientes** y **Equipos**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
 
 **Clientes**
+- **Aa Texto** ajusta el tamaño y color de los nombres de cliente, sitio y servicio (aplica a todos).
 - Una tarjeta por cliente con su ícono o logo, color, número de sitios y servicios, y aviso si tiene incidencias activas.
 - El filtro **Con incidencia activa** muestra solo los clientes afectados.
 - El lápiz de cada tarjeta (o **Personalizar**) cambia nombre, color, ícono o imagen/logo.
@@ -76,6 +77,7 @@ Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme,
 ## Líneas privadas entre sitios
 
 - Al editar un servicio (lápiz o ⋯), en **Línea privada: también llega a** marca los otros sitios del cliente por los que pasa. El servicio aparece en la página del cliente bajo cada sitio con la marca **↔ Línea privada con…**, y en el árbol con **↔**.
+- En la página del cliente, el mismo servicio en dos sitios se marca con la etiqueta **L2L**, fondo amarillo y una **línea amarilla con dos puntos** que une ambos sitios.
 - En las líneas del diagrama hay un medio nuevo, **Línea privada (L2L)**, que se dibuja con trazo de raya y punto.
 
 ## Equipos en cada sitio
