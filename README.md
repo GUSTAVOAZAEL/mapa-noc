@@ -12,6 +12,10 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Mover clientes, sitios y servicios
+
+En el árbol de la izquierda arrastra cualquier elemento y suéltalo sobre otro cliente, sitio o carpeta para moverlo ahí, con todo su contenido y diagramas. Para dejarlo en el nivel principal suéltalo en el recuadro que aparece al final del árbol. También puedes moverlo desde **⋯ → Ubicación (mover a)**, útil en celular.
+
 ## Edición rápida en el diagrama
 
 - **Botón + junto a cada elemento**: al pasar el mouse o seleccionar un equipo aparece un **+** al lado del punto de conexión. Desde ahí agregas un **equipo conectado** (se coloca a la derecha y queda unido con una línea), un **texto** debajo o un **grupo** alrededor.

@@ -94,6 +94,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .row:hover .ra,.row.on .ra{display:flex}
 .ra button{width:24px;height:24px;border:0;background:none;border-radius:4px;cursor:pointer;color:var(--muted)}
 .ra button:hover{background:var(--panel);color:var(--ink)}
+.row[draggable=true]{-webkit-user-drag:element}
+.row.dragging{opacity:.45}
+.row.dropin{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+.dropRoot{margin-top:8px;border:2px dashed var(--line);border-radius:6px;padding:10px;text-align:center;font-size:12px;color:var(--muted)}
+.dropRoot.dropin{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .row.hit .nm{color:var(--hit);font-weight:500}
 
 /* inventario */
@@ -141,8 +146,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .impCard::before{content:"";position:absolute;left:-7px;top:18px;width:12px;height:12px;background:var(--hit-soft);border-left:1px solid var(--hit);border-bottom:1px solid var(--hit);transform:rotate(45deg)}
 .impCard.left::before{left:auto;right:-7px;border-left:0;border-bottom:0;border-right:1px solid var(--hit);border-top:1px solid var(--hit)}
 .impCard.free::before{display:none}
-.impCard .row2{display:flex;gap:6px}
-.impCard .row2 .btn{flex:1;justify-content:center}
+.impCard .row2{display:grid;gap:6px}
+.impCard .row2 .btn{justify-content:center;width:100%}
 .impCard .big{font:600 22px/1 var(--f-cond);color:var(--hit)}
 .impBanner{display:flex;gap:10px;align-items:center;background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
 .impBanner b{color:var(--hit)}
@@ -709,7 +714,7 @@ function sideClients(){
   const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
-      return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}">
+      return `<li><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="Arrastra para mover a otro cliente o sitio">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
         <span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
@@ -717,7 +722,7 @@ function sideClients(){
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
   const tree=branch(null);
   return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="newClient">+ Cliente</button></div>`+
-    (tree||`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
+    (tree?tree+`<div class="dropRoot" data-froot="1" ${ui.dragF?'':'hidden'}>Suelta aquí para dejarlo en el nivel principal</div>`:'')+(tree?'':`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
 }
 function sideDevices(){
   const q=fold(ui.devQ);
@@ -789,7 +794,7 @@ function renderCanvas(){
   if(ui.impact){const it=impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
     const d=devById(ui.impact.dev),all=impactOf(ui.impact.dev,ui.impact.port);
     const cl=new Set(all.map(i=>clientOf(i.fid)?.id).filter(Boolean)).size;
-    ib.hidden=false;ib.innerHTML=`<span>Impacto en <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b></span><span><span class="big">${all.length}</span> servicio${all.length===1?'':'s'} · <b>${cl}</b> cliente${cl===1?'':'s'}${it?'':'<br><small>Este equipo no está en este diagrama.</small>'}</span><span class="row2"><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm" data-act="clearImp">Ocultar impacto</button></span>`;
+    ib.hidden=false;ib.innerHTML=`<span>Impacto en <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b></span><span><span class="big">${all.length}</span> servicio${all.length===1?'':'s'} · <b>${cl}</b> cliente${cl===1?'':'s'}${it?'':'<br><small>Este equipo no está en este diagrama.</small>'}</span><span class="row2"><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm dan" data-act="incFromImp">Registrar incidencia</button><button class="btn sm" data-act="clearImp">Ocultar impacto</button></span>`;
   }else ib.hidden=true;
   // capa de incidencias
   const L=S.meta.layer||'activas',$ls=$('#layerSel');if($ls.value!==L)$ls.value=L;
@@ -1012,7 +1017,7 @@ function openPlusMenu(nodeId,ev){
   ui.sel=ui.multi.size>1?{t:'multi'}:{t:'node',id:nodeId};renderInsp();rc();
   m.innerHTML=`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>
     <button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>
-    ${n?.deviceId?`<button data-act="plusImp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><circle cx="9" cy="9" r="6.5" stroke-dasharray="2.5 2"/></svg><span>Ver impacto<small>Clientes y servicios que pasan por aquí</small></span></button>
+    ${n?.deviceId?`<button data-act="plusImp" style="color:var(--hit)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><circle cx="9" cy="9" r="6.5" stroke-dasharray="2.5 2"/></svg><span>Ver impacto<small style="color:var(--muted)">Clientes y servicios que pasan por aquí</small></span></button>
     <button data-act="plusInc" style="color:var(--danger)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2 17 16H1z"/><path d="M9 7v4M9 13.5v.1"/></svg><span>Registrar incidencia<small style="color:var(--muted)">Con este equipo como afectado</small></span></button>`:''}
     <button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`;
   m.hidden=false;
@@ -1164,13 +1169,31 @@ function folderModal(id,parentId,kind){
   modal(f?'Editar '+KINDS[k].toLowerCase():'Nuevo '+KINDS[k].toLowerCase(),
     `<div class="fld"><span class="lbl">Nombre</span><input id="fName" value="${esc(f?.name||'')}" placeholder="${k==='cliente'?'Razón social o nombre corto':k==='sitio'?'Sucursal, planta, oficina…':'Internet dedicado, L2L, MPLS…'}"></div>
      <div class="fld"><span class="lbl">Tipo</span><select id="fKind">${Object.entries(KINDS).map(([v,l])=>`<option value="${v}"${v===k?' selected':''}>${l}</option>`).join('')}</select></div>
+     ${f?`<div class="fld"><span class="lbl">Ubicación (mover a)</span><select id="fParent"><option value="">Nivel principal</option>${S.folders.filter(x=>!subtree(f.id).includes(x.id)).map(x=>({x,p:pathOf(x.id).map(y=>y.name).join(' › ')})).sort((a,b)=>ncmp(a.p,b.p)).map(o=>`<option value="${o.x.id}"${o.x.id===f.parentId?' selected':''}>${esc(o.p)}</option>`).join('')}</select></div>`:''}
      <div id="fErr" class="err"></div>`,
     [...(f?[{l:'Eliminar',k:'dan',f:()=>delFolderModal(f.id)}]:[]),{l:'Cancelar'},{l:f?'Guardar':'Crear',k:'pri',f:()=>{
       const name=$('#fName').value.trim();if(!name){$('#fErr').textContent='Escribe un nombre.';return;}
-      if(f){f.name=name;f.kind=$('#fKind').value;}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null};S.folders.push(nf);ui.folder=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
+      if(f){f.name=name;f.kind=$('#fKind').value;const np=$('#fParent').value||null;if((f.parentId||null)!==np){f.parentId=np;if(np)ui.collapsed.delete(np);}}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null};S.folders.push(nf);ui.folder=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
       save();closeModal();renderAll();requestAnimationFrame(fit);}}]);
   $('#fName').onkeydown=e=>{if(e.key==='Enter')$('#mF .pri').click();};
 }
+
+/* ---------- mover carpetas ---------- */
+function moveFolder(id,newParent){
+  const f=folById(id);if(!f)return;newParent=newParent||null;
+  if(newParent&&subtree(id).includes(newParent)){toast('No puedes moverlo dentro de sí mismo');return;}
+  if((f.parentId||null)===newParent)return;
+  f.parentId=newParent;if(newParent)ui.collapsed.delete(newParent);
+  save();renderAll();toast(`«${f.name}» movido a ${newParent?pathOf(newParent).map(x=>x.name).join(' › '):'nivel principal'}`);
+}
+(()=>{const pane=$('#pane');
+  pane.addEventListener('dragstart',e=>{const r=e.target.closest('[data-fdrag]');if(!r)return;ui.dragF=r.dataset.fdrag;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',ui.dragF);}catch(err){}
+    r.classList.add('dragging');const z=pane.querySelector('[data-froot]');if(z)z.hidden=false;});
+  pane.addEventListener('dragend',()=>{ui.dragF=null;pane.querySelectorAll('.dragging,.dropin').forEach(x=>x.classList.remove('dragging','dropin'));const z=pane.querySelector('[data-froot]');if(z)z.hidden=true;});
+  pane.addEventListener('dragover',e=>{if(!ui.dragF)return;const r=e.target.closest('[data-fdrag],[data-froot]');pane.querySelectorAll('.dropin').forEach(x=>{if(x!==r)x.classList.remove('dropin');});
+    if(!r)return;const tid=r.dataset.fdrag;if(tid&&subtree(ui.dragF).includes(tid))return;e.preventDefault();e.dataTransfer.dropEffect='move';r.classList.add('dropin');});
+  pane.addEventListener('drop',e=>{if(!ui.dragF)return;const r=e.target.closest('[data-fdrag],[data-froot]');if(!r)return;e.preventDefault();const id=ui.dragF;ui.dragF=null;moveFolder(id,r.dataset.fdrag||null);});
+})();
 function subtree(id){const out=[id];kids(id).forEach(k=>out.push(...subtree(k.id)));return out;}
 function delFolderModal(id){
   const ids=subtree(id),f=folById(id);
