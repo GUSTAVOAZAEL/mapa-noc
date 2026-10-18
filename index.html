@@ -137,6 +137,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .incBanner{display:flex;gap:10px;align-items:center;background:var(--danger-soft);border:1px solid var(--danger);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
 .incBanner b{color:var(--danger)}
 .incBanner .grow{flex:1}
+.impCard{position:absolute;z-index:6;width:250px;flex-direction:column;align-items:stretch!important;gap:8px!important;padding:10px 12px!important;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.impCard::before{content:"";position:absolute;left:-7px;top:18px;width:12px;height:12px;background:var(--hit-soft);border-left:1px solid var(--hit);border-bottom:1px solid var(--hit);transform:rotate(45deg)}
+.impCard.left::before{left:auto;right:-7px;border-left:0;border-bottom:0;border-right:1px solid var(--hit);border-top:1px solid var(--hit)}
+.impCard.free::before{display:none}
+.impCard .row2{display:flex;gap:6px}
+.impCard .row2 .btn{flex:1;justify-content:center}
+.impCard .big{font:600 22px/1 var(--f-cond);color:var(--hit)}
 .impBanner{display:flex;gap:10px;align-items:center;background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
 .impBanner b{color:var(--hit)}
 .impBanner .grow{flex:1}
@@ -434,7 +441,8 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
       </svg>
       <div class="empty" id="empty" hidden></div>
       <div class="plusMenu" id="plusMenu" hidden></div>
-      <div class="banners"><div class="incBanner" id="incBanner" hidden></div><div class="impBanner" id="impBanner" hidden></div></div>
+      <div class="banners"><div class="incBanner" id="incBanner" hidden></div></div>
+      <div class="impBanner impCard" id="impBanner" hidden></div>
       <div class="hint" id="hint">Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom</div>
       <div class="zoom">
         <button class="btn ic sm" id="zIn" aria-label="Acercar">+</button>
@@ -732,7 +740,7 @@ function sideImpact(){
     const items=impactOf(cur.dev,cur.port);
     const byC={};items.forEach(i=>{const c=clientOf(i.fid);const k=c?c.id:'-';(byC[k]=byC[k]||{c,items:[]}).items.push(i);});
     html+=`<div class="sum"><div><b>${Object.keys(byC).length}</b><span>clientes</span></div><div><b>${items.length}</b><span>servicios / diagramas</span></div></div>`;
-    if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Quitar resaltado</button></div><button class="btn sm dan" data-act="incFromImp">Registrar incidencia con esta afectación</button>`;
+    if(items.length)html+=`<div style="display:flex;gap:6px"><button class="btn sm" data-act="copyImp">Copiar lista</button><button class="btn sm ghost" data-act="clearImp">Ocultar impacto</button></div><button class="btn sm dan" data-act="incFromImp">Registrar incidencia con esta afectación</button>`;
     html+=Object.values(byC).sort((a,b)=>ncmp(a.c?.name,b.c?.name)).map(g=>`<div class="grp"><h4>${esc(g.c?.name||'Sin cliente')}</h4>${g.items.map(i=>{
       const p=pathOf(i.fid).slice(1).map(f=>f.name).join(' › ')||'(diagrama del cliente)';
       return `<button class="irow" data-open="${i.fid}"><span>${esc(p)}</span><span class="pp">${esc(i.ports.join(', ')||'sin puertos/IPs registrados')}</span></button>`;}).join('')}</div>`).join('');
@@ -780,7 +788,8 @@ function renderCanvas(){
   let hit=null;
   if(ui.impact){const it=impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
     const d=devById(ui.impact.dev),all=impactOf(ui.impact.dev,ui.impact.port);
-    ib.hidden=false;ib.innerHTML=`<span>Impacto: <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b> — ${all.length} servicio${all.length===1?'':'s'}${it?'':' (no pasa por este diagrama)'}</span><span class="grow"></span><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm ghost" data-act="clearImp">Quitar</button>`;
+    const cl=new Set(all.map(i=>clientOf(i.fid)?.id).filter(Boolean)).size;
+    ib.hidden=false;ib.innerHTML=`<span>Impacto en <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b></span><span><span class="big">${all.length}</span> servicio${all.length===1?'':'s'} · <b>${cl}</b> cliente${cl===1?'':'s'}${it?'':'<br><small>Este equipo no está en este diagrama.</small>'}</span><span class="row2"><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm" data-act="clearImp">Ocultar impacto</button></span>`;
   }else ib.hidden=true;
   // capa de incidencias
   const L=S.meta.layer||'activas',$ls=$('#layerSel');if($ls.value!==L)$ls.value=L;
@@ -856,6 +865,13 @@ function renderCanvas(){
   if(ui.drag?.kind==='box'){const b=ui.drag;out+=`<rect class="marquee" x="${Math.min(b.x0,b.x)}" y="${Math.min(b.y0,b.y)}" width="${Math.abs(b.x-b.x0)}" height="${Math.abs(b.y-b.y0)}"/>`;}
   if(ui.drag?.kind==='link'){const a=nm[ui.drag.from];if(a){const G=geom(a);out+=`<line class="tmp" x1="${a.x+G.hd[0]}" y1="${a.y+G.hd[1]}" x2="${ui.drag.x}" y2="${ui.drag.y}"/>`;}}
   vpG.innerHTML=out;
+  if(ui.impact){const ib2=$('#impBanner'),wr=ib2.parentElement.getBoundingClientRect(),n0=D.nodes.find(n=>n.deviceId===ui.impact.dev);
+    ib2.classList.remove('left','free');
+    if(n0){const G=geom(n0);let x=vp.x+(n0.x+G.w+(G.hd?28:0))*vp.k+12,y=vp.y+n0.y*vp.k+Math.min(G.h*vp.k/2,30)-26;
+      if(x+260>wr.width){x=vp.x+n0.x*vp.k-262;ib2.classList.add('left');}
+      if(x<6||x+250>wr.width){x=Math.max(6,Math.min(wr.width-256,x));ib2.classList.add('free');}
+      y=Math.max(60,Math.min(wr.height-ib2.offsetHeight-8,y));ib2.style.left=x+'px';ib2.style.top=y+'px';}
+    else{ib2.classList.add('free');ib2.style.left=(wr.width-262)+'px';ib2.style.top='64px';}}
   emp.hidden=D.nodes.length>0||D.groups.length>0;
   if(!D.nodes.length&&!D.groups.length)emp.innerHTML=`<div><h3>Diagrama vacío</h3><span>Agrega los equipos de este ${esc((KINDS[folById(fid)?.kind]||'elemento').toLowerCase())} con <b>+ Equipo</b> y conéctalos arrastrando el punto del borde.</span></div>`;
 }

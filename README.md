@@ -21,7 +21,7 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Puertos o IPs en los enlaces**: al seleccionar una línea, debajo de cada extremo aparecen los puertos/IPs ya registrados en ese equipo; toca uno y queda puesto en el enlace. También puedes escribir uno nuevo y se guarda en el equipo.
 - **Panel de Puertos / IPs**: al seleccionar un equipo, el recuadro *Puertos / IPs* muestra todos los registrados (resaltados los que se usan en el diagrama), permite agregar nuevos y abrir el impacto de cada uno. Útil para equipos de voz con varias IPs públicas.
 - **Líneas sin flecha por default**: las conexiones nuevas se crean sin flecha; en el panel puedes elegir un sentido o ambos.
-- El menú del **+** también tiene **Ver impacto** y **Registrar incidencia**.
+- El menú del **+** también tiene **Ver impacto** y **Registrar incidencia**. El resumen del impacto aparece en una tarjeta junto al equipo, con **Ver lista** y **Ocultar impacto**.
 - **Nombres únicos**: no se puede guardar un equipo con un nombre que ya existe (sin importar mayúsculas). Mientras escribes te avisa y te ofrece **Agregar el existente**. Si la IP ya la tiene otro equipo, te avisa y te pide confirmar.
 
 ## Formas de los equipos
