@@ -643,7 +643,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
         <button class="btn sm" id="tFit">Ajustar vista</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
         <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
-        <button class="btn sm pillTog" id="autoLocTog" title="Mostrar u ocultar los recuadros de ubicación que se dibujan solos según la ubicación de cada equipo">📍 Ubicaciones</button>
+        <button class="btn sm pillTog" id="autoLocTog" title="Mostrar u ocultar todos los grupos de ubicación (ciudad, edificio, sitio, piso, sala, gabinete, rack)">📍 Ubicaciones</button>
         <select class="layerSel secSel" id="secSel" title="Resaltar una red" aria-label="Resaltar una red"><option value="">Todas las redes</option><option value="voz">Red de voz</option><option value="transporte">Red de transporte</option><option value="datos">Red de datos</option></select>
       </div>
     </div>
@@ -828,7 +828,7 @@ function shiftPlace(D,pid,dx,dy){dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
   D.nodes.forEach(n=>{const dv=n.deviceId&&devById(n.deviceId);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
   (D.groups||[]).forEach(g=>{if(g.placeId&&(g.placeId===pid||placeUnder(g.placeId,pid))){g.x+=dx;g.y+=dy;}});}
 /* Separa los grupos de ubicación para que no se encimen: hermanos lado a lado y equipos ajenos fuera */
-function fixLoc(D){if(!D||ui.folder===MAP)return 0;let moves=0;const G=18;
+function fixLoc(D){if(!D||ui.folder===MAP||S.meta.autoLoc===false)return 0;let moves=0;const G=18;
   for(let it=0;it<80;it++){const B=locBoxes(D);if(!B.length)break;const byP={};B.forEach(b=>byP[b.pid]=b);
     const parentOf=b=>{let p=placeById(placeById(b.pid)?.parentId),gd=0;while(p&&gd++<20){if(byP[p.id])return p.id;p=placeById(p.parentId);}return '';};
     const sib={};B.forEach(b=>{const k=parentOf(b);(sib[k]=sib[k]||[]).push(b);});let did=false;
@@ -1127,7 +1127,8 @@ function renderCanvas(){
   // grupos (detrás)
   const inside=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
   let out='';const AG=ui.ag=autoGroups(D);
-  [...D.groups,...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
+  const locOff=S.meta.autoLoc===false&&ui.folder!==MAP;
+  [...D.groups.filter(g=>!(locOff&&(g.placeId||PKINDS.includes(g.kind)))),...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
     const col=g.color||'var(--muted)',sel=(ui.sel?.t==='group'||ui.sel?.t==='agroup')&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
     const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.kind==='sitio'&&folById(g.siteId)?sitePath(g.siteId):(g.label||''));
@@ -1276,7 +1277,7 @@ function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]))
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
-  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);save();renderInsp();rc();}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(S.meta.autoLoc!==false){if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);}save();renderInsp();rc();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1308,7 +1309,7 @@ $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
 $('#pillTog').onclick=()=>{S.meta.hidePills=!S.meta.hidePills;save(false);rc();};
-$('#autoLocTog').onclick=()=>{S.meta.autoLoc=S.meta.autoLoc===false;if(ui.sel?.t==='agroup')ui.sel=null;save(false);renderAll();};
+$('#autoLocTog').onclick=()=>{S.meta.autoLoc=S.meta.autoLoc===false;if(ui.sel?.t==='agroup'||ui.sel?.t==='group')ui.sel=null;const D=ui.folder&&ui.folder!==MAP&&S.diagrams[ui.folder];if(D&&S.meta.autoLoc&&fixLoc(D))save();else save(false);renderAll();toast(S.meta.autoLoc?'Grupos de ubicación visibles':'Grupos de ubicación ocultos');};
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
@@ -1934,7 +1935,7 @@ function renderInsp(){
       <p class="endHint" style="margin:0">Este recuadro aparece en todos los diagramas donde haya equipos con esta ubicación registrada. Para cambiar la ubicación de un equipo, edítalo o arrástralo a otro grupo.</p>
       ${mem.length?`<div class="acc"><span class="lbl">Equipos aquí (${mem.length})</span>${mem.map(n=>{const d=devById(n.deviceId);return `<button class="drow" data-selnode="${d.id}">${gsvg(d?.type)}<div class="t"><div>${esc(d?.name)}</div><div class="ip">${esc(placePath(d.place))}</div></div><span></span></button>`;}).join('')}</div>`:''}
       <button class="btn sm" data-act="pinAuto">Fijar como grupo editable en este diagrama</button>
-      <button class="btn sm" data-act="autoLocOff">Ocultar ubicaciones automáticas</button>`;
+      <button class="btn sm" data-act="autoLocOff">Ocultar grupos de ubicación</button>`;
     return;}
   if(ui.sel.t==='group'){
     const g=D.groups.find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
@@ -2609,7 +2610,7 @@ document.addEventListener('click',e=>{
     case 'dupEl':{const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.sel?.id);if(!n)break;const c={...n,id:uid('x'),x:n.x+32,y:n.y+32};D.nodes.push(c);ui.multi=new Set([c.id]);ui.sel={t:'node',id:c.id};save();renderAll();break;}
     case 'addGrp':groupFromSelection('edificio');break;
     case 'pinAuto':{const D=getDiag(ui.folder),g=(ui.ag||[]).find(x=>x.id===ui.sel?.id);if(g){const ng={id:uid('g'),kind:g.kind,label:g.label,placeId:g.placeId,color:g.color||'',x:Math.round(g.x/8)*8,y:Math.round(g.y/8)*8,w:Math.round(g.w/8)*8+8,h:Math.round(g.h/8)*8+8};D.groups.push(ng);ui.sel={t:'group',id:ng.id};save();renderInsp();rc();toast('Grupo fijado: ahora puedes moverlo y cambiar su tamaño');}break;}
-    case 'autoLocOff':S.meta.autoLoc=false;ui.sel=null;save(false);renderAll();toast('Ubicaciones automáticas ocultas (botón 📍 para volver a verlas)');break;
+    case 'autoLocOff':S.meta.autoLoc=false;ui.sel=null;save(false);renderAll();toast('Grupos de ubicación ocultos (botón 📍 Ubicaciones para volver a verlos)');break;
     case 'dtAdd':{let i=1;while(S.devices.some(x=>norm(x.name)===norm('NUEVO-'+i)))i++;const nd={id:uid('d'),name:'NUEVO-'+i,ip:'',type:ui.lastType||S.types[0]?.name||'Router',access:[],sections:ui.devCardSec&&ui.devCardSec!=='none'?[ui.devCardSec]:[],ports:[]};S.devices.push(nd);ui.cvQ='';save();renderAll();
       requestAnimationFrame(()=>{const r=document.querySelector(`[data-drow="${nd.id}"] [data-dt="name"]`);if(r){r.scrollIntoView({block:'center'});r.focus();r.select();}});break;}
     case 'mkGroup':groupFromSelection($('#mKind').value);break;
