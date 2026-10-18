@@ -68,7 +68,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 .side,.insp,.stage{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:0;min-width:0}
 .side{display:flex;flex-direction:column;overflow:hidden}
-.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 6px}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:1;border:0;background:none;padding:11px 2px 9px;cursor:pointer;color:var(--muted);font:500 12.5px var(--f-ui);white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
 .pane{flex:1;overflow:auto;padding:10px}
@@ -365,6 +366,32 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 #inspBody{display:flex;flex-direction:column;gap:12px;min-width:0}
 .mOnly{display:none}
 
+/* mapa general */
+.mtree,.mtree ul{list-style:none;margin:0;padding:0}
+.mtree ul{padding-left:16px}
+.mrow{display:flex;align-items:center;gap:7px;padding:3px 2px;border-radius:5px;cursor:pointer;font-size:13px;min-width:0}
+.mrow:hover{background:var(--panel-2)}
+.mrow input{flex:none;margin:0;accent-color:var(--accent)}
+.mrow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .dotc{width:10px;height:10px;border-radius:3px;flex:none}
+.mrow .open{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px}
+.mrow .open:hover{color:var(--accent)}
+.shareBox{background:var(--accent-soft);border-radius:8px;padding:10px;display:grid;gap:6px;font-size:13px}
+.shareBox b.big{font:600 22px/1 var(--f-cond);color:var(--accent)}
+.shareBox.none{background:var(--panel-2)}
+.srow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:center;border:0;background:none;padding:5px 4px;border-radius:5px;cursor:pointer;text-align:left;width:100%}
+.srow:hover{background:var(--panel)}
+.srow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .c{font:600 11px var(--f-mono);color:var(--accent)}
+.svcs{display:flex;flex-wrap:wrap;gap:4px}
+.svc{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 7px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line);cursor:pointer;color:var(--ink)}
+.svc i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.edge.shared line.ln{stroke-width:3.6}
+.node.shared .nb{stroke:var(--accent);stroke-width:2.6}
+.sbadge circle{fill:var(--accent)}
+.sbadge text{font:700 10.5px var(--f-ui);fill:var(--accent-ink)}
+.mapNote{font-size:12px;color:var(--muted)}
+body.mapMode .stage{border-color:var(--accent)}
 @media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
 @media (max-width:860px){
   #app{grid-template-columns:minmax(0,1fr)}
@@ -403,6 +430,7 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
     </div>
     <div class="status" id="status"><i></i><span></span></div>
     <div class="acts">
+      <button class="btn" data-act="openMap" id="bMap" title="Ver varios diagramas juntos y lo que comparten"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="3" cy="4" r="1.8"/><circle cx="13" cy="4" r="1.8"/><circle cx="8" cy="12" r="1.8"/><circle cx="8" cy="6.5" r="1.4"/><path d="M4.6 4.6 6.8 6M11.4 4.6 9.2 6M8 8v2.2"/></svg><span class="lb">Mapa general</span></button>
       <button class="btn" id="bImport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m-3-3 3 3 3-3M3 12v2h10v-2"/></svg><span class="lb">Importar</span></button>
       <button class="btn pri" id="bExport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10V2M5 5l3-3 3 3M3 12v2h10v-2"/></svg><span class="lb">Exportar JSON</span></button>
       <button class="btn ic" id="bSettings" aria-label="Ajustes"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
@@ -647,7 +675,7 @@ function save(markDirty=true){
 const devById=id=>S.devices.find(d=>d.id===id);
 const folById=id=>S.folders.find(f=>f.id===id);
 const kids=pid=>S.folders.filter(f=>(f.parentId||null)===(pid||null)).sort((a,b)=>ncmp(a.name,b.name));
-function getDiag(fid,create){if(!S.diagrams[fid]&&create)S.diagrams[fid]={nodes:[],edges:[],groups:[]};const D=S.diagrams[fid]||{nodes:[],edges:[],groups:[]};if(!D.groups)D.groups=[];return D;}
+function getDiag(fid,create){if(fid===MAP)return ui.mapD||(ui.mapD=buildMap());if(!S.diagrams[fid]&&create)S.diagrams[fid]={nodes:[],edges:[],groups:[]};const D=S.diagrams[fid]||{nodes:[],edges:[],groups:[]};if(!D.groups)D.groups=[];return D;}
 function pathOf(fid){const out=[];let f=folById(fid);while(f){out.unshift(f);f=folById(f.parentId);}return out;}
 function clientOf(fid){const p=pathOf(fid);return p[0]||null;}
 function devicePorts(id){
@@ -659,6 +687,14 @@ function devicePorts(id){
 function usage(id){let c=0;for(const D of Object.values(S.diagrams))if(D.nodes.some(n=>n.deviceId===id))c++;return c;}
 
 /* ---------- impacto ---------- */
+function diagHits(D,devId,port){
+  const pn=norm(port);const nodes=D.nodes.filter(n=>n.deviceId===devId);if(!nodes.length)return null;
+  const ids=new Set(nodes.map(n=>n.id)),edges=new Set(),hitNodes=new Set();
+  D.edges.forEach(e=>{const a=ids.has(e.from),b=ids.has(e.to);if(!a&&!b)return;const ok=!pn||(a&&norm(e.fp)===pn)||(b&&norm(e.tp)===pn);if(ok){edges.add(e.id);hitNodes.add(a?e.from:e.to);}});
+  if(!pn)nodes.forEach(n=>hitNodes.add(n.id));
+  if(pn&&!edges.size)return null;
+  return{edges,nodes:hitNodes};
+}
 function impactOf(devId,port){
   const pn=norm(port),items=[];
   for(const [fid,D] of Object.entries(S.diagrams)){
@@ -699,10 +735,12 @@ function renderSide(){
   if(ui.tab==='clientes')pane.innerHTML=sideClients();
   else if(ui.tab==='equipos')pane.innerHTML=sideDevices();
   else if(ui.tab==='incidencias')pane.innerHTML=sideIncidents();
+  else if(ui.tab==='mapa')pane.innerHTML=sideMap();
   else pane.innerHTML=sideImpact();
   const na=activeIncs().length,cn=$('#incCnt');cn.hidden=!na;cn.textContent=na;
   if(ui.tab==='equipos'){const i=$('#devQ');if(i){i.value=ui.devQ;}}
   if(ui.tab==='incidencias'){const i=$('#incQ');if(i)i.value=ui.incQ||'';}
+  pane.querySelectorAll('[data-ind]').forEach(x=>x.indeterminate=true);
 }
 function exampleNote(){
   return S.meta.example?`<div class="note"><span><b>Datos de ejemplo.</b> Clientes y equipos ficticios para que pruebes el flujo. Prueba el análisis de impacto en <span class="mono">AGG-GPE-02 · XGE0/0/5</span>.</span><div><button class="btn sm" data-act="wipe">Empezar vacío</button></div></div>`:'';
@@ -783,15 +821,17 @@ function trunc(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
 function lbl(x,y,t,cls){const w=t.length*6.4+10;return `<g class="${cls}"><rect x="${x-w/2}" y="${y-9}" width="${w}" height="17" rx="3"/><text x="${x}" y="${y+3.5}" text-anchor="middle">${esc(t)}</text></g>`;}
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
-  document.querySelectorAll('[data-act=addDev],[data-act=addTxt],[data-act=addGrp]').forEach(b=>b.disabled=!fid);
+  document.querySelectorAll('[data-act=addDev],[data-act=addTxt],[data-act=addGrp]').forEach(b=>b.disabled=!fid||fid===MAP);
+  document.body.classList.toggle('mapMode',fid===MAP);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
   if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
   const path=pathOf(fid);
-  $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span>${esc(f.name)}</span><span>›</span>`).join('')+`<b>${esc(path.at(-1)?.name||'')}</b>`;
+  if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.length} equipos</span>`;}
+  else $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span>${esc(f.name)}</span><span>›</span>`).join('')+`<b>${esc(path.at(-1)?.name||'')}</b>`;
   // impacto en este diagrama
   let hit=null;
-  if(ui.impact){const it=impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
+  if(ui.impact){const it=fid===MAP?diagHits(D,ui.impact.dev,ui.impact.port):impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
     const d=devById(ui.impact.dev),all=impactOf(ui.impact.dev,ui.impact.port);
     const cl=new Set(all.map(i=>clientOf(i.fid)?.id).filter(Boolean)).size;
     ib.hidden=false;ib.innerHTML=`<span>Impacto en <b>${esc(d?.name)}${ui.impact.port?' · '+esc(ui.impact.port):''}</b></span><span><span class="big">${all.length}</span> servicio${all.length===1?'':'s'} · <b>${cl}</b> cliente${cl===1?'':'s'}${it?'':'<br><small>Este equipo no está en este diagrama.</small>'}</span><span class="row2"><button class="btn sm" data-act="showImp">Ver lista</button><button class="btn sm dan" data-act="incFromImp">Registrar incidencia</button><button class="btn sm" data-act="clearImp">Ocultar impacto</button></span>`;
@@ -834,7 +874,7 @@ function renderCanvas(){
     const ie=inc?.edges.has(e.id);
     const ec=!h&&!sel&&!ie&&e.color?e.color:'';
     const mk=h?'arH':sel?'arS':ie?'arI':ec?markerFor(ec):'ar';
-    const cls='edge'+(sel?' sel':'')+(h?' hit':'')+(ie?' inc':'')+(hit&&!h?' dim':'')+(sdim.has(e.from)||sdim.has(e.to)?' sdim':'');
+    const cls='edge'+(e.shared?' shared':'')+(sel?' sel':'')+(h?' hit':'')+(ie?' inc':'')+(hit&&!h?' dim':'')+(sdim.has(e.from)||sdim.has(e.to)||(fid===MAP&&S.meta.mapShared&&!e.shared)?' sdim':'');
     const dash=MEDIA[e.medium]?.d||'';
     const ms=e.dir==='both'?`marker-start="url(#${mk})"`:'',me=e.dir==='none'?'':`marker-end="url(#${mk})"`;
     let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" ${ec?`style="stroke:${ec}"`:''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
@@ -847,22 +887,24 @@ function renderCanvas(){
       s+=`<g class="dm"><line x1="${px2-nx*R}" y1="${py2-ny*R}" x2="${px2+nx*R}" y2="${py2+ny*R}"/><text x="${tx}" y="${ty+3}" text-anchor="middle">${esc(trunc(e.demarcLabel||'Demarcación',22))}</text>${e.demarcA||e.demarcB?`<text class="sd" x="${tx}" y="${ty+(ny>0?-9:15)}" text-anchor="middle">${esc(trunc(e.demarcA||'',14))} ⟷ ${esc(trunc(e.demarcB||'',14))}</text>`:''}<title>Punto de demarcación${e.demarcA||e.demarcB?`: ${esc(e.demarcA||'')} | ${esc(e.demarcB||'')}`:''}</title></g>`;}
     s+=`<line class="eh" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></g>`;
     out+=s;
-    if(sel&&!(ui.drag?.kind==='reend'))endH=`<circle class="eend" data-eend="from" cx="${x1}" cy="${y1}" r="7"><title>Arrastra para cambiar el origen</title></circle><circle class="eend" data-eend="to" cx="${x2}" cy="${y2}" r="7"><title>Arrastra para cambiar el destino</title></circle>`;
+    if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend'))endH=`<circle class="eend" data-eend="from" cx="${x1}" cy="${y1}" r="7"><title>Arrastra para cambiar el origen</title></circle><circle class="eend" data-eend="to" cx="${x2}" cy="${y2}" r="7"><title>Arrastra para cambiar el destino</title></circle>`;
   });
   D.nodes.forEach(n=>{
     const {w,h}=dims(n),sel=ui.sel?.t==='node'&&ui.sel.id===n.id,hn=hit?.nodes.has(n.id);
     const ic=inc?.nodes.get(n.id),isAct=act.nodes.has(n.id),sh=n.deviceId?shapeOf(n):'',G=geom(n);
-    const cls='node'+(n.deviceId?' sh-'+sh:' txt')+((sel||(ui.multi?.size>1&&ui.multi.has(n.id)))?' sel':'')+(sdim.has(n.id)?' sdim':'')+(hn?' hit':'')+(ic?' inc':'')+(isAct&&L!=='ocultas'?' act':'')+(hit&&!hn&&n.deviceId?' dim':'');
+    const cls='node'+(n.svcCount>1?' shared':'')+(fid===MAP&&S.meta.mapShared&&n.svcCount<2?' sdim':'')+(n.deviceId?' sh-'+sh:' txt')+((sel||(ui.multi?.size>1&&ui.multi.has(n.id)))?' sel':'')+(sdim.has(n.id)?' sdim':'')+(hn?' hit':'')+(ic?' inc':'')+(isAct&&L!=='ocultas'?' act':'')+(hit&&!hn&&n.deviceId?' dim':'');
     let s=`<g class="${cls}" data-node="${n.id}" transform="translate(${n.x},${n.y})">`;
     if(n.deviceId){const d=devById(n.deviceId)||{name:'(equipo eliminado)',ip:'',type:'Otro'};
-      s+=(ic?G.out('halo'):'')+G.out('nb')+G.body(typeOf(d.type),d)+`<title>${esc(d.name)}${d.ip?' · '+esc(d.ip):''}</title>`;
+      s+=(ic?G.out('halo'):'')+G.out('nb')+G.body(typeOf(d.type),d)+`<title>${esc(d.name)}${d.ip?' · '+esc(d.ip):''}${n.svcCount>1?` · en ${n.svcCount} diagramas`:''}</title>`;
+      if(n.svcCount>1){const bx=(G.clip.k==='rect'?G.clip.x:G.clip.cx-G.clip.r*0.72)+2,by=(G.clip.k==='rect'?G.clip.y:G.clip.cy-G.clip.r*0.72)+2;s+=`<g class="sbadge"><circle cx="${bx}" cy="${by}" r="9.5"/><text x="${bx}" y="${by+3.8}" text-anchor="middle">${n.svcCount}</text><title>Compartido por ${n.svcCount} diagramas</title></g>`;}
       (d.sections||[]).filter(k=>SECTIONS[k]).forEach((k,i)=>{const x=G.pill[0]-26-i*20,y=G.pill[1];s+=`<g class="spill"><rect x="${x}" y="${y-7}" width="17" height="13" rx="3" style="fill:${SECTIONS[k].c}"/><text x="${x+8.5}" y="${y+2.5}" text-anchor="middle">${SECTIONS[k].k}</text><title>Red de ${SECTIONS[k].l.toLowerCase()}</title></g>`;});
     }else{
       s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0" style="${n.color?`fill:${n.color};`:''}font-size:${+n.size||13}px;${n.bold?'font-weight:600;':''}">${String(n.text||'').split('\n').map(l=>`<tspan x="5" dy="${Math.round(18*((+n.size||13)/13))}">${esc(l)||' '}</tspan>`).join('')}</text>`;
     }
     if(ic){const bx=G.bd?G.bd[0]:w-4,by=G.bd?G.bd[1]:4;
       const lab=L==='historial'?String(ic.size):'!';s+=`<g class="ibadge"><circle cx="${bx}" cy="${by}" r="9"/><text x="${bx}" y="${by+4}" text-anchor="middle">${lab}</text><title>${esc([...ic].map(id=>S.incidents.find(x=>x.id===id)?.title).filter(Boolean).join('\n'))}</title></g>`;}
-    s+=`<circle class="hd" data-handle="${n.id}" cx="${G.hd[0]}" cy="${G.hd[1]}" r="6.5"/><g class="plus" data-plus="${n.id}" transform="translate(${G.hd[0]+20},${G.hd[1]})"><title>Agregar equipo, texto o grupo</title><circle r="8.5"/><path d="M-4 0h8M0-4v8"/></g></g>`;
+    if(fid!==MAP)s+=`<circle class="hd" data-handle="${n.id}" cx="${G.hd[0]}" cy="${G.hd[1]}" r="6.5"/>`;
+    s+=`<g class="plus" data-plus="${n.id}" transform="translate(${G.hd[0]+20},${G.hd[1]})"><title>Agregar equipo, texto o grupo</title><circle r="8.5"/><path d="M-4 0h8M0-4v8"/></g></g>`;
     out+=s;
   });
   out+=endH;
@@ -899,6 +941,7 @@ svg.addEventListener('pointerdown',e=>{
   if(pl){e.preventDefault();openPlusMenu(pl.dataset.plus,e);return;}
   const ee=e.target.closest('[data-eend]');
   if(ee&&ui.sel?.t==='edge'){ui.drag={kind:'reend',eid:ui.sel.id,end:ee.dataset.eend,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);e.preventDefault();rc();return;}
+  if(ui.folder===MAP&&e.target.closest('[data-eend]')){return;}
   const h=e.target.closest('[data-handle]');
   if(h){ui.drag={kind:'link',from:h.dataset.handle,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);e.preventDefault();return;}
   const gr=e.target.closest('[data-gresize]');
@@ -935,7 +978,8 @@ svg.addEventListener('pointermove',e=>{
 });
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
-  if((g.kind==='node'||g.kind==='gresize')&&g.moved)save();
+  if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};g.orig.forEach(([o])=>{if(o.deviceId)S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
+  else if((g.kind==='node'||g.kind==='gresize')&&g.moved)save();
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
@@ -1015,17 +1059,98 @@ function openPlusMenu(nodeId,ev){
   const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===nodeId);
   if(!(ui.multi?.has(nodeId)))ui.multi=new Set([nodeId]);
   ui.sel=ui.multi.size>1?{t:'multi'}:{t:'node',id:nodeId};renderInsp();rc();
-  m.innerHTML=`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>
-    <button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>
+  const inMap=ui.folder===MAP;
+  m.innerHTML=`${inMap?'':`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>`}
+    ${inMap?'':`<button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>`}
     ${n?.deviceId?`<button data-act="plusImp" style="color:var(--hit)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><circle cx="9" cy="9" r="6.5" stroke-dasharray="2.5 2"/></svg><span>Ver impacto<small style="color:var(--muted)">Clientes y servicios que pasan por aquí</small></span></button>
     <button data-act="plusInc" style="color:var(--danger)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2 17 16H1z"/><path d="M9 7v4M9 13.5v.1"/></svg><span>Registrar incidencia<small style="color:var(--muted)">Con este equipo como afectado</small></span></button>`:''}
-    <button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`;
+    ${inMap?'':`<button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`}`;
   m.hidden=false;
   const x=Math.min(ev.clientX-wr.left+10,wr.width-m.offsetWidth-6),y=Math.min(ev.clientY-wr.top+10,wr.height-m.offsetHeight-6);
   m.style.left=Math.max(6,x)+'px';m.style.top=Math.max(6,y)+'px';
 }
 document.addEventListener('pointerdown',e=>{const m=$('#plusMenu');if(!m.hidden&&!e.target.closest('#plusMenu')&&!e.target.closest('[data-plus]'))m.hidden=true;},true);
 
+
+/* ---------- mapa general ---------- */
+const MAP='__map__';
+const SVC_COLORS=['#2F6FD6','#C2367A','#23875A','#B86A00','#7A4FC9','#0F8A80','#C7432A','#8A6D00','#1F7A9E','#9C4FB0','#5A6978','#3C8A3E'];
+const diagFids=()=>S.folders.filter(f=>S.diagrams[f.id]?.nodes.some(n=>n.deviceId)).map(f=>f.id).sort((a,b)=>ncmp(pathOf(a).map(x=>x.name).join('/'),pathOf(b).map(x=>x.name).join('/')));
+function mapSel(){const all=diagFids();const sel=S.meta.mapSel;return sel?all.filter(f=>sel.includes(f)):all;}
+function svcColor(fid){const i=diagFids().indexOf(fid);return SVC_COLORS[(i<0?0:i)%SVC_COLORS.length];}
+const svcName=fid=>pathOf(fid).map(x=>x.name).join(' › ');
+const svcChips=list=>`<div class="svcs">${list.map(f=>`<span class="svc" data-open="${f}" title="Abrir diagrama"><i style="background:${svcColor(f)}"></i>${esc(svcName(f))}</span>`).join('')}</div>`;
+function buildMap(){
+  const fids=mapSel(),nodes=new Map(),edges=new Map();
+  fids.forEach(fid=>{const D=S.diagrams[fid];if(!D)return;const nm={};
+    D.nodes.forEach(n=>{if(!n.deviceId||!devById(n.deviceId))return;nm[n.id]=n.deviceId;
+      if(!nodes.has(n.deviceId))nodes.set(n.deviceId,{id:'m_'+n.deviceId,deviceId:n.deviceId,x:0,y:0,svc:new Set(),orig:{x:n.x,y:n.y}});
+      nodes.get(n.deviceId).svc.add(fid);});
+    D.edges.forEach(e=>{const a=nm[e.from],b=nm[e.to];if(!a||!b)return;
+      const fw=a<b,k=fw?`${a}|${b}|${norm(e.fp)}|${norm(e.tp)}`:`${b}|${a}|${norm(e.tp)}|${norm(e.fp)}`;
+      if(!edges.has(k))edges.set(k,{id:'me'+edges.size,from:'m_'+(fw?a:b),to:'m_'+(fw?b:a),fp:fw?e.fp:e.tp,tp:fw?e.tp:e.fp,medium:e.medium,dir:'none',label0:e.label,svc:new Set()});
+      edges.get(k).svc.add(fid);});
+  });
+  const N=[...nodes.values()].map(n=>{n.svcList=[...n.svc];n.svcCount=n.svcList.length;delete n.svc;return n;});
+  const E=[...edges.values()].map(e=>{e.svcList=[...e.svc];delete e.svc;e.shared=e.svcList.length>1;
+    e.color=e.shared?'':svcColor(e.svcList[0]);e.label=e.shared?`${e.svcList.length} diagramas`:(e.label0||'');return e;});
+  layoutMap(N,E);
+  return{nodes:N,edges:E,groups:[],isMap:true};
+}
+function layoutMap(N,E){
+  S.mapPos=S.mapPos||{};const P=S.mapPos;
+  const free=N.filter(n=>!P[n.deviceId]);
+  N.forEach(n=>{if(P[n.deviceId]){n.x=P[n.deviceId].x;n.y=P[n.deviceId].y;}});
+  if(free.length){
+    const idx={};N.forEach((n,i)=>idx[n.id]=i);
+    const R=140+N.length*26;free.forEach((n,i)=>{const a=i/free.length*Math.PI*2;n.x=R*Math.cos(a)+(n.orig.x%37);n.y=R*0.6*Math.sin(a)+(n.orig.y%29);});
+    const isFree=new Set(free.map(n=>n.id));
+    for(let it=0;it<500;it++){
+      const t=1-it/500,F=N.map(()=>[0,0]);
+      for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){
+        const a=N[i],b=N[j];let dx=a.x-b.x,dy=a.y-b.y;let d2=dx*dx+dy*dy;if(d2<1){dx=Math.random();dy=Math.random();d2=1;}
+        const f=140000/d2,d=Math.sqrt(d2);F[i][0]+=dx/d*f;F[i][1]+=dy/d*f;F[j][0]-=dx/d*f;F[j][1]-=dy/d*f;}
+      E.forEach(e=>{const i=idx[e.from],j=idx[e.to];if(i==null||j==null)return;const a=N[i],b=N[j];const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,f=(d-280)*0.06;
+        F[i][0]+=dx/d*f;F[i][1]+=dy/d*f;F[j][0]-=dx/d*f;F[j][1]-=dy/d*f;});
+      N.forEach((n,i)=>{if(!isFree.has(n.id))return;F[i][0]-=n.x*0.004;F[i][1]-=n.y*0.006;
+        const m=Math.hypot(F[i][0],F[i][1])||1,st=Math.min(m,40*t+2);n.x+=F[i][0]/m*st;n.y+=F[i][1]/m*st;});
+    }
+    free.forEach(n=>{n.x=Math.round(n.x/8)*8;n.y=Math.round(n.y/8)*8;P[n.deviceId]={x:n.x,y:n.y};});
+    try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
+  }
+}
+function refreshMap(fitAfter){ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(fitAfter)requestAnimationFrame(fit);}
+function openMap(){const first=ui.folder!==MAP;if(first&&ui.folder)ui.prevFolder=ui.folder;ui.folder=MAP;ui.tab='mapa';document.body.classList.remove('showSide');
+  ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(first&&!ui.vps[MAP+'_seen']){ui.vps[MAP+'_seen']=1;requestAnimationFrame(fit);}}
+function sideMap(){
+  const all=diagFids(),sel=new Set(mapSel());
+  if(!all.length)return `<p class="sub" style="color:var(--muted)">Todavía no hay diagramas con equipos. Cuando tengas servicios dibujados, aquí podrás verlos juntos.</p>`;
+  const dsub=id=>subtree(id).filter(x=>all.includes(x));
+  const branch=pid=>{const ks=kids(pid).filter(f=>dsub(f.id).length);if(!ks.length)return'';
+    return '<ul'+(pid?'':' class="mtree"')+'>'+ks.map(f=>{const ds=dsub(f.id),on=ds.filter(x=>sel.has(x)).length,own=all.includes(f.id);
+      return `<li><label class="mrow"><input type="checkbox" data-mapf="${f.id}"${on===ds.length?' checked':''}${on&&on<ds.length?' data-ind="1"':''}>${own?`<span class="dotc" style="background:${svcColor(f.id)}"></span>`:''}<span class="nm" title="${esc(svcName(f.id))}">${esc(f.name)}</span>${own?`<button class="open" data-open="${f.id}" title="Abrir diagrama">abrir ↗</button>`:''}</label>${branch(f.id)}</li>`;}).join('')+'</ul>';};
+  // compartidos
+  const D=getDiag(MAP),shared=D.nodes.filter(n=>n.svcCount>1).sort((a,b)=>b.svcCount-a.svcCount||ncmp(devById(a.deviceId)?.name,devById(b.deviceId)?.name));
+  const cls=new Set(mapSel().map(f=>clientOf(f)?.id));
+  let box;
+  if(sel.size<2)box=`<div class="shareBox none"><span>Elige dos o más diagramas para ver qué equipos comparten.</span></div>`;
+  else if(!shared.length)box=`<div class="shareBox none"><b>No comparten ningún equipo.</b><span class="mapNote">Los ${sel.size} diagramas seleccionados son independientes.</span></div>`;
+  else box=`<div class="shareBox"><span><b class="big">${shared.length}</b> equipo${shared.length===1?'':'s'} compartido${shared.length===1?'':'s'} entre ${sel.size} diagramas de ${cls.size} cliente${cls.size===1?'':'s'}</span>
+    ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div>`;
+  return `<h3 style="margin:0 0 6px;font:600 17px var(--f-cond)">Mapa general</h3><div class="paneHead"><span class="lbl grow">${sel.size} de ${all.length} diagramas</span><button class="btn sm" data-act="mapAll">Todos</button><button class="btn sm" data-act="mapNone">Ninguno</button></div>
+    ${box}
+    <label class="chk" style="margin:10px 0 6px;font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
+    ${branch(null)}
+    <hr class="sep" style="margin:12px 0 8px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="mapRelayout">Reacomodar automáticamente</button>${ui.prevFolder&&folById(ui.prevFolder)?`<button class="btn sm ghost" data-open="${ui.prevFolder}">← Volver al diagrama</button>`:''}</div>
+    <p class="mapNote">El mapa une los diagramas elegidos: cada equipo aparece una sola vez. Las líneas toman el color de su diagrama y las que se repiten en varios se ven más gruesas. Puedes mover los equipos; la posición del mapa se guarda aparte y no altera tus diagramas.</p>`;
+}
+function mapInspector(){
+  const D=getDiag(MAP),M=mapSel(),sh=D.nodes.filter(n=>n.svcCount>1).length;
+  return `<div><span class="lbl">Vista combinada</span><h3>Mapa general</h3></div>
+    <dl class="kv"><dt>Diagramas</dt><dd>${M.length}</dd><dt>Equipos</dt><dd>${D.nodes.length}</dd><dt>Compartidos</dt><dd>${sh}</dd><dt>Conexiones</dt><dd>${D.edges.length}</dd></dl>
+    <div class="acc"><span class="lbl">Leyenda</span>${svcChips(M)}</div>
+    <p class="sub" style="margin:0">Los equipos con número están en varios diagramas. Elige qué clientes o servicios ver en el panel de la izquierda. Este mapa es de solo lectura: para editar, abre el diagrama del servicio.</p>`;
+}
 /* ---------- inspector ---------- */
 function accessCmd(d,a){
   const ip=d.ip||'';
@@ -1041,6 +1166,7 @@ function renderInsp(){
   const el=$('#inspBody'),close='<button class="btn sm ghost insClose" data-act="desel">Cerrar ✕</button>';
   const D=ui.folder?getDiag(ui.folder):null;
   $('#insp').classList.toggle('idle',!ui.sel);
+  if(ui.folder===MAP&&!ui.sel){el.innerHTML=mapInspector();return;}
   if(!D||!ui.sel){
     if(!ui.folder){el.innerHTML=`<h3>Mapa NOC</h3><p class="sub">Selecciona un servicio para ver su diagrama.</p>`;return;}
     const f=folById(ui.folder),devs=[...new Set(D.nodes.filter(n=>n.deviceId).map(n=>n.deviceId))].map(devById).filter(Boolean);
@@ -1082,6 +1208,7 @@ function renderInsp(){
         <button class="btn sm dan" data-act="delSel">Eliminar texto</button>`;return;
     }
     const d=devById(n.deviceId)||{};
+    const mapInfo=ui.folder===MAP?`<div class="acc"><span class="lbl">Aparece en ${n.svcList.length} diagrama${n.svcList.length===1?'':'s'}</span>${svcChips(n.svcList)}</div>`:'';
     const conns=D.edges.filter(e=>e.from===n.id||e.to===n.id).map(e=>{const mine=e.from===n.id?e.fp:e.tp,other=D.nodes.find(x=>x.id===(e.from===n.id?e.to:e.from)),od=other?.deviceId?devById(other.deviceId)?.name:'texto';return{e,mine,od};});
     const u=usage(d.id);
     el.innerHTML=`${close}<div style="display:flex;gap:10px;align-items:flex-start"><span style="color:var(--accent)">${gsvg(d.type,26)}</span><div style="min-width:0"><h3>${esc(d.name)}</h3><div class="sub mono">${esc(d.ip||'sin IP')}</div></div></div>
@@ -1091,16 +1218,24 @@ function renderInsp(){
         ${ps.length?`<div class="pchips">${ps.map(p=>`<button type="button" class="pchip${used.has(norm(p))?' used':''}" data-imp="${d.id}" data-port="${esc(p)}" title="Ver impacto de ${esc(p)}">${esc(p)}</button>`).join('')}</div><span class="endHint">Los resaltados se usan en este diagrama. Toca uno para ver su impacto.</span>`:'<span class="endHint">Sin puertos ni IPs todavía.</span>'}
         <div class="portAdd"><input class="inp mono" id="nPortAdd" placeholder="Agregar puerto o IP"><button class="btn sm" data-act="addPort" data-devid="${d.id}">Agregar</button></div>
         ${conns.length?`<div class="kv" style="margin-top:2px">${conns.map(c=>`<dt class="mono">${esc(c.mine||'—')}</dt><dd>→ ${esc(c.od||'')}</dd>`).join('')}</div>`:''}</div>`;})()}
-      <div class="fld"><span class="lbl">Forma en este diagrama</span><select class="inp" id="nShape"><option value="">Según el tipo (${SHAPE_NAMES[SH[typeOf(d.type).shape]?typeOf(d.type).shape:'rect']})</option>${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${n.shape===k?' selected':''}>${v}</option>`).join('')}</select></div>
+      ${mapInfo}
+      ${ui.folder===MAP?'':`<div class="fld"><span class="lbl">Forma en este diagrama</span><select class="inp" id="nShape"><option value="">Según el tipo (${SHAPE_NAMES[SH[typeOf(d.type).shape]?typeOf(d.type).shape:'rect']})</option>${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${n.shape===k?' selected':''}>${v}</option>`).join('')}</select></div>`}
       ${accessBlock(d)}
 
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
       ${(()=>{const ai=activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)),all=S.incidents.filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)).length;
         return `<div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="sub">${all} en total para este equipo</span><button class="btn sm dan" data-act="incFromNode" data-devid="${d.id}">Registrar incidencia</button></div>`;})()}
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button><button class="btn sm dan" data-act="delSel">Quitar del diagrama</button></div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button>${ui.folder===MAP?'':'<button class="btn sm dan" data-act="delSel">Quitar del diagrama</button>'}</div>`;
     return;
   }
   const e=D.edges.find(x=>x.id===ui.sel.id);if(!e){ui.sel=null;return renderInsp();}
+  if(ui.folder===MAP){const a=D.nodes.find(n=>n.id===e.from),b=D.nodes.find(n=>n.id===e.to);
+    el.innerHTML=`${close}<span class="lbl">Conexión en el mapa general</span>
+      <div class="end"><span class="who">${esc(devById(a?.deviceId)?.name)}</span><span class="mono">${esc(e.fp||'—')}</span></div>
+      <div style="text-align:center;color:var(--muted)">↕</div>
+      <div class="end"><span class="who">${esc(devById(b?.deviceId)?.name)}</span><span class="mono">${esc(e.tp||'—')}</span></div>
+      <div class="acc"><span class="lbl">Usada por ${e.svcList.length} diagrama${e.svcList.length===1?'':'s'}</span>${svcChips(e.svcList)}</div>
+      <p class="sub" style="margin:0">Para modificar esta conexión ábrela desde el diagrama de su servicio.</p>`;return;}
   const a=D.nodes.find(n=>n.id===e.from),b=D.nodes.find(n=>n.id===e.to);
   const nameOf=n=>n?.deviceId?devById(n.deviceId)?.name:'Texto';
   const endSel=(id,cur)=>`<select class="endSel" id="${id}" title="Elemento al que se conecta esta punta">${D.nodes.map(n=>`<option value="${n.id}"${n.id===cur?' selected':''}>${esc(n.deviceId?devById(n.deviceId)?.name||'?':'Texto: '+trunc(n.text,24))}</option>`).join('')}</select>`;
@@ -1483,7 +1618,7 @@ function periodIncs(){const p=S.meta.incPeriod||'90';if(p==='all')return S.incid
 function incAffect(inc){const fids=new Set(),clients=new Set();(inc.scope||[]).forEach(sc=>{if(!sc.dev)return;impactOf(sc.dev,sc.port).forEach(it=>{fids.add(it.fid);const c=clientOf(it.fid);if(c)clients.add(c.id);});});return{fids,clients};}
 function incHits(fid,list){
   const nodes=new Map(),edges=new Set(),hl=[];
-  list.forEach(inc=>{let any=false;(inc.scope||[]).forEach(sc=>{if(!sc.dev)return;const it=impactOf(sc.dev,sc.port).find(i=>i.fid===fid);if(!it)return;any=true;
+  list.forEach(inc=>{let any=false;(inc.scope||[]).forEach(sc=>{if(!sc.dev)return;const it=fid===MAP?diagHits(getDiag(MAP),sc.dev,sc.port):impactOf(sc.dev,sc.port).find(i=>i.fid===fid);if(!it)return;any=true;
     it.nodes.forEach(n=>{if(!nodes.has(n))nodes.set(n,new Set());nodes.get(n).add(inc.id);});it.edges.forEach(e=>edges.add(e));});if(any)hl.push(inc);});
   return{nodes,edges,list:hl};
 }
@@ -1599,11 +1734,11 @@ qI.addEventListener('keydown',e=>{if(e.key==='Escape'){qI.value='';sres.hidden=t
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search'))sres.hidden=true;});
 
 /* ---------- delegación de clics ---------- */
-function openFolder(fid){ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
+function openFolder(fid){if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
 function setImpact(dev,port){ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
 document.addEventListener('click',e=>{
   const t=e.target;
-  const tab=t.closest('[data-tab]');if(tab){ui.tab=tab.dataset.tab;renderSide();return;}
+  const tab=t.closest('[data-tab]');if(tab){ui.tab=tab.dataset.tab;if(ui.tab==='mapa')openMap();else renderSide();return;}
   const tog=t.closest('[data-tog]');if(tog){e.stopPropagation();const id=tog.dataset.tog;ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}
   const ac=t.closest('[data-addchild]');if(ac){const p=folById(ac.dataset.addchild);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
   const ef=t.closest('[data-editf]');if(ef){folderModal(ef.dataset.editf);return;}
@@ -1613,12 +1748,13 @@ document.addEventListener('click',e=>{
   const ep=t.closest('[data-eport]');if(ep){const D=getDiag(ui.folder),ed=D.edges.find(x=>x.id===ui.sel?.id);if(ed){const k=ep.dataset.eport;ed[k]=norm(ed[k])===norm(ep.dataset.v)?'':ep.dataset.v;save();renderInsp();rc();}return;}
   const dsc=t.closest('[data-devsec]');if(dsc){ui.devSec=dsc.dataset.devsec;renderSide();return;}
   const gc=t.closest('[data-gcol]');if(gc){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){g.color=gc.dataset.gcol;save();renderInsp();rc();}return;}
+  const mn=t.closest('[data-mapnode]');if(mn){const n=getDiag(MAP).nodes.find(x=>x.id===mn.dataset.mapnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();showNode(n);rc();}return;}
   const icf=t.closest('[data-incf]');if(icf){ui.incFilter=icf.dataset.incf;renderSide();return;}
   const rd=t.closest('[data-rkdev]');if(rd){setImpact(rd.dataset.rkdev,'');return;}
   const rcl=t.closest('[data-rkcli]');if(rcl){openFolder(rcl.dataset.rkcli);return;}
   const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
   const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
-  const op=t.closest('[data-open]');if(op){sres.hidden=true;openFolder(op.dataset.open);return;}
+  const op=t.closest('[data-open]');if(op){e.preventDefault();sres.hidden=true;openFolder(op.dataset.open);return;}
   const dv=t.closest('[data-dev]');if(dv){devModal(dv.dataset.dev);return;}
   const sn=t.closest('[data-selnode]');if(sn){const n=getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
   const cp=t.closest('[data-copy]');if(cp){copyText(cp.dataset.copy);return;}
@@ -1628,7 +1764,11 @@ document.addEventListener('click',e=>{
     case 'newClient':folderModal(null,null,'cliente');break;
     case 'newDev':ui.addAfterCreate=false;ui.addFrom=null;devModal(null);break;
     case 'csv':csvModal();break;
+    case 'openMap':openMap();break;
     case 'newInc':incModal(null);break;
+    case 'mapAll':S.meta.mapSel=null;save(false);refreshMap(true);break;
+    case 'mapNone':S.meta.mapSel=[];save(false);refreshMap(false);break;
+    case 'mapRelayout':{const D=getDiag(MAP);S.mapPos=S.mapPos||{};D.nodes.forEach(n=>delete S.mapPos[n.deviceId]);save(false);refreshMap(true);break;}
     case 'addDev':ui.addFrom=null;pickDevModal();break;
     case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
     case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
@@ -1657,11 +1797,15 @@ document.addEventListener('click',e=>{
 });
 $('#pane').addEventListener('input',e=>{if(e.target.id==='incQ'){ui.incQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#incQ');i.focus();i.setSelectionRange(p,p);return;}if(e.target.id==='devQ'){ui.devQ=e.target.value;const p=e.target.selectionStart;renderSide();const i=$('#devQ');i.focus();i.setSelectionRange(p,p);}});
 $('#pane').addEventListener('change',e=>{
+  if(e.target.matches('[data-mapf]')){const all=diagFids(),sel=new Set(mapSel()),ds=subtree(e.target.dataset.mapf).filter(x=>all.includes(x));
+    if(e.target.checked)ds.forEach(x=>sel.add(x));else ds.forEach(x=>sel.delete(x));S.meta.mapSel=[...sel];save(false);refreshMap(false);return;}
+  if(e.target.id==='mapShared'){S.meta.mapShared=e.target.checked;save(false);rc();return;}
   if(e.target.id==='incPer'){S.meta.incPeriod=e.target.value;save(false);renderAll();return;}
   if(e.target.id==='impDev'){ui.impact=e.target.value?{dev:e.target.value,port:''}:null;renderAll();}
   if(e.target.id==='impPort'){ui.impact.port=e.target.value;renderAll();}
 });
 function delSel(){
+  if(ui.folder===MAP){toast('El mapa general es de solo lectura; edita en el diagrama de cada servicio');return;}
   const D=getDiag(ui.folder);if(!ui.sel)return;
   if(ui.sel.t==='group'){D.groups=D.groups.filter(g=>g.id!==ui.sel.id);ui.sel=null;save();renderAll();return;}
   if(ui.sel.t==='multi'){const ids=ui.multi||new Set();D.nodes=D.nodes.filter(n=>!ids.has(n.id));D.edges=D.edges.filter(e=>!ids.has(e.from)&&!ids.has(e.to));ui.multi=new Set();ui.sel=null;save();renderAll();return;}
@@ -1678,7 +1822,7 @@ $('#menuBtn').onclick=()=>document.body.classList.toggle('showSide');
 $('#scrim').onclick=()=>document.body.classList.remove('showSide');
 window.addEventListener('resize',()=>rc());
 
-function renderAll(){renderSide();renderCanvas();renderInsp();renderStatus();}
+function renderAll(){if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
 renderAll();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>

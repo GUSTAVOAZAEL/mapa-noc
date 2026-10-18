@@ -12,6 +12,18 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Mapa general
+
+El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
+
+- En el panel izquierdo marcas clientes, sitios o servicios. Puedes elegir varios a la vez; **Todos** y **Ninguno** ayudan a empezar.
+- Cada equipo aparece una sola vez. Los que están en varios diagramas llevan un número con cuántos los usan y la lista **compartidos** te dice cuáles son. Si los elegidos no comparten nada, te lo indica.
+- Cada línea toma el color de su diagrama (ver leyenda a la derecha). Las conexiones repetidas en varios diagramas se dibujan más gruesas.
+- **Resaltar solo lo compartido** atenúa todo lo demás.
+- Al seleccionar un equipo ves en qué diagramas aparece y puedes abrirlos. Impacto e incidencias también se marcan en el mapa.
+- Puedes arrastrar los equipos para acomodar el mapa; esa posición se guarda aparte y no cambia tus diagramas. **Reacomodar automáticamente** lo vuelve a ordenar.
+- El mapa es de solo lectura: para agregar o cambiar conexiones, abre el diagrama del servicio.
+
 ## Mover clientes, sitios y servicios
 
 En el árbol de la izquierda arrastra cualquier elemento y suéltalo sobre otro cliente, sitio o carpeta para moverlo ahí, con todo su contenido y diagramas. Para dejarlo en el nivel principal suéltalo en el recuadro que aparece al final del árbol. También puedes moverlo desde **⋯ → Ubicación (mover a)**, útil en celular.
