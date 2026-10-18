@@ -51,6 +51,10 @@ En la vista **Equipos** cambia entre **▦ Tarjetas** y **☰ Tabla**. En la tab
 
 En el panel de **Clientes** (y en la lista del mapa general) cada cliente va en un bloque sombreado con su color, para ver fácil dónde empieza y dónde termina. Los botones **⊟** y **⊞** junto a *+ Cliente* compactan o despliegan todo el árbol.
 
+## Unificar equipos duplicados
+
+Si diste de alta el mismo equipo dos veces con nombres distintos (por ejemplo *ASR MTY 9010 1* y *mty-asr9010-1*): en **Equipos** marca la casilla de ambos (esquina de la tarjeta, o junto al nombre en la tabla) y presiona **⇄ Unificar**. Eliges cuál se queda y, cuando los datos no coinciden, qué nombre, IP, tipo, marca, modelo, ubicación, etc. conservar. Redes, accesos y puertos se suman; las notas se juntan y se anotan las IPs y nombres que no quedaron. El equipo que se va se reemplaza por el que se queda en todos los diagramas (sus líneas pasan al que se queda), incidencias y sitios. Se puede deshacer con Ctrl+Z.
+
 ## Mapa general
 
 El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:

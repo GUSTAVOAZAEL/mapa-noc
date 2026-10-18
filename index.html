@@ -484,6 +484,18 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cgrid.cli .ccard .cimg{width:84px;height:84px;border-radius:18px}
 .cgrid.cli .ccard .cimg img{width:68px;height:68px}
 .cgrid.cli .ccard .cname{font:600 var(--cli-fs,22px)/1.15 var(--f-cond);color:var(--cli-col,var(--ink))}
+.csel{position:absolute;top:8px;left:8px;z-index:2;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:var(--panel);border:1px solid var(--line);cursor:pointer;opacity:.0;transition:opacity .12s}
+.ccard:hover .csel,.ccard.picked .csel,body.dsel-on .csel{opacity:1}
+.csel input{margin:0;cursor:pointer}
+.ccard.picked{outline:2px solid var(--accent);outline-offset:-1px}
+.dselBar{position:sticky;top:0;z-index:5;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13.5px}
+.mgTab{width:100%;border-collapse:collapse;font-size:13px}
+.mgTab th{text-align:left;font:600 11px var(--f-ui);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line)}
+.mgTab td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.mgTab select{width:100%}
+.mgKeep{display:grid;gap:6px;margin-bottom:12px}
+.mgKeep label{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}
+.mgKeep label.on{border-color:var(--accent);background:var(--accent-soft)}
 .ccard{position:relative;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--cc,var(--accent)) 7%,var(--panel));padding:16px 14px 14px;cursor:pointer;display:grid;gap:6px;text-align:left;min-width:0;overflow:hidden;transition:transform .12s,box-shadow .12s}
 .ccard::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--cc,var(--accent))}
 .ccard:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-1px)}
@@ -1806,7 +1818,8 @@ function clientModal(id){
   draw();
 }
 function devCard(d){const n=devIncCount(d.id),u=usage(d.id),col=d.color||'';
-  return `<div class="ccard${n?' inc':''}" role="button" tabindex="0" data-dcard="${d.id}" style="--cc:${col||typeOf(d.type).color||'var(--accent)'}">
+  const pk=ui.devPick?.has(d.id);
+  return `<div class="ccard${n?' inc':''}${pk?' picked':''}" role="button" tabindex="0" data-dcard="${d.id}" style="--cc:${col||typeOf(d.type).color||'var(--accent)'}"><label class="csel" data-dsel="${d.id}" title="Seleccionar para unificar"><input type="checkbox"${pk?' checked':''}></label>
     <span class="cimg">${gsvg(d.type,30)}</span><span class="cname">${esc(d.name)}</span>
     <span class="cip">${esc(d.ip||'sin IP')}</span><span class="cmeta">${esc(d.type)}${d.place?' · '+esc(placeChain(d.place).slice(-2).map(x=>x.name).join(' › ')):(d.location?' · '+esc(d.location):'')}</span>
     <span class="cmeta" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${secChips(d)}<span>En ${u} diagrama${u===1?'':'s'}</span></span>
@@ -1831,8 +1844,57 @@ function deviceCards(){
     <div class="seg" style="margin:0">${tabs.map(([k,l])=>`<button data-dsec="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>
     <label class="chk" style="font-size:13px"><input type="checkbox" id="devIncOnly"${onlyInc?' checked':''}> Solo con incidencia</label>
     <button class="btn pri" data-act="newDev">+ Equipo</button></div>
-    ${body||`<p class="emptyNote">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</p>`}`;
+    ${devPickBar()}${body||`<p class="emptyNote">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</p>`}`;
 }
+function devPickBar(){const n=ui.devPick?.size||0;document.body.classList.toggle('dsel-on',n>0);if(!n)return '';
+  return `<div class="dselBar"><b>${n} equipo${n===1?'':'s'} seleccionado${n===1?'':'s'}</b><span style="color:var(--muted)">${[...ui.devPick].map(id=>esc(devById(id)?.name||'')).join(' · ')}</span><span style="flex:1"></span>
+    <button class="btn sm pri" data-act="devMerge"${n<2?' disabled title="Selecciona al menos 2"':''}>⇄ Unificar</button><button class="btn sm" data-act="devPickClear">Quitar selección</button></div>`;}
+function mergeDevModal(ids){ids=ids.filter(devById);if(ids.length<2)return;let keep=ids[0];
+  const F=[['name','Nombre'],['ip','IP de gestión'],['type','Tipo'],['brand','Marca'],['model','Modelo'],['place','Ubicación física'],['location','Referencia'],['color','Color']];
+  const show=(k,v)=>k==='place'?(placePath(v)||''):v;
+  const choice={};
+  const draw=()=>{const K=devById(keep),others=ids.filter(x=>x!==keep).map(devById);
+    const rows=F.map(([k,l])=>{const vals=[...new Set([K,...others].map(d=>d[k]||'').filter(Boolean))];if(!vals.length)return'';
+      if(!(k in choice)||!vals.includes(choice[k]))choice[k]=K[k]||vals[0];
+      return `<tr><td style="width:130px;color:var(--muted)">${l}</td><td>${vals.length>1?`<select class="inp" data-mgf="${k}">${vals.map(v=>`<option value="${esc(v)}"${v===choice[k]?' selected':''}>${esc(show(k,v))}</option>`).join('')}</select>`:`<span class="${k==='ip'?'mono':''}">${esc(show(k,vals[0]))}</span>`}</td></tr>`;}).join('');
+    const uni=(f)=>[...new Set([K,...others].flatMap(f))];
+    const secs=uni(d=>d.sections||[]),ports=uni(d=>d.ports||[]),acc=uni(d=>(d.access||[]).map(a=>a.p+(a.port?':'+a.port:'')));
+    const dg=new Set();ids.forEach(id=>Object.entries(S.diagrams).forEach(([f,D])=>{if(D.nodes.some(n=>n.deviceId===id))dg.add(f);}));
+    $('#mgBody').innerHTML=`<p class="sub" style="margin:0 0 10px;color:var(--muted)">Elige el equipo que se queda. Los demás se reemplazan por él en todos los diagramas (con sus conexiones), incidencias y sitios, y después se eliminan del inventario.</p>
+      <span class="lbl">Equipo que se queda</span>
+      <div class="mgKeep">${ids.map(id=>{const d=devById(id),u=usage(id);return `<label class="${id===keep?'on':''}"><input type="radio" name="mgK" value="${id}"${id===keep?' checked':''}>${gsvg(d.type)}<span style="display:grid"><b>${esc(d.name)}</b><span class="mono" style="font-size:12px;color:var(--muted)">${esc(d.ip||'sin IP')} · en ${u} diagrama${u===1?'':'s'}</span></span></label>`;}).join('')}</div>
+      <span class="lbl">Información unificada</span>
+      <table class="mgTab"><tbody>${rows}
+        <tr><td style="color:var(--muted)">Red</td><td>${secs.map(k=>SECTIONS[k]?.l||k).join(', ')||'—'}</td></tr>
+        <tr><td style="color:var(--muted)">Acceso</td><td class="mono">${esc(acc.join(', '))||'—'}</td></tr>
+        <tr><td style="color:var(--muted)">Puertos / IPs</td><td class="mono" style="font-size:12px">${esc(ports.join(', '))||'—'}</td></tr>
+        <tr><td style="color:var(--muted)">Notas</td><td style="font-size:12.5px">Se juntan las notas de todos${others.some(d=>d.ip&&d.ip!==(choice.ip||K.ip))?' y se anotan las IPs que no quedaron':''}.</td></tr>
+      </tbody></table>
+      <p class="endHint" style="margin-top:10px">Se actualizarán ${dg.size} diagrama${dg.size===1?'':'s'}. Si te equivocas, puedes usar ↶ Deshacer (Ctrl+Z).</p>`;};
+  modal('Unificar equipos','<div id="mgBody"></div>',[{l:'Cancelar'},{l:'Unificar',k:'pri',f:()=>{
+    const K=devById(keep),others=ids.filter(x=>x!==keep).map(devById),all=[K,...others];
+    const nameNew=choice.name||K.name;
+    F.forEach(([k])=>{if(k in choice&&choice[k])K[k]=choice[k];});
+    const uni=f=>[...new Set(all.flatMap(f))];
+    K.sections=uni(d=>d.sections||[]);K.ports=uni(d=>d.ports||[]);
+    const acc=[];all.forEach(d=>(d.access||[]).forEach(a=>{if(!acc.some(x=>x.p===a.p))acc.push({...a});}));K.access=acc;
+    const lostIps=[...new Set(all.map(d=>d.ip).filter(ip=>ip&&ip!==K.ip))];
+    const notes=[...new Set(all.map(d=>(d.notes||'').trim()).filter(Boolean))];
+    const lostNames=all.map(d=>d.name).filter(n=>n&&norm(n)!==norm(nameNew));
+    if(lostIps.length)notes.push('Otras IPs: '+lostIps.join(', '));if(lostNames.length)notes.push('También conocido como: '+[...new Set(lostNames)].join(', '));
+    K.notes=notes.join('\n');K.name=nameNew;
+    const gone=new Set(others.map(d=>d.id));
+    Object.values(S.diagrams).forEach(D=>{const kn=D.nodes.find(n=>n.deviceId===keep);let target=kn;
+      D.nodes.filter(n=>gone.has(n.deviceId)).forEach(n=>{if(!target){n.deviceId=keep;target=n;return;}
+        D.edges.forEach(e=>{if(e.from===n.id)e.from=target.id;if(e.to===n.id)e.to=target.id;});D.nodes=D.nodes.filter(x=>x!==n);});
+      D.edges=D.edges.filter(e=>e.from!==e.to);});
+    (S.incidents||[]).forEach(i=>(i.scope||[]).forEach(sc=>{if(gone.has(sc.dev))sc.dev=keep;}));
+    S.folders.forEach(f=>{if(f.devs)f.devs=[...new Set(f.devs.map(x=>gone.has(x)?keep:x))];});
+    if(S.mapPos)gone.forEach(id=>delete S.mapPos[id]);
+    S.devices=S.devices.filter(d=>!gone.has(d.id));
+    ui.devPick=new Set();save();closeModal();renderAll();toast(`Unificados en ${K.name}`);}}],{wide:true});
+  draw();
+  $('#mgBody').addEventListener('change',e=>{if(e.target.name==='mgK'){keep=e.target.value;for(const k in choice)delete choice[k];draw();}else if(e.target.dataset.mgf)choice[e.target.dataset.mgf]=e.target.value;});}
 const DT_COLS=[['name','Nombre'],['ip','IP de gestión'],['type','Tipo'],['brand','Marca'],['model','Modelo'],['sections','Red'],...PKINDS.map(k=>['lv_'+k,GKINDS[k]]),['location','Referencia'],['access','Acceso'],['ports','Puertos / IPs'],['notes','Notas'],['use','Diagramas']];
 function accStr(d){return (d.access||[]).map(a=>a.p+(a.port?':'+a.port:'')).join(', ');}
 function parseAcc(v){return String(v||'').split(/[,;\s]+/).map(x=>x.trim().toLowerCase()).filter(Boolean).map(x=>{const [p,port]=x.split(':');return{p,port:port||''};}).filter(a=>['ssh','telnet','web'].includes(a.p)).filter((a,i,arr)=>arr.findIndex(b=>b.p===a.p)===i);}
@@ -1842,7 +1904,7 @@ function deviceTable(list){const so=ui.dtSort||{k:'name',dir:1};
   const types=S.types.map(t=>t.name).sort(ncmp);
   const row=d=>{const ty=types.some(t=>norm(t)===norm(d.type))?types:[d.type,...types];const ic=devIncCount(d.id);
     return `<tr data-drow="${d.id}">
-    <td class="first"><input class="c" data-dt="name" value="${esc(d.name)}" style="font-weight:600;min-width:150px${ic?';color:var(--danger)':''}" title="${ic?'Con incidencia activa':''}"></td>
+    <td class="first"><div style="display:flex;align-items:center;gap:2px"><label data-dsel="${d.id}" title="Seleccionar para unificar" style="padding:0 4px;cursor:pointer"><input type="checkbox"${ui.devPick?.has(d.id)?' checked':''}></label><input class="c" data-dt="name" value="${esc(d.name)}" style="font-weight:600;min-width:150px${ic?';color:var(--danger)':''}" title="${ic?'Con incidencia activa':''}"></div></td>
     <td><input class="c mono" data-dt="ip" value="${esc(d.ip||'')}" style="min-width:115px"></td>
     <td><select class="c" data-dt="type" style="min-width:120px">${ty.map(t=>`<option${norm(t)===norm(d.type)?' selected':''}>${esc(t)}</option>`).join('')}</select></td>
     <td><input class="c" data-dt="brand" value="${esc(d.brand||'')}" style="min-width:80px"></td>
@@ -2622,6 +2684,7 @@ document.addEventListener('click',e=>{
   const cip=t.closest('[data-copyip]');if(cip){const d=devById(cip.dataset.copyip);if(d){if(d.ip)copyIp(d);else toast(d.name+' no tiene IP registrada');}return;}
   const vw=t.closest('[data-view]');if(vw){setView(vw.dataset.view);return;}
   const ce=t.closest('[data-cedit]');if(ce){e.stopPropagation();clientModal(ce.dataset.cedit);return;}
+  const dsl=t.closest('[data-dsel]');if(dsl){e.preventDefault();ui.devPick=ui.devPick||new Set();const id=dsl.dataset.dsel;if(ui.devPick.has(id))ui.devPick.delete(id);else ui.devPick.add(id);const sc=$('#cardsView').scrollTop,tw=document.querySelector('.dtWrap'),ts=tw&&[tw.scrollTop,tw.scrollLeft];renderView();$('#cardsView').scrollTop=sc;const tw2=document.querySelector('.dtWrap');if(tw2&&ts){tw2.scrollTop=ts[0];tw2.scrollLeft=ts[1];}return;}
   const dco=t.closest('[data-dcol-open]');if(dco){deviceSheet(dco.dataset.dcolOpen);return;}
   const vb=t.closest('[data-vip]');if(vb){const f=folById(vb.dataset.vip);if(f){f.vip=!f.vip;save();renderAll();toast(f.vip?`${f.name} marcado como destacado`:`${f.name} ya no está destacado`);}return;}
   const cpg=t.closest('[data-cpage]');if(cpg){ui.cliPage=cpg.dataset.cpage;renderView();$('#cardsView').scrollTop=0;return;}
@@ -2688,6 +2751,8 @@ document.addEventListener('click',e=>{
     case 'addPort':{const d=devById(a.dataset.devid),i=$('#nPortAdd'),v=i?.value.trim();if(!d||!v)break;
       if(d.ports.some(p=>norm(p)===norm(v))){toast('Ya está registrado');break;}d.ports.push(v);save();renderInsp();renderSide();toast('Agregado a '+d.name);break;}
     case 'plusGrp':$('#plusMenu').hidden=true;groupFromSelection('edificio');break;
+    case 'devMerge':mergeDevModal([...(ui.devPick||[])]);break;
+    case 'devPickClear':ui.devPick=new Set();renderView();break;
     case 'treeCollapse':S.folders.forEach(f=>{if(kids(f.id).length)ui.collapsed.add(f.id);});renderSide();break;
     case 'treeExpand':ui.collapsed.clear();renderSide();break;
     case 'addTxt':ui.dropAt=null;addText();break;
