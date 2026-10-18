@@ -439,7 +439,12 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cvSec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:600 15px var(--f-cond)}
 .cvSec i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .cvSec .n{font:500 12px var(--f-ui);color:var(--muted)}
-.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.cgrid.cli{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.cgrid.cli .ccard{padding:20px 16px 16px;gap:8px}
+.cgrid.cli .ccard .cimg{width:84px;height:84px;border-radius:18px}
+.cgrid.cli .ccard .cimg img{width:68px;height:68px}
+.cgrid.cli .ccard .cname{font:600 22px/1.15 var(--f-cond)}
 .ccard{position:relative;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--cc,var(--accent)) 7%,var(--panel));padding:16px 14px 14px;cursor:pointer;display:grid;gap:6px;text-align:left;min-width:0;overflow:hidden;transition:transform .12s,box-shadow .12s}
 .ccard::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--cc,var(--accent))}
 .ccard:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-1px)}
@@ -459,7 +464,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cpHead .cimg img{width:46px;height:46px;object-fit:contain}
 .cpHead h2{margin:0;font:600 24px var(--f-cond)}
 .cpHead .grow{flex:1;min-width:160px}
-.sitegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.sitegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:14px}
 .sitebox{border:1px solid var(--line);border-radius:10px;background:var(--panel);display:grid;align-content:start;overflow:hidden}
 .sitebox .sh{display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--panel-2);border-bottom:1px solid var(--line)}
 .sitebox .sh b{font:600 15px var(--f-cond);flex:1;min-width:0;overflow-wrap:anywhere}
@@ -468,6 +473,10 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .svrow:hover{background:var(--accent-soft)}
 .svrow .t{font-weight:500;overflow-wrap:anywhere}
 .svrow .m{font-size:12px;color:var(--muted);grid-column:1}
+.svrow{position:relative}
+.svrow .acts2{grid-row:1/3;grid-column:2;display:flex;gap:6px;align-items:center}
+.svrow .ed{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.svrow .ed:hover{color:var(--accent);border-color:var(--accent)}
 .svrow .go{grid-row:1/3;grid-column:2;color:var(--accent);font-size:12.5px;font-weight:600;white-space:nowrap}
 .svrow .ib{color:var(--danger);font-weight:600}
 .emptyNote{color:var(--muted);padding:14px}
@@ -1409,19 +1418,20 @@ function clientCards(){
     <input class="inp" id="cvQ" type="search" placeholder="Buscar cliente" value="${esc(ui.cvQ||'')}">
     <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc?'':'on'}">Todos (${all.length})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
     <button class="btn pri" data-act="newClient">+ Cliente</button></div>
-  ${list.length?`<div class="cgrid">${list.map(f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
+  ${list.length?`<div class="cgrid cli">${list.map(f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
     return `<div class="ccard${n?' inc':''}" role="button" tabindex="0" data-cpage="${f.id}" style="--cc:${f.color||'var(--accent)'}">
-      <span class="cimg">${cliIcon(f,30)}</span><span class="cname">${esc(f.name)}</span>
+      <span class="cimg">${cliIcon(f,48)}</span><span class="cname">${esc(f.name)}</span>
       <span class="cmeta">${sites} sitio${sites===1?'':'s'} · ${svc} servicio${svc===1?'':'s'}</span>
       ${n?`<span class="cinc">⚠ ${n} incidencia${n===1?'':'s'} activa${n===1?'':'s'}</span>`:''}
       <button class="cedit" data-cedit="${f.id}" title="Personalizar tarjeta" aria-label="Personalizar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg></button></div>`;}).join('')}</div>`
     :`<p class="emptyNote">${onlyInc?'Ningún cliente tiene incidencias activas.':all.length?'Sin coincidencias.':'Aún no tienes clientes. Crea el primero con + Cliente.'}</p>`}`;
 }
+const PENCIL='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg>';
 function clientPage(id){
   const f=folById(id),fi=incFolders(),ic=incClients().get(id)||0;
   const row=x=>{const D=S.diagrams[x.id],ne=D?D.nodes.filter(n=>n.deviceId).length:0,n=fi.get(x.id)||0,sub=pathOf(x.id).slice(2,-1).map(y=>y.name).join(' › ');
-    return `<button class="svrow" data-open="${x.id}"><span class="t">${esc(x.name)}</span><span class="go">Abrir diagrama →</span>
-      <span class="m"><span class="kind ${x.kind}">${esc(KINDS[x.kind]||'')}</span> ${sub?esc(sub)+' · ':''}${ne} equipo${ne===1?'':'s'}${n?` · <span class="ib">⚠ ${n} activa${n===1?'':'s'}</span>`:''}</span></button>`;};
+    return `<div class="svrow" role="button" tabindex="0" data-open="${x.id}"><span class="t">${esc(x.name)}</span><span class="acts2"><button class="ed" data-editf="${x.id}" title="Renombrar, mover o eliminar" aria-label="Editar">${PENCIL}</button><span class="go">${ne?'Abrir diagrama →':'Empezar diagrama →'}</span></span>
+      <span class="m"><span class="kind ${x.kind}">${esc(KINDS[x.kind]||'')}</span> ${sub?esc(sub)+' · ':''}${ne} equipo${ne===1?'':'s'}${n?` · <span class="ib">⚠ ${n} activa${n===1?'':'s'}</span>`:''}</span></div>`;};
   const sites=kids(id);
   const own=S.diagrams[id]?.nodes.length?`<div class="sitebox" style="margin-bottom:14px"><div class="sh"><b>Diagrama general del cliente</b></div>${row(f)}</div>`:'';
   return `<div class="cvHead"><button class="btn" data-act="cliBack">← Todos los clientes</button><span class="grow"></span></div>
@@ -1430,7 +1440,7 @@ function clientPage(id){
       <button class="btn" data-cedit="${id}">Personalizar</button><button class="btn pri" data-addsite="${id}">+ Sitio</button></div>
     ${own}
     ${sites.length?`<div class="sitegrid">${sites.map(st=>{const desc=subtree(st.id).slice(1).map(folById).filter(Boolean);const items=(S.diagrams[st.id]?.nodes.length?[st]:[]).concat(desc);const n=fi.get(st.id)||0;
-      return `<div class="sitebox"><div class="sh"><span class="kind ${st.kind}">${esc(KINDS[st.kind]||'')}</span><b>${esc(st.name)}</b>${n?`<span class="ib" style="color:var(--danger);font-size:12px">⚠ ${n}</span>`:''}<button class="btn sm" data-addsvc="${st.id}">+ Servicio</button></div>
+      return `<div class="sitebox"><div class="sh"><span class="kind ${st.kind}">${esc(KINDS[st.kind]||'')}</span><b>${esc(st.name)}</b><button class="btn sm ghost" data-editf="${st.id}" title="Renombrar, mover o eliminar el sitio" aria-label="Editar sitio">${PENCIL}</button>${n?`<span class="ib" style="color:var(--danger);font-size:12px">⚠ ${n}</span>`:''}<button class="btn sm" data-addsvc="${st.id}">+ Servicio</button></div>
         ${items.length?items.map(row).join(''):`<p class="emptyNote" style="margin:0">Sin servicios todavía.</p>`}</div>`;}).join('')}</div>`
       :`<p class="emptyNote">Este cliente aún no tiene sitios. Agrega uno con <b>+ Sitio</b>.</p>`}`;
 }
@@ -1657,8 +1667,11 @@ function folderModal(id,parentId,kind){
      <div id="fErr" class="err"></div>`,
     [...(f?[{l:'Eliminar',k:'dan',f:()=>delFolderModal(f.id)}]:[]),{l:'Cancelar'},{l:f?'Guardar':'Crear',k:'pri',f:()=>{
       const name=$('#fName').value.trim();if(!name){$('#fErr').textContent='Escribe un nombre.';return;}
-      if(f){f.name=name;f.kind=$('#fKind').value;const np=$('#fParent').value||null;if((f.parentId||null)!==np){f.parentId=np;if(np)ui.collapsed.delete(np);}}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null};S.folders.push(nf);ui.folder=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
-      save();closeModal();renderAll();requestAnimationFrame(fit);}}]);
+      if(f){f.name=name;f.kind=$('#fKind').value;const np=$('#fParent').value||null;if((f.parentId||null)!==np){f.parentId=np;if(np)ui.collapsed.delete(np);}}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null};S.folders.push(nf);ui.folder=nf.id;ui.justCreated=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
+      save();closeModal();renderAll();requestAnimationFrame(fit);
+      if(!f&&ui.view==='clients'&&ui.justCreated){const nid=ui.justCreated;ui.justCreated=null;const nf=folById(nid);
+        modal('Listo',`<p><b>${esc(nf.name)}</b> se creó como ${esc((KINDS[nf.kind]||'').toLowerCase())}. ¿Quieres empezar a dibujar su diagrama?</p>`,[{l:'Seguir aquí'},{l:'Abrir diagrama',k:'pri',f:()=>openFolder(nid)}]);}
+      ui.justCreated=null;}}]);
   $('#fName').onkeydown=e=>{if(e.key==='Enter')$('#mF .pri').click();};
 }
 
@@ -2008,7 +2021,7 @@ function incModal(id,prefill){
     {l:'Cancelar'},
     {l:'Guardar',k:'pri',f:()=>{
       const d=iDraft,err=$('#iErr');
-      if(!d.title.trim()){err.textContent='Escribe un título para la incidencia.';return;}
+      if(!d.title.trim())d.title=autoIncTitle(d);
       if(!d.start){err.textContent='Indica la fecha y hora de inicio.';return;}
       if(d.end&&parseDT(d.end)<parseDT(d.start)){err.textContent='La hora de fin es anterior al inicio.';return;}
       d.scope=d.scope.filter(x=>x.dev);
@@ -2016,6 +2029,8 @@ function incModal(id,prefill){
       save();closeModal();renderAll();toast(d.end?'Incidencia guardada como cerrada':'Incidencia activa guardada');}}]);
   drawInc();
 }
+function autoIncTitle(d){const devs=(d.scope||[]).filter(x=>x.dev).map(x=>(devById(x.dev)?.name||'')+(x.port?' '+x.port:'')).filter(Boolean);
+  return [d.cause||'Incidencia',devs.slice(0,2).join(', ')+(devs.length>2?` +${devs.length-2}`:'')].filter(Boolean).join(' · ')+(d.ticket?` (${d.ticket})`:'');}
 function incSummary(d){const a=incAffect(d);
   const lines=[`${d.title} ${d.ticket?'['+d.ticket+']':''}`.trim(),`Severidad: ${SEV[d.severity]||''} · Causa: ${d.cause||'—'}`,`Inicio: ${fmtDT(d.start)}${d.end?` · Fin: ${fmtDT(d.end)} · Duración: ${fmtDur(d.start,d.end)}`:` · Activa (${fmtDur(d.start)})`}`];
   if(d.vendorTicket)lines.push('Ticket proveedor: '+d.vendorTicket);
@@ -2027,7 +2042,7 @@ function drawInc(){
   const devs=[...S.devices].sort((a,b)=>ncmp(a.name,b.name)),a=incAffect(d);
   const byC={};[...a.fids].forEach(f=>{const c=clientOf(f);(byC[c?.name||'—']=byC[c?.name||'—']||[]).push(pathOf(f).slice(1).map(x=>x.name).join(' › ')||'(cliente)');});
   body.innerHTML=`
-    <div class="fld"><span class="lbl">Título</span><input id="iTitle" value="${esc(d.title)}" placeholder="Corte de fibra tramo GPE–Apodaca"></div>
+    <div class="fld"><span class="lbl">Título (opcional)</span><input id="iTitle" value="${esc(d.title)}" placeholder="Si lo dejas vacío: ${esc(autoIncTitle(d))}"></div>
     <div class="three"><div class="fld"><span class="lbl">Ticket de red</span><input id="iTicket" class="mono" value="${esc(d.ticket)}" placeholder="NOC-12345"></div>
       <div class="fld"><span class="lbl">Ticket proveedor</span><input id="iVendor" class="mono" value="${esc(d.vendorTicket||'')}" placeholder="Opcional"></div>
       <div class="fld"><span class="lbl">Severidad</span><select id="iSev">${Object.entries(SEV).map(([k,v])=>`<option value="${k}"${d.severity===k?' selected':''}>${v}</option>`).join('')}</select></div></div>
@@ -2186,7 +2201,7 @@ document.addEventListener('keydown',e=>{
 
 $('#cardsView').addEventListener('input',e=>{if(e.target.id==='cvQ'){ui.cvQ=e.target.value;ui.cvFocus=true;renderView();}});
 $('#cardsView').addEventListener('change',e=>{if(e.target.id==='devIncOnly'){ui.devInc=e.target.checked;renderView();}});
-$('#cardsView').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cpage],[data-dcard]')){e.preventDefault();e.target.click();}});
+$('#cardsView').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cpage],[data-dcard],.svrow')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-dcol-custom]')&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=e.target.value;save();renderView();}}});
 $('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
 $('#menuBtn').onclick=()=>document.body.classList.toggle('showSide');

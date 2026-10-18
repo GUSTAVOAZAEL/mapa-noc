@@ -20,7 +20,7 @@ Arriba a la izquierda puedes cambiar entre **Diagramas** (la vista de siempre), 
 - Una tarjeta por cliente con su ícono o logo, color, número de sitios y servicios, y aviso si tiene incidencias activas.
 - El filtro **Con incidencia activa** muestra solo los clientes afectados.
 - El lápiz de cada tarjeta (o **Personalizar**) cambia nombre, color, ícono o imagen/logo.
-- Al abrir un cliente ves sus sitios con los servicios de cada uno; **Abrir diagrama** te lleva directo al diagrama. Desde ahí también agregas sitios y servicios.
+- Al abrir un cliente ves sus sitios con los servicios de cada uno; **Abrir diagrama** (o **Empezar diagrama** si está vacío) te lleva directo al diagrama. Desde ahí agregas sitios y servicios, y con el lápiz renombras, mueves o eliminas cualquiera. Al crear un servicio te pregunta si quieres abrir su diagrama de inmediato.
 
 **Equipos**
 - Tarjetas agrupadas en **Red de voz**, **Red de transporte** y **Red de datos** (y *Sin red*), con filtro por red, buscador (nombre, IP o puerto) y **Solo con incidencia**.
@@ -105,7 +105,7 @@ Los grupos se pueden anidar (un rack dentro de una sala dentro de un edificio). 
 
 ## Incidencias
 
-En la pestaña **Incidencias** registras cada evento: título, ticket de red, ticket del proveedor, severidad, causa, inicio, fin y notas. En **Equipos y puertos afectados** eliges qué equipo (y opcionalmente qué puerto) falló; la herramienta calcula sola qué servicios y clientes quedan afectados.
+En la pestaña **Incidencias** registras cada evento: título (opcional; si lo dejas vacío se arma con la causa, el equipo y el ticket), ticket de red, ticket del proveedor, severidad, causa, inicio, fin y notas. En **Equipos y puertos afectados** eliges qué equipo (y opcionalmente qué puerto) falló; la herramienta calcula sola qué servicios y clientes quedan afectados.
 
 - Una incidencia sin hora de fin está **activa**. Con **Cerrar ahora** se registra el fin.
 - Los equipos y conexiones afectados se marcan en **rojo** en todos los diagramas, y al abrir el diagrama de un cliente afectado aparece un aviso de **evento activo**.
