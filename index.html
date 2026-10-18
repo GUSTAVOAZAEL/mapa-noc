@@ -37,7 +37,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-#app{height:100%;display:grid;grid-template-columns:290px minmax(0,1fr) 300px;grid-template-rows:auto minmax(0,1fr);gap:10px;
+#app{height:100%;display:grid;grid-template-columns:290px 10px minmax(0,1fr) 10px 300px;grid-template-rows:auto minmax(0,1fr);gap:10px 0;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
 .top{grid-column:1/-1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
 .brand{display:flex;align-items:center;gap:9px;font:600 17px/1 var(--f-cond);letter-spacing:.01em;white-space:nowrap}
@@ -66,6 +66,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn[disabled]{opacity:.45;cursor:default}
 .menuBtn{display:none}
 
+.rz{cursor:col-resize;position:relative;touch-action:none;min-height:0}
+.rz::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;border-radius:2px;background:transparent;transition:background .15s}
+.rz:hover::after,.rz.on::after{background:var(--accent)}
+body.resizing{cursor:col-resize;user-select:none}
+body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
+.panTog{width:30px;padding:0;justify-content:center}
+.panTog.off{color:var(--muted)}
 .side,.insp,.stage{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:0;min-width:0}
 .side{display:flex;flex-direction:column;overflow:hidden}
 .tabs{display:flex;border-bottom:1px solid var(--line);padding:0 4px;overflow-x:auto;scrollbar-width:none}
@@ -418,9 +425,12 @@ body.mapMode .stage{border-color:var(--accent)}
 .locWarn{background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-bottom:10px}
 .locList{display:grid;gap:10px}
 .pillTog.off{opacity:.5;text-decoration:line-through}
-@media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
+@media (max-width:1100px){#app{grid-template-columns:260px 10px minmax(0,1fr) 10px 270px}}
 @media (max-width:860px){
-  #app{grid-template-columns:minmax(0,1fr)}
+  #app{grid-template-columns:minmax(0,1fr)!important}
+  .stage{grid-column:1!important}
+  .rz{display:none}
+  #togR{display:none}
   .menuBtn{display:inline-flex}
   .side{position:fixed;left:0;top:0;bottom:0;width:min(330px,88vw);z-index:40;border-radius:0;transform:translateX(-102%);transition:transform .2s;
     padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px)}
@@ -463,7 +473,7 @@ body.mapMode .stage{border-color:var(--accent)}
     </div>
   </header>
 
-  <aside class="side" id="side">
+  <aside class="side" id="side" style="grid-column:1;grid-row:2">
     <nav class="tabs" role="tablist">
       <button data-tab="clientes">Clientes</button>
       <button data-tab="equipos">Equipos</button>
@@ -472,11 +482,14 @@ body.mapMode .stage{border-color:var(--accent)}
     </nav>
     <div class="pane" id="pane"></div>
   </aside>
+  <div class="rz" id="rzL" data-rz="L" title="Arrastra para cambiar el ancho · doble clic para restablecer" style="grid-column:2;grid-row:2"></div>
   <div class="scrim" id="scrim"></div>
 
-  <main class="stage">
+  <main class="stage" style="grid-column:3;grid-row:2">
     <div class="bar">
+      <button class="btn sm panTog" id="togL" title="Mostrar u ocultar el panel de clientes" aria-label="Mostrar u ocultar panel izquierdo"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M6 2.5v11"/><path class="fillL" d="M2.2 3.2h3.1v9.6H2.2z" fill="currentColor" stroke="none"/></svg></button>
       <div class="crumb" id="crumb"></div>
+      <button class="btn sm panTog" id="togR" title="Mostrar u ocultar el panel de detalle" aria-label="Mostrar u ocultar panel derecho" style="order:9"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M10 2.5v11"/><path d="M10.7 3.2h3.1v9.6h-3.1z" fill="currentColor" stroke="none"/></svg></button>
       <div class="tools" id="tools">
         <button class="btn sm mOnly" data-act="addDev">+ Equipo</button>
         <button class="btn sm mOnly" data-act="addTxt">+ Texto</button>
@@ -511,7 +524,8 @@ body.mapMode .stage{border-color:var(--accent)}
     </div>
   </main>
 
-  <aside class="insp" id="insp">
+  <div class="rz" id="rzR" data-rz="R" title="Arrastra para cambiar el ancho · doble clic para restablecer" style="grid-column:4;grid-row:2"></div>
+  <aside class="insp" id="insp" style="grid-column:5;grid-row:2">
     <div class="inspTools">
       <button class="btn sm" data-act="addDev">+ Equipo</button>
       <button class="btn sm" data-act="addTxt">+ Texto</button>
@@ -1982,10 +1996,37 @@ document.addEventListener('keydown',e=>{
 $('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
 $('#menuBtn').onclick=()=>document.body.classList.toggle('showSide');
 $('#scrim').onclick=()=>document.body.classList.remove('showSide');
-window.addEventListener('resize',()=>rc());
+
+/* ---------- paneles laterales: ocultar y ancho ---------- */
+const desk=()=>matchMedia('(min-width:861px)').matches;
+function applyPanels(){
+  const app=$('#app'),m=S.meta;
+  document.body.classList.toggle('hideL',!!m.hideL&&desk());document.body.classList.toggle('hideR',!!m.hideR&&desk());
+  $('#togL').classList.toggle('off',!!m.hideL);$('#togR').classList.toggle('off',!!m.hideR);
+  $('#togL').title=m.hideL?'Mostrar el panel de clientes':'Ocultar el panel de clientes';$('#togR').title=m.hideR?'Mostrar el panel de detalle':'Ocultar el panel de detalle';
+  if(!desk()){app.style.gridTemplateColumns='';app.style.columnGap='';return;}
+  const def=innerWidth<=1100?[260,270]:[290,300];
+  const lw=m.hideL?0:(m.lw||def[0]),rw=m.hideR?0:(m.rw||def[1]);
+  app.style.columnGap='0px';
+  app.style.gridTemplateColumns=`${lw}px ${m.hideL?0:10}px minmax(0,1fr) ${m.hideR?0:10}px ${rw}px`;
+  rc();
+}
+$('#togL').onclick=()=>{if(!desk()){document.body.classList.toggle('showSide');return;}S.meta.hideL=!S.meta.hideL;save(false);applyPanels();setTimeout(()=>rc(),30);};
+$('#togR').onclick=()=>{if(!desk()){ui.sel=null;renderInsp();return;}S.meta.hideR=!S.meta.hideR;save(false);applyPanels();setTimeout(()=>rc(),30);};
+document.querySelectorAll('[data-rz]').forEach(el=>{
+  el.addEventListener('pointerdown',e=>{if(!desk())return;e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add('on');document.body.classList.add('resizing');
+    const side=el.dataset.rz,r=$('#app').getBoundingClientRect(),cs=getComputedStyle($('#app'));
+    const mv=ev=>{let w;if(side==='L')w=ev.clientX-r.left-parseFloat(cs.paddingLeft)-5;else w=r.right-parseFloat(cs.paddingRight)-ev.clientX-5;
+      const max=Math.min(side==='L'?620:680,r.width-520);w=Math.round(Math.max(side==='L'?200:220,Math.min(max,w)));
+      if(side==='L')S.meta.lw=w;else S.meta.rw=w;applyPanels();};
+    const up=()=>{el.releasePointerCapture(e.pointerId);el.classList.remove('on');document.body.classList.remove('resizing');el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);save(false);rc();};
+    el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);});
+  el.addEventListener('dblclick',()=>{if(el.dataset.rz==='L')delete S.meta.lw;else delete S.meta.rw;save(false);applyPanels();});
+});
+window.addEventListener('resize',()=>{applyPanels();rc();});
 
 function renderAll(){if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-renderAll();
+renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
 

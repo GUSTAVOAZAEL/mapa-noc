@@ -144,6 +144,12 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - **puertos**: separados con `|`.
 - Si la IP o el nombre ya existe, el equipo se actualiza en lugar de duplicarse. Acepta separador `,` o `;`.
 
+## Paneles laterales
+
+- Los botones de panel en los extremos de la barra del diagrama ocultan o muestran el panel de clientes (izquierda) y el de detalle (derecha), para dejar más espacio al diagrama.
+- Arrastra la línea entre un panel y el diagrama para hacerlo más angosto o más ancho. Doble clic sobre esa línea lo regresa a su ancho original.
+- Se recuerda tu elección la próxima vez que abras la página.
+
 ## Atajos
 
 - Los botones **+ Equipo**, **+ Texto** y **+ Grupo** están arriba del panel derecho (en celular, en la barra del diagrama).
