@@ -170,5 +170,5 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 
 - Rueda del mouse: zoom. Arrastrar el fondo: mover la vista.
 - `Supr`: quita del diagrama lo seleccionado.
-- Doble clic en un equipo: editarlo.
+- Doble clic en un equipo: copia su IP (para pegarla en tu cliente SSH/Telnet o en el navegador). Para editarlo usa el botón **Editar equipo** del panel derecho.
 - `Esc`: cerrar ventanas o quitar la selección.

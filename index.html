@@ -1122,7 +1122,10 @@ function endDrag(e){
 }
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 svg.addEventListener('wheel',e=>{if(!ui.folder)return;e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
-svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!n)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===n.dataset.node);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd)devModal(nd.deviceId);});
+svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!n)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===n.dataset.node);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd){const d=devById(nd.deviceId);if(!d)return;if(!d.ip){toast(`${d.name} no tiene IP registrada; agrégala con Editar equipo`);return;}copyIp(d);}});
+function copyIp(d){const ok=()=>toast(`IP de ${d.name} copiada: ${d.ip}`);
+  try{navigator.clipboard.writeText(d.ip).then(ok,fb);}catch(e){fb();}
+  function fb(){const ta=document.createElement('textarea');ta.value=d.ip;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){toast('No se pudo copiar: '+d.ip);}ta.remove();}}
 $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,r.height/2);};
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
