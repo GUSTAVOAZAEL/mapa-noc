@@ -1352,10 +1352,10 @@ document.addEventListener('click',e=>{const p=$('#locPop');if(p&&!p.contains(e.t
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function blankMenu(e,pt){const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();ui.blankAt={x:pt.x,y:pt.y};
-  m.innerHTML=`<button data-act="blankDev">${gsvg('Router')}<span>Equipo<small>Del inventario o uno nuevo</small></span></button>
-    <button data-act="blankEl">${gsvg('Mufla')}<span>Elemento<small>Caja de empalme, splitter, poste…</small></span></button>
-    <button data-act="blankTxt"><span style="width:18px;text-align:center;font-weight:700">T</span><span>Texto<small>Nota o etiqueta libre</small></span></button>
-    <button data-act="blankGrp"><span style="width:18px;text-align:center">▭</span><span>Grupo<small>Ciudad, edificio, sitio, sala, rack…</small></span></button>`;
+  m.innerHTML=`<button data-act="blankDev">${gsvg('Switch')}<span>Equipo<small>Del inventario o uno nuevo, en este punto</small></span></button>
+    <button data-act="blankEl">${gsvg('Mufla')}<span>Elemento<small>Caja de empalme, splitter, poste… sin inventario</small></span></button>
+    <button data-act="blankTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota en este punto</small></span></button>
+    <button data-act="blankGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>Edificio, sala, rack… en este punto</small></span></button>`;
   m.hidden=false;const x=e.clientX-wr.left,y=e.clientY-wr.top;m.style.left=Math.min(x,wr.width-m.offsetWidth-8)+'px';m.style.top=Math.min(y,wr.height-m.offsetHeight-8)+'px';}
 function centerPt(){if(ui.dropAt){const p=ui.dropAt;ui.dropAt=null;return p;}const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
 
