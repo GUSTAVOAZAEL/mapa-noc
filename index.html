@@ -234,10 +234,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* modal y toast */
 .modal{position:fixed;inset:0;background:var(--overlay);display:grid;place-items:center;z-index:50;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
-.mbox{background:var(--panel);border-radius:10px;width:min(560px,100%);max-height:calc(100% - 20px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);min-width:0}
+.mbox{background:var(--panel);border-radius:10px;width:min(560px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);min-width:0}
 .mbox header{padding:16px 18px 4px;font:600 18px var(--f-cond)}
-.mbox .mb{padding:10px 18px;overflow:auto;min-width:0}
-.mbox footer{padding:12px 18px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.mbox .mb{padding:10px 18px;overflow:auto;min-width:0;min-height:0;flex:1 1 auto}
+.mbox header{flex:none}
+.mbox footer{flex:none;border-top:1px solid var(--line);padding:12px 18px 16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .mbox p{margin:0 0 10px}
 .chk{display:flex;gap:8px;align-items:center}
 .accEdit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
@@ -853,6 +854,7 @@ function renderCanvas(){
   document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
   if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
+  if(fid===MAP&&S.meta.mapLoc!==false&&ui.mapLOC)D.groups=mapGroups(D.nodes,ui.mapLOC);
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
   const path=pathOf(fid);
   if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.length} equipos</span>`;}
@@ -885,7 +887,7 @@ function renderCanvas(){
     out+=`<g class="grp${sel?' sel':''}${gi?' inc':''}" data-group="${g.id}"><rect class="gb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="${g.kind==='rack'||g.kind==='gabinete'?4:10}" style="stroke:${col};fill:${col}" ${dash?`stroke-dasharray="${dash}"`:''}/>
       <rect class="gh" data-ghead="${g.id}" x="${g.x}" y="${g.y}" width="${g.w}" height="26"/>
       <text class="gt" x="${g.x+10}" y="${g.y+17}" style="fill:${col}"><tspan class="k">${esc(GKINDS[g.kind]||'Grupo')}</tspan><tspan dx="6" style="fill:var(--ink)">${esc(trunc(g.label,Math.max(6,Math.floor(g.w/7.2)-8)))}</tspan></text>
-      <rect class="gr" data-gresize="${g.id}" x="${g.x+g.w-11}" y="${g.y+g.h-11}" width="13" height="13" rx="2"/></g>`;
+      ${g.ro?'':`<rect class="gr" data-gresize="${g.id}" x="${g.x+g.w-11}" y="${g.y+g.h-11}" width="13" height="13" rx="2"/>`}</g>`;
   });
   // aristas paralelas
   const pairs={};D.edges.forEach(e=>{const k=[e.from,e.to].sort().join('|');(pairs[k]=pairs[k]||[]).push(e.id);});
@@ -986,6 +988,7 @@ svg.addEventListener('pointerdown',e=>{
   const ed=e.target.closest('[data-edge]');
   if(ed){ui.multi=new Set();ui.sel={t:'edge',id:ed.dataset.edge};renderInsp();rc();return;}
   const gh=e.target.closest('[data-ghead]');
+  if(gh&&ui.folder===MAP){const g=getDiag(MAP).groups.find(x=>x.id===gh.dataset.ghead);if(g){locState={dev:null,q:g.label};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}return;}
   if(gh&&!e.shiftKey){const g=D.groups.find(x=>x.id===gh.dataset.ghead);ui.multi=new Set();ui.sel={t:'group',id:g.id};
     const inG=(o,w,h)=>o.x+w/2>=g.x&&o.x+w/2<=g.x+g.w&&o.y+h/2>=g.y&&o.y+h/2<=g.y+g.h;
     const nodes=D.nodes.filter(x=>{const d=dims(x);return inG(x,d.w,d.h);}).map(x=>[x,x.x,x.y]);
@@ -1124,17 +1127,49 @@ function buildMap(){
   const N=[...nodes.values()].map(n=>{n.svcList=[...n.svc];n.svcCount=n.svcList.length;delete n.svc;return n;});
   const E=[...edges.values()].map(e=>{e.svcList=[...e.svc];delete e.svc;e.shared=e.svcList.length>1;
     e.color=e.shared?'':svcColor(e.svcList[0]);e.label=e.shared?`${e.svcList.length} diagramas`:(e.label0||'');return e;});
-  layoutMap(N,E);
-  return{nodes:N,edges:E,groups:[],isMap:true};
+  const LOC=collectLocations();ui.mapLOC=LOC;
+  layoutMap(N,E,LOC);
+  return{nodes:N,edges:E,groups:S.meta.mapLoc===false?[]:mapGroups(N,LOC),isMap:true};
 }
-function layoutMap(N,E){
+function mapGroups(N,LOC){
+  const byDev={};N.forEach(n=>byDev[n.deviceId]=n);const boxes={},out=[];
+  const locs=[...LOC.values()].sort((a,b)=>(GRANK[b.kind]??0)-(GRANK[a.kind]??0));
+  locs.forEach(l=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,any=false;
+    l.devs.forEach(d=>{const n=byDev[d];if(!n)return;any=true;const dm=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+dm.w);y1=Math.max(y1,n.y+dm.h);});
+    locs.forEach(c=>{if(c.parent===l.key&&boxes[c.key]){const b=boxes[c.key];any=true;x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w);y1=Math.max(y1,b.y+b.h);}});
+    if(!any)return;const pad=16;
+    const b={id:'mg_'+out.length,kind:l.kind,label:l.label,color:l.color||'',notes:l.notes,x:x0-pad,y:y0-pad-26,w:x1-x0+pad*2,h:y1-y0+pad*2+26,ro:true};
+    boxes[l.key]=b;out.push(b);});
+  return out;
+}
+function structLayout(N,LOC){
+  const byDev={};N.forEach(n=>byDev[n.deviceId]=n);
+  const locs=[...LOC.values()].filter(l=>[...l.devs].some(d=>byDev[d]));if(!locs.length)return null;
+  const keyset=new Set(locs.map(l=>l.key));
+  const parentOf=l=>{let p=l.parent;while(p&&!keyset.has(p))p=LOC.get(p)?.parent;return p||null;};
+  const home={};locs.forEach(l=>l.devs.forEach(d=>{if(!byDev[d])return;const c=home[d];if(!c||(GRANK[l.kind]??0)>(GRANK[c.kind]??0))home[d]=l;}));
+  const grid=(items,maxW)=>{let x=0,y=0,rowH=0,W=0;const pos=[];items.forEach(it=>{if(x>0&&x+it.w>maxW){x=0;y+=rowH+46;rowH=0;}pos.push([x,y]);x+=it.w+56;rowH=Math.max(rowH,it.h);W=Math.max(W,x-56);});
+    return{w:W,h:y+rowH,place:(ox,oy)=>items.forEach((it,i)=>it.place(ox+pos[i][0],oy+pos[i][1]))};};
+  const placed=new Set();
+  const block=l=>{const items=locs.filter(c=>parentOf(c)===l.key).map(block);
+    N.forEach(n=>{if(home[n.deviceId]===l){const d=dims(n);items.push({w:d.w,h:d.h,place:(x,y)=>{n.x=x;n.y=y;placed.add(n.id);}});}});
+    const g=grid(items,620),pad=22,head=34;const r={w:g.w+pad*2,h:g.h+pad*2+head};r.place=(x,y)=>{r.x=x;r.y=y;g.place(x+pad,y+pad+head);};return r;};
+  const roots=locs.filter(l=>!parentOf(l)).map(block);
+  const g=grid(roots,1500);g.place(0,0);
+  return{placed,rects:roots.map(r=>({x:r.x-30,y:r.y-30,w:r.w+60,h:r.h+60})),bottom:g.h};
+}
+function layoutMap(N,E,LOC){
   S.mapPos=S.mapPos||{};const P=S.mapPos;
   const free=N.filter(n=>!P[n.deviceId]);
   N.forEach(n=>{if(P[n.deviceId]){n.x=P[n.deviceId].x;n.y=P[n.deviceId].y;}});
-  if(free.length){
-    const idx={};N.forEach((n,i)=>idx[n.id]=i);
-    const R=140+N.length*26;free.forEach((n,i)=>{const a=i/free.length*Math.PI*2;n.x=R*Math.cos(a)+(n.orig.x%37);n.y=R*0.6*Math.sin(a)+(n.orig.y%29);});
-    const isFree=new Set(free.map(n=>n.id));
+  if(!free.length)return;
+  const idx={};N.forEach((n,i)=>idx[n.id]=i);
+  let move=new Set(free.map(n=>n.id)),rects=[];
+  const st=free.length===N.length&&LOC?structLayout(N,LOC):null;
+  if(st){st.placed.forEach(id=>move.delete(id));rects=st.rects;
+    const rest=N.filter(n=>move.has(n.id));rest.forEach((n,i)=>{n.x=i*240-((rest.length-1)*120)+400;n.y=st.bottom+220+(i%2)*90;});}
+  else{const R=140+N.length*26;free.forEach((n,i)=>{const a=i/free.length*Math.PI*2;n.x=R*Math.cos(a)+(n.orig.x%37);n.y=R*0.6*Math.sin(a)+(n.orig.y%29);});}
+  if(move.size){
     for(let it=0;it<500;it++){
       const t=1-it/500,F=N.map(()=>[0,0]);
       for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){
@@ -1142,12 +1177,15 @@ function layoutMap(N,E){
         const f=140000/d2,d=Math.sqrt(d2);F[i][0]+=dx/d*f;F[i][1]+=dy/d*f;F[j][0]-=dx/d*f;F[j][1]-=dy/d*f;}
       E.forEach(e=>{const i=idx[e.from],j=idx[e.to];if(i==null||j==null)return;const a=N[i],b=N[j];const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,f=(d-280)*0.06;
         F[i][0]+=dx/d*f;F[i][1]+=dy/d*f;F[j][0]-=dx/d*f;F[j][1]-=dy/d*f;});
-      N.forEach((n,i)=>{if(!isFree.has(n.id))return;F[i][0]-=n.x*0.004;F[i][1]-=n.y*0.006;
-        const m=Math.hypot(F[i][0],F[i][1])||1,st=Math.min(m,40*t+2);n.x+=F[i][0]/m*st;n.y+=F[i][1]/m*st;});
+      N.forEach((n,i)=>{if(!move.has(n.id))return;if(!st){F[i][0]-=n.x*0.004;F[i][1]-=n.y*0.006;}
+        const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
+        rects.forEach(r=>{if(cx>r.x&&cx<r.x+r.w&&cy>r.y&&cy<r.y+r.h){const dl=cx-r.x,dr=r.x+r.w-cx,dt=cy-r.y,db=r.y+r.h-cy,m=Math.min(dl,dr,dt,db);
+          if(m===dl)F[i][0]-=400;else if(m===dr)F[i][0]+=400;else if(m===dt)F[i][1]-=400;else F[i][1]+=400;}});
+        const m=Math.hypot(F[i][0],F[i][1])||1,stp=Math.min(m,40*t+2);n.x+=F[i][0]/m*stp;n.y+=F[i][1]/m*stp;});
     }
-    free.forEach(n=>{n.x=Math.round(n.x/8)*8;n.y=Math.round(n.y/8)*8;P[n.deviceId]={x:n.x,y:n.y};});
-    try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
   }
+  free.forEach(n=>{n.x=Math.round(n.x/8)*8;n.y=Math.round(n.y/8)*8;P[n.deviceId]={x:n.x,y:n.y};});
+  try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 }
 function refreshMap(fitAfter){ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(fitAfter)requestAnimationFrame(fit);}
 function openMap(){const first=ui.folder!==MAP;if(first&&ui.folder)ui.prevFolder=ui.folder;ui.folder=MAP;ui.tab='mapa';document.body.classList.remove('showSide');
@@ -1169,10 +1207,11 @@ function sideMap(){
     ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div>`;
   return `<h3 style="margin:0 0 6px;font:600 17px var(--f-cond)">Mapa general</h3><div class="paneHead"><span class="lbl grow">${sel.size} de ${all.length} diagramas</span><button class="btn sm" data-act="mapAll">Todos</button><button class="btn sm" data-act="mapNone">Ninguno</button></div>
     ${box}
-    <label class="chk" style="margin:10px 0 6px;font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
+    <label class="chk" style="margin:10px 0 2px;font-size:13px"><input type="checkbox" id="mapLoc"${S.meta.mapLoc===false?'':' checked'}> Mostrar ubicaciones (edificio, sala, gabinete…)</label>
+    <label class="chk" style="margin:4px 0 6px;font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
     ${branch(null)}
     <hr class="sep" style="margin:12px 0 8px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="mapRelayout">Reacomodar automáticamente</button>${ui.prevFolder&&folById(ui.prevFolder)?`<button class="btn sm ghost" data-open="${ui.prevFolder}">← Volver al diagrama</button>`:''}</div>
-    <p class="mapNote">El mapa une los diagramas elegidos: cada equipo aparece una sola vez. Las líneas toman el color de su diagrama y las que se repiten en varios se ven más gruesas. Puedes mover los equipos; la posición del mapa se guarda aparte y no altera tus diagramas.</p>`;
+    <p class="mapNote">El mapa une los diagramas elegidos: cada equipo aparece una sola vez. Las líneas toman el color de su diagrama y las que se repiten en varios se ven más gruesas. Los recuadros muestran las ubicaciones físicas que capturaste en tus diagramas (toca su título para ver el detalle). Puedes mover los equipos; la posición del mapa se guarda aparte y no altera tus diagramas. <b>Reacomodar</b> junta los equipos que están en el mismo lugar.</p>`;
 }
 function mapInspector(){
   const D=getDiag(MAP),M=mapSel(),sh=D.nodes.filter(n=>n.svcCount>1).length;
@@ -1903,6 +1942,7 @@ $('#pane').addEventListener('input',e=>{if(e.target.id==='incQ'){ui.incQ=e.targe
 $('#pane').addEventListener('change',e=>{
   if(e.target.matches('[data-mapf]')){const all=diagFids(),sel=new Set(mapSel()),ds=subtree(e.target.dataset.mapf).filter(x=>all.includes(x));
     if(e.target.checked)ds.forEach(x=>sel.add(x));else ds.forEach(x=>sel.delete(x));S.meta.mapSel=[...sel];save(false);refreshMap(false);return;}
+  if(e.target.id==='mapLoc'){S.meta.mapLoc=e.target.checked;save(false);refreshMap(false);return;}
   if(e.target.id==='mapShared'){S.meta.mapShared=e.target.checked;save(false);rc();return;}
   if(e.target.id==='incPer'){S.meta.incPeriod=e.target.value;save(false);renderAll();return;}
   if(e.target.id==='impDev'){ui.impact=e.target.value?{dev:e.target.value,port:''}:null;renderAll();}

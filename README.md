@@ -30,6 +30,7 @@ El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios 
 - Cada equipo aparece una sola vez. Los que están en varios diagramas llevan un número con cuántos los usan y la lista **compartidos** te dice cuáles son. Si los elegidos no comparten nada, te lo indica.
 - Cada línea toma el color de su diagrama (ver leyenda a la derecha). Las conexiones repetidas en varios diagramas se dibujan más gruesas.
 - **Resaltar solo lo compartido** atenúa todo lo demás.
+- **Mostrar ubicaciones** dibuja los edificios, salas, gabinetes y racks que capturaste en tus diagramas, unidos y anidados igual que en *Ubicación física*. Tocar el título de una ubicación abre su detalle. **Reacomodar automáticamente** agrupa a los equipos dentro de su ubicación.
 - Al seleccionar un equipo ves en qué diagramas aparece y puedes abrirlos. Impacto e incidencias también se marcan en el mapa.
 - Puedes arrastrar los equipos para acomodar el mapa; esa posición se guarda aparte y no cambia tus diagramas. **Reacomodar automáticamente** lo vuelve a ordenar.
 - El mapa es de solo lectura: para agregar o cambiar conexiones, abre el diagrama del servicio.
