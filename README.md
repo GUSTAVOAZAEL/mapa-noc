@@ -12,6 +12,16 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
+## Ubicación física
+
+Desde el **+** de un equipo (**Ver ubicación física**), su panel derecho o **Equipos → Ubicaciones** ves en qué edificio, zona, piso, sala, gabinete o rack lo has englobado, juntando lo que capturaste en todos tus diagramas:
+
+- Los grupos con el mismo tipo y nombre en distintos diagramas se consideran el mismo lugar y suman sus equipos.
+- Si un gabinete estuvo dentro de un edificio en algún diagrama, o comparten equipos, el gabinete se muestra dentro del edificio.
+- Ves qué otros equipos comparten ese lugar y en qué diagramas se capturó cada ubicación (con botón para abrirlos).
+- Si el mismo equipo quedó en dos lugares distintos del mismo tipo (por ejemplo, dos gabinetes), te avisa para que lo revises.
+- Sin equipo elegido muestra todas las ubicaciones, con buscador.
+
 ## Mapa general
 
 El botón **Mapa general** (arriba) une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
@@ -62,7 +72,7 @@ Si en un diagrama quieres otra forma para un equipo en particular, selecciónalo
 Cada equipo puede pertenecer a una o varias redes (**Voz**, **Transporte**, **Datos**). Se marca al editar el equipo o con la columna `red` del CSV.
 
 - En **Equipos** filtras el inventario por red (o ves los que no tienen red asignada).
-- En el diagrama cada equipo muestra etiquetas **V / T / D**, y el selector **Todas las redes** de la barra resalta una red y atenúa lo demás.
+- En el diagrama cada equipo muestra etiquetas **V / T / D** (el botón **V·T·D** de la barra las muestra u oculta), y el selector **Todas las redes** de la barra resalta una red y atenúa lo demás.
 
 ## Punto de demarcación
 

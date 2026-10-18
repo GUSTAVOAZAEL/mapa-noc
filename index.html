@@ -392,6 +392,31 @@ textarea.big{width:100%;min-height:200px;font:12px var(--f-mono);border:1px soli
 .sbadge text{font:700 10.5px var(--f-ui);fill:var(--accent-ink)}
 .mapNote{font-size:12px;color:var(--muted)}
 body.mapMode .stage{border-color:var(--accent)}
+/* ubicaciones */
+.mbox.wide{width:min(920px,100%)}
+.locTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.locTools .inp{flex:1;min-width:160px}
+.loc{border:1.5px solid var(--lc,var(--line));border-radius:9px;padding:9px 10px 10px;display:grid;gap:8px;background:color-mix(in srgb,var(--lc,var(--line)) 5%,var(--panel));min-width:0}
+.loc.rack,.loc.gabinete{border-radius:5px}
+.loc.piso,.loc.sala{border-style:dashed}
+.loc.gabinete{border-style:dotted;border-width:2px}
+.loc.focus{box-shadow:0 0 0 3px var(--accent-soft)}
+.lh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.lh .k{font:600 10px var(--f-ui);text-transform:uppercase;letter-spacing:.08em;color:var(--lc,var(--muted))}
+.lh b{font:600 15px var(--f-cond)}
+.lh .cnt{font-size:12px;color:var(--muted);margin-left:auto}
+.ldevs{display:flex;flex-wrap:wrap;gap:6px}
+.ldev{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.ldev:hover{border-color:var(--accent)}
+.ldev.me{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ldev.me svg{color:var(--accent-ink)!important}
+.ldev small{font:11px var(--f-mono);opacity:.75}
+.lkids{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.lsvc{display:flex;flex-wrap:wrap;gap:4px}
+.lsvc .svc{font-size:11px;padding:2px 6px}
+.locWarn{background:var(--hit-soft);border:1px solid var(--hit);border-radius:6px;padding:8px 10px;font-size:12.5px;margin-bottom:10px}
+.locList{display:grid;gap:10px}
+.pillTog.off{opacity:.5;text-decoration:line-through}
 @media (max-width:1100px){#app{grid-template-columns:260px minmax(0,1fr) 270px}}
 @media (max-width:860px){
   #app{grid-template-columns:minmax(0,1fr)}
@@ -457,6 +482,7 @@ body.mapMode .stage{border-color:var(--accent)}
         <button class="btn sm mOnly" data-act="addGrp">+ Grupo</button>
         <button class="btn sm" id="tFit">Ajustar vista</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
+        <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
         <select class="layerSel secSel" id="secSel" title="Resaltar una red" aria-label="Resaltar una red"><option value="">Todas las redes</option><option value="voz">Red de voz</option><option value="transporte">Red de transporte</option><option value="datos">Red de datos</option></select>
       </div>
     </div>
@@ -646,11 +672,13 @@ function sample(){
   d.devices.forEach(x=>x.sections=SEC[x.id]||[]);
   d.diagrams.fA1a={nodes:[N('n0','dISP',20,-120),N('n1','dCORE',34,118),N('n2','dAGG',300,140),N('n3','dOLT',560,140),N('n4','dC1',900,140),T('t1','VLAN 120 · 200 Mbps\nIP pública 201.x.x.10/30',560,40)],
     edges:[E('e1','n1','n2','Te0/0/0/1','XGE0/0/1'),E('e2','n2','n3','XGE0/0/5','0/9/0'),E('e3','n3','n4','0/1/2','ether1','fibra','ONT 7'),E('e0','n0','n1','Hu0/0/1','Te0/0/0/0','fibra','Tránsito IP')]};
+  d.diagrams.fA1a.groups=[{id:'gA1',kind:'edificio',label:'Nodo Guadalupe',x:284,y:96,w:470,h:124,color:'#23875A'}];
   Object.assign(d.diagrams.fA1a.edges[2],{demarc:true,demarcPos:.72,demarcLabel:'Demarcación',demarcA:'Proveedor',demarcB:'Cliente'});
   d.diagrams.fA1b={nodes:[N('n1','dC1',40,160),N('n2','dOLT',290,160),N('n3','dAGG',540,160),N('n4','dPTP',790,60),N('n5','dC2',790,260),T('t1','L2L VLAN 310',300,60)],
     edges:[E('e1','n1','n2','ether2','0/1/2','fibra','','both'),E('e2','n2','n3','0/9/0','XGE0/0/5','fibra','','both'),E('e3','n3','n4','XGE0/0/7','eth0','cobre','','both'),E('e4','n4','n5','air','ether1','radio','','both')]};
   d.diagrams.fA2a={nodes:[N('n1','dCORE',40,140),N('n2','dAGG',300,140),N('n3','dPTP',560,140),N('n4','dC2',820,140)],
     edges:[E('e1','n1','n2','Te0/0/0/1','XGE0/0/1'),E('e2','n2','n3','XGE0/0/7','eth0','cobre'),E('e3','n3','n4','air','ether1','radio')]};
+  d.diagrams.fA2a.groups=[{id:'gA2',kind:'gabinete',label:'GAB-03 · Sala de equipos',x:286,y:100,w:206,h:116,color:'#B86A00'}];
   d.diagrams.fB1a={nodes:[N('n1','dCORE',54,150),N('n2','dFW',290,160),N('n3','dAGG',540,160),N('n4','dOLT',790,160),N('n5','dC3',790,330),T('t1','VPN IPsec hacia FW-DC-01',300,60)],
     edges:[E('e1','n1','n2','Te0/0/0/2','port1'),E('e2','n2','n3','port3','XGE0/0/2'),E('e3','n3','n4','XGE0/0/5','0/9/0'),E('e4','n4','n5','0/1/3','Gi0/0/0','fibra','ONT 2'),E('e5','n5','n2','','', 'logico','IPsec','both')],
     groups:[{id:'g1',kind:'edificio',label:'DC Monterrey',x:12,y:92,w:488,h:214,color:''},{id:'g2',kind:'rack',label:'R03 · Sala A, piso 2',x:26,y:120,w:206,h:174,color:'#2F6FD6'},{id:'g3',kind:'gabinete',label:'GAB-07 · Sala B, piso 3',x:276,y:120,w:210,h:174,color:'#B86A00'}]};
@@ -768,7 +796,7 @@ function sideDevices(){
   const list=S.devices.filter(d=>!q||fold([d.name,d.ip,d.brand,d.model,d.type,d.location].join(' ')).includes(q))
     .filter(d=>!sf||(sf==='none'?!(d.sections||[]).length:(d.sections||[]).includes(sf))).sort((a,b)=>ncmp(a.name,b.name));
   const cnt=k=>S.devices.filter(d=>k==='none'?!(d.sections||[]).length:(d.sections||[]).includes(k)).length;
-  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.devices.length} equipos</span><button class="btn sm" data-act="types">Tipos</button><button class="btn sm" data-act="csv">CSV</button><button class="btn sm" data-act="newDev">+ Equipo</button></div>
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.devices.length} equipos</span><button class="btn sm" data-act="locAll" title="Ver en qué edificio, piso, sala, gabinete o rack has englobado tus equipos">Ubicaciones</button><button class="btn sm" data-act="types">Tipos</button><button class="btn sm" data-act="csv">CSV</button><button class="btn sm" data-act="newDev">+ Equipo</button></div>
   <div class="seg">${[['','Todos'],['voz','Voz'],['transporte','Transp.'],['datos','Datos'],['none','Sin red']].map(([k,l])=>`<button data-devsec="${k}" class="${sf===k?'on':''}" title="${k?cnt(k)+' equipos':''}">${l}</button>`).join('')}</div>
   <input class="inp" id="devQ" type="search" placeholder="Filtrar por nombre, IP, marca…" style="margin-bottom:8px">
   <div class="dlist">${list.map(d=>{const u=usage(d.id);return `<button class="drow" data-dev="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)} ${secChips(d)}</div><div class="ip">${esc(d.ip||'sin IP')} · ${esc(d.type)}</div></div><span class="use" title="Servicios que lo usan">${u}</span></button>`;}).join('')||'<p class="sub">Sin resultados.</p>'}</div>`;
@@ -822,7 +850,7 @@ function lbl(x,y,t,cls){const w=t.length*6.4+10;return `<g class="${cls}"><rect 
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
   document.querySelectorAll('[data-act=addDev],[data-act=addTxt],[data-act=addGrp]').forEach(b=>b.disabled=!fid||fid===MAP);
-  document.body.classList.toggle('mapMode',fid===MAP);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
+  document.body.classList.toggle('mapMode',fid===MAP);$('#pillTog').classList.toggle('off',!!S.meta.hidePills);$('#bMap').classList.toggle('pri',fid===MAP);$('#hint').innerHTML=fid===MAP?'Mapa general: arrastra equipos para acomodarlos · rueda para zoom · clic en un equipo para ver en qué diagramas aparece':'Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom';
   if(!fid){$('#incBanner').hidden=true;vpG.innerHTML='';emp.hidden=false;emp.innerHTML=`<div><h3>Sin diagrama abierto</h3><span>Elige un cliente, sitio o servicio en el panel, o crea uno nuevo.</span></div>`;ib.hidden=true;$('#crumb').innerHTML='';return;}
   const D=getDiag(fid),vp=getVp();
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
@@ -897,7 +925,7 @@ function renderCanvas(){
     if(n.deviceId){const d=devById(n.deviceId)||{name:'(equipo eliminado)',ip:'',type:'Otro'};
       s+=(ic?G.out('halo'):'')+G.out('nb')+G.body(typeOf(d.type),d)+`<title>${esc(d.name)}${d.ip?' · '+esc(d.ip):''}${n.svcCount>1?` · en ${n.svcCount} diagramas`:''}</title>`;
       if(n.svcCount>1){const bx=(G.clip.k==='rect'?G.clip.x:G.clip.cx-G.clip.r*0.72)+2,by=(G.clip.k==='rect'?G.clip.y:G.clip.cy-G.clip.r*0.72)+2;s+=`<g class="sbadge"><circle cx="${bx}" cy="${by}" r="9.5"/><text x="${bx}" y="${by+3.8}" text-anchor="middle">${n.svcCount}</text><title>Compartido por ${n.svcCount} diagramas</title></g>`;}
-      (d.sections||[]).filter(k=>SECTIONS[k]).forEach((k,i)=>{const x=G.pill[0]-26-i*20,y=G.pill[1];s+=`<g class="spill"><rect x="${x}" y="${y-7}" width="17" height="13" rx="3" style="fill:${SECTIONS[k].c}"/><text x="${x+8.5}" y="${y+2.5}" text-anchor="middle">${SECTIONS[k].k}</text><title>Red de ${SECTIONS[k].l.toLowerCase()}</title></g>`;});
+      if(!S.meta.hidePills)(d.sections||[]).filter(k=>SECTIONS[k]).forEach((k,i)=>{const x=G.pill[0]-26-i*20,y=G.pill[1];s+=`<g class="spill"><rect x="${x}" y="${y-7}" width="17" height="13" rx="3" style="fill:${SECTIONS[k].c}"/><text x="${x+8.5}" y="${y+2.5}" text-anchor="middle">${SECTIONS[k].k}</text><title>Red de ${SECTIONS[k].l.toLowerCase()}</title></g>`;});
     }else{
       s+=`<rect class="tb" x="-4" y="-2" width="${w+8}" height="${h+4}" rx="4"/><text x="5" y="0" style="${n.color?`fill:${n.color};`:''}font-size:${+n.size||13}px;${n.bold?'font-weight:600;':''}">${String(n.text||'').split('\n').map(l=>`<tspan x="5" dy="${Math.round(18*((+n.size||13)/13))}">${esc(l)||' '}</tspan>`).join('')}</text>`;
     }
@@ -1005,6 +1033,7 @@ svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!
 $('#zIn').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1.2,r.width/2,r.height/2);};
 $('#zOut').onclick=()=>{const r=svg.getBoundingClientRect();zoomAt(1/1.2,r.width/2,r.height/2);};
 $('#tFit').onclick=fit;
+$('#pillTog').onclick=()=>{S.meta.hidePills=!S.meta.hidePills;save(false);rc();};
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
 function centerPt(){const r=svg.getBoundingClientRect(),vp=getVp();return{x:(r.width/2-vp.x)/vp.k,y:(r.height/2-vp.y)/vp.k};}
@@ -1063,7 +1092,8 @@ function openPlusMenu(nodeId,ev){
   m.innerHTML=`${inMap?'':`<button data-act="plusDev">${gsvg('Switch')}<span>Equipo conectado<small>Se agrega a la derecha y se une con una línea</small></span></button>`}
     ${inMap?'':`<button data-act="plusTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota junto a este elemento</small></span></button>`}
     ${n?.deviceId?`<button data-act="plusImp" style="color:var(--hit)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="2.5"/><circle cx="9" cy="9" r="6.5" stroke-dasharray="2.5 2"/></svg><span>Ver impacto<small style="color:var(--muted)">Clientes y servicios que pasan por aquí</small></span></button>
-    <button data-act="plusInc" style="color:var(--danger)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2 17 16H1z"/><path d="M9 7v4M9 13.5v.1"/></svg><span>Registrar incidencia<small style="color:var(--muted)">Con este equipo como afectado</small></span></button>`:''}
+    <button data-act="plusInc" style="color:var(--danger)"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2 17 16H1z"/><path d="M9 7v4M9 13.5v.1"/></svg><span>Registrar incidencia<small style="color:var(--muted)">Con este equipo como afectado</small></span></button>
+    <button data-act="plusLoc">${gsvg('Edificio')}<span>Ver ubicación física<small>Edificio, piso, sala, gabinete o rack donde lo has englobado</small></span></button>`:''}
     ${inMap?'':`<button data-act="plusGrp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2"><rect x="1.5" y="3" width="15" height="12" rx="2"/></svg><span>Grupo<small>${ui.multi.size>1?`Englobar los ${ui.multi.size} seleccionados`:'Edificio, sala, rack… alrededor'}</small></span></button>`}`;
   m.hidden=false;
   const x=Math.min(ev.clientX-wr.left+10,wr.width-m.offsetWidth-6),y=Math.min(ev.clientY-wr.top+10,wr.height-m.offsetHeight-6);
@@ -1151,6 +1181,76 @@ function mapInspector(){
     <div class="acc"><span class="lbl">Leyenda</span>${svcChips(M)}</div>
     <p class="sub" style="margin:0">Los equipos con número están en varios diagramas. Elige qué clientes o servicios ver en el panel de la izquierda. Este mapa es de solo lectura: para editar, abre el diagrama del servicio.</p>`;
 }
+
+/* ---------- ubicaciones físicas ---------- */
+const GRANK={edificio:0,zona:1,piso:2,sala:3,gabinete:4,rack:5};
+function collectLocations(){
+  const L=new Map();
+  for(const [fid,D] of Object.entries(S.diagrams)){
+    if(!folById(fid)||!D.groups?.length)continue;
+    const inG=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
+    const key=g=>g.kind+'|'+fold(g.label||('(sin nombre '+g.id+')'));
+    D.groups.forEach(g=>{const k=key(g);
+      if(!L.has(k))L.set(k,{key:k,kind:g.kind,label:g.label||'(sin nombre)',color:g.color,notes:g.notes||'',devs:new Set(),fids:new Set(),parents:new Map()});
+      const l=L.get(k);l.fids.add(fid);if(!l.color&&g.color)l.color=g.color;if(!l.notes&&g.notes)l.notes=g.notes;
+      D.nodes.forEach(n=>{if(n.deviceId&&inG(g,n))l.devs.add(n.deviceId);});
+      D.groups.forEach(o=>{if(o!==g&&o.x<=g.x&&o.y<=g.y&&o.x+o.w>=g.x+g.w&&o.y+o.h>=g.y+g.h&&o.w*o.h>g.w*g.h){const pk=key(o);l.parents.set(pk,(l.parents.get(pk)||0)+1);}});
+    });
+  }
+  // padre: contención explícita, si no, por jerarquía con equipos en común
+  const arr=[...L.values()];
+  arr.forEach(l=>{
+    let best=null;
+    l.parents.forEach((c,pk)=>{const p=L.get(pk);if(!p)return;const sc=c*10+(GRANK[p.kind]??0);if(!best||sc>best.sc)best={k:pk,sc};});
+    if(!best){arr.forEach(p=>{if(p===l||(GRANK[p.kind]??9)>=(GRANK[l.kind]??9))return;let common=0;l.devs.forEach(d=>{if(p.devs.has(d))common++;});
+      if(!common)return;const sc=(GRANK[p.kind]??0)*100+common;if(!best||sc>best.sc)best={k:p.key,sc};});}
+    l.parent=best?best.k:null;
+  });
+  // romper ciclos
+  arr.forEach(l=>{const seen=new Set([l.key]);let p=l.parent;while(p){if(seen.has(p)){l.parent=null;break;}seen.add(p);p=L.get(p)?.parent;}});
+  return L;
+}
+let locState={dev:null,q:''};
+function locModal(devId){locState={dev:devId||null,q:''};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}
+function drawLoc(){
+  const body=$('#locBody');if(!body)return;
+  const L=collectLocations(),dev=locState.dev&&devById(locState.dev),q=fold(locState.q);
+  const kidsOf=k=>[...L.values()].filter(l=>l.parent===k).sort((a,b)=>(GRANK[a.kind]??9)-(GRANK[b.kind]??9)||ncmp(a.label,b.label));
+  const allDevs=l=>{const s=new Set(l.devs);kidsOf(l.key).forEach(c=>allDevs(c).forEach(d=>s.add(d)));return s;};
+  // qué ubicaciones mostrar
+  let show;
+  if(dev){const mine=[...L.values()].filter(l=>l.devs.has(dev.id));show=new Set();
+    mine.forEach(l=>{let k=l.key;while(k){show.add(k);k=L.get(k)?.parent;}});}
+  else if(q){show=new Set();[...L.values()].forEach(l=>{const hit=fold(l.label).includes(q)||[...l.devs].some(d=>fold(devById(d)?.name+' '+devById(d)?.ip).includes(q));
+      if(hit){let k=l.key;while(k){show.add(k);k=L.get(k)?.parent;}}});}
+  const visible=l=>!show||show.has(l.key);
+  const box=l=>{
+    const ks=kidsOf(l.key),inKids=new Set();ks.forEach(c=>allDevs(c).forEach(d=>inKids.add(d)));
+    const own=[...l.devs].filter(d=>!inKids.has(d)).map(devById).filter(Boolean).sort((a,b)=>ncmp(a.name,b.name));
+    const tot=allDevs(l).size,focus=dev&&l.devs.has(dev.id);
+    return `<div class="loc ${l.kind}${focus?' focus':''}" style="--lc:${l.color||'var(--muted)'}">
+      <div class="lh"><span class="k">${esc(GKINDS[l.kind]||'Grupo')}</span><b>${esc(l.label)}</b><span class="cnt">${tot} equipo${tot===1?'':'s'} · ${l.fids.size} diagrama${l.fids.size===1?'':'s'}</span></div>
+      ${l.notes?`<span class="mapNote">${esc(l.notes)}</span>`:''}
+      ${own.length?`<div class="ldevs">${own.map(d=>`<button class="ldev${dev&&d.id===dev.id?' me':''}" data-locfocus="${d.id}" title="Ver la ubicación de ${esc(d.name)}">${gsvg(d.type,16)}${esc(d.name)}${d.ip?` <small>${esc(d.ip)}</small>`:''}</button>`).join('')}</div>`:''}
+      ${ks.filter(visible).length?`<div class="lkids">${ks.filter(visible).map(box).join('')}</div>`:''}
+      <div class="lsvc">${[...l.fids].map(f=>`<span class="svc" data-locopen="${f}" title="Abrir diagrama"><i style="background:${svcColor(f)}"></i>${esc(pathOf(f).slice(-2).map(x=>x.name).join(' › '))}</span>`).join('')}</div>
+    </div>`;};
+  const roots=[...L.values()].filter(l=>!l.parent&&visible(l)).sort((a,b)=>(GRANK[a.kind]??9)-(GRANK[b.kind]??9)||ncmp(a.label,b.label));
+  let warn='';
+  if(dev){const mine=[...L.values()].filter(l=>l.devs.has(dev.id));const byK={};mine.forEach(l=>(byK[l.kind]=byK[l.kind]||[]).push(l.label));
+    const dup=Object.entries(byK).filter(([k,v])=>v.length>1);
+    if(dup.length)warn=`<div class="locWarn">⚠ <b>${esc(dev.name)}</b> aparece en ubicaciones distintas del mismo tipo: ${dup.map(([k,v])=>`${esc(GKINDS[k])}: ${v.map(esc).join(' / ')}`).join('; ')}. Revisa si es el mismo lugar escrito diferente o si un diagrama está mal.</div>`;}
+  const devOpts=S.devices.slice().sort((a,b)=>ncmp(a.name,b.name)).map(d=>`<option value="${d.id}"${dev&&d.id===dev.id?' selected':''}>${esc(d.name)}</option>`).join('');
+  body.innerHTML=`<div class="locTools"><select class="inp" id="locDev"><option value="">Todas las ubicaciones</option>${devOpts}</select>${dev?'':`<input class="inp" id="locQ" type="search" placeholder="Buscar edificio, sala, gabinete o equipo" value="${esc(locState.q)}">`}</div>
+    ${warn}
+    ${!L.size?`<p class="mapNote">Aún no has englobado equipos. En un diagrama selecciona varios equipos (Shift+clic) y crea un grupo de tipo Edificio, Piso, Sala, Gabinete o Rack. Aquí se juntan las ubicaciones de todos tus diagramas.</p>`:
+      roots.length?`<div class="locList">${roots.map(box).join('')}</div>`:`<p class="mapNote">${dev?`${esc(dev.name)} no está dentro de ningún grupo en tus diagramas.`:'Sin coincidencias.'}</p>`}
+    <p class="mapNote" style="margin-top:10px">Se juntan los grupos que tienen el mismo tipo y nombre en distintos diagramas. Si un gabinete estaba dentro de un edificio en algún diagrama, o comparte equipos con él, se muestra dentro. Toca un equipo para ver su ubicación y un diagrama para abrirlo.</p>`;
+  $('#locDev').onchange=e=>{locState.dev=e.target.value||null;drawLoc();};
+  const qi=$('#locQ');if(qi)qi.oninput=e=>{locState.q=e.target.value;const p=e.target.selectionStart;drawLoc();const i=$('#locQ');i.focus();i.setSelectionRange(p,p);};
+  body.onclick=e=>{const f=e.target.closest('[data-locfocus]');if(f){locState.dev=f.dataset.locfocus;drawLoc();return;}
+    const o=e.target.closest('[data-locopen]');if(o){closeModal();openFolder(o.dataset.locopen);const d=locState.dev;if(d){const n=getDiag(o.dataset.locopen).nodes.find(x=>x.deviceId===d);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}}}};
+}
 /* ---------- inspector ---------- */
 function accessCmd(d,a){
   const ip=d.ip||'';
@@ -1225,7 +1325,7 @@ function renderInsp(){
       ${d.notes?`<div><span class="lbl">Notas</span><p style="margin:4px 0 0;white-space:pre-wrap">${esc(d.notes)}</p></div>`:''}
       ${(()=>{const ai=activeIncs().filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)),all=S.incidents.filter(i=>(i.scope||[]).some(sc=>sc.dev===d.id)).length;
         return `<div class="acc"><span class="lbl">Incidencias</span>${ai.map(i=>`<button class="icard act" data-inc="${i.id}"><span class="ih"><span class="sev ${i.severity}">${SEV[i.severity]||''}</span>Activa · ${fmtDur(i.start)}</span><b>${esc(i.title)}</b></button>`).join('')}<span class="sub">${all} en total para este equipo</span><button class="btn sm dan" data-act="incFromNode" data-devid="${d.id}">Registrar incidencia</button></div>`;})()}
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button>${ui.folder===MAP?'':'<button class="btn sm dan" data-act="delSel">Quitar del diagrama</button>'}</div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-imp="${d.id}" data-port="">Impacto del equipo</button><button class="btn sm" data-locdev="${d.id}">Ubicación física</button><button class="btn sm" data-dev="${d.id}">Editar equipo</button>${ui.folder===MAP?'':'<button class="btn sm dan" data-act="delSel">Quitar del diagrama</button>'}</div>`;
     return;
   }
   const e=D.edges.find(x=>x.id===ui.sel.id);if(!e){ui.sel=null;return renderInsp();}
@@ -1288,7 +1388,8 @@ $('#insp').addEventListener('change',e=>{
 });
 
 /* ---------- modales ---------- */
-function modal(title,body,actions){
+function modal(title,body,actions,opts){
+  document.querySelector('#modal .mbox').classList.toggle('wide',!!opts?.wide);
   $("#mT").textContent=title;$("#mB").onclick=null;$("#mB").innerHTML=body;
   const f=$('#mF');f.innerHTML='';
   actions.forEach(a=>{const b=document.createElement('button');b.className='btn '+(a.k||'');b.textContent=a.l;b.onclick=a.f||closeModal;f.appendChild(b);});
@@ -1749,6 +1850,7 @@ document.addEventListener('click',e=>{
   const dsc=t.closest('[data-devsec]');if(dsc){ui.devSec=dsc.dataset.devsec;renderSide();return;}
   const gc=t.closest('[data-gcol]');if(gc){const g=getDiag(ui.folder).groups.find(x=>x.id===ui.sel?.id);if(g){g.color=gc.dataset.gcol;save();renderInsp();rc();}return;}
   const mn=t.closest('[data-mapnode]');if(mn){const n=getDiag(MAP).nodes.find(x=>x.id===mn.dataset.mapnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();showNode(n);rc();}return;}
+  const ld=t.closest('[data-locdev]');if(ld){locModal(ld.dataset.locdev);return;}
   const icf=t.closest('[data-incf]');if(icf){ui.incFilter=icf.dataset.incf;renderSide();return;}
   const rd=t.closest('[data-rkdev]');if(rd){setImpact(rd.dataset.rkdev,'');return;}
   const rcl=t.closest('[data-rkcli]');if(rcl){openFolder(rcl.dataset.rkcli);return;}
@@ -1773,6 +1875,8 @@ document.addEventListener('click',e=>{
     case 'plusDev':$('#plusMenu').hidden=true;ui.addFrom=ui.plusNode;pickDevModal();break;
     case 'plusTxt':{$('#plusMenu').hidden=true;const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===ui.plusNode);if(!n)break;const G=geom(n);
       const t={id:uid('t'),text:'Nota',x:n.x,y:n.y+G.h+18};D.nodes.push(t);ui.multi=new Set([t.id]);ui.sel={t:'node',id:t.id};save();renderAll();setTimeout(()=>{const i=$('#nTxt');if(i){i.focus();i.select();}},30);break;}
+    case 'plusLoc':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)locModal(n.deviceId);break;}
+    case 'locAll':locModal(null);break;
     case 'plusImp':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)setImpact(n.deviceId,'');break;}
     case 'plusInc':{$('#plusMenu').hidden=true;const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.plusNode);if(n?.deviceId)incModal(null,[{dev:n.deviceId,port:''}]);break;}
     case 'addPort':{const d=devById(a.dataset.devid),i=$('#nPortAdd'),v=i?.value.trim();if(!d||!v)break;
