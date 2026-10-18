@@ -1535,8 +1535,7 @@ function drawL2L(){
       let P;
       if(Math.abs(xg1-xg2)<2)P=[[ax,A.cy],[xg1,A.cy],[xg1,B.cy],[bx,B.cy]];
       else{let L;if(sameRow)L=Math.min(BA.t,BB.t)-rg/2;else if(BB.t>BA.t)L=BB.t-rg/2;else L=BA.t-rg/2;L+=off*0.4;
-        if(sameRow&&Math.abs(xg1-xg2)<cg*1.5+Math.abs(BA.r-BB.l))P=[[ax,A.cy],[xg1,A.cy],[xg1,B.cy],[bx,B.cy]];
-        else P=[[ax,A.cy],[xg1,A.cy],[xg1,L],[xg2,L],[xg2,B.cy],[bx,B.cy]];}
+        P=[[ax,A.cy],[xg1,A.cy],[xg1,L],[xg2,L],[xg2,B.cy],[bx,B.cy]];}
       // adyacentes en la misma fila: línea directa por el hueco
       if(sameRow&&((toRight&&Math.abs(BB.l-BA.r-cg)<3)||(toLeft&&Math.abs(BA.l-BB.r-cg)<3)))P=[[ax,A.cy],[xg1,A.cy],[xg1,B.cy],[bx,B.cy]];
       out+=`<path d="${roundPath(P,12)}"/><circle cx="${ax}" cy="${A.cy}" r="5.5"/><circle cx="${bx}" cy="${B.cy}" r="5.5"/>`;});});
