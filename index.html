@@ -1662,10 +1662,9 @@ function renderInsp(){
   if(!D||!ui.sel){
     if(!ui.folder){el.innerHTML=`<h3>Mapa NOC</h3><p class="sub">Selecciona un servicio para ver su diagrama.</p>`;return;}
     const f=folById(ui.folder),devs=[...new Set(D.nodes.filter(n=>n.deviceId).map(n=>n.deviceId))].map(devById).filter(Boolean);
-    el.innerHTML=`<div><span class="lbl">${esc(KINDS[f?.kind]||'')}</span><h3>${esc(f?.name)}</h3></div>
+    el.innerHTML=`${suggestHTML(ui.folder,'insp')}
+      <div><span class="lbl">${esc(KINDS[f?.kind]||'')}</span><h3>${esc(f?.name)}</h3></div>
       <dl class="kv"><dt>Equipos</dt><dd>${devs.length}</dd><dt>Conexiones</dt><dd>${D.edges.length}</dd></dl>
-      ${devs.length?`<div class="acc"><span class="lbl">Equipos en el camino</span>${devs.map(d=>`<button class="drow" data-selnode="${d.id}">${gsvg(d.type)}<div class="t"><div>${esc(d.name)}</div><div class="ip">${esc(d.ip)}</div></div><span></span></button>`).join('')}</div>`:''}
-      ${suggestHTML(ui.folder,'insp')}
       <hr class="sep"><p class="sub" style="margin:0">Haz clic en un equipo o en una línea para ver su detalle, puertos y acceso. <kbd>Supr</kbd> elimina lo seleccionado del diagrama.</p>`;
     return;
   }
