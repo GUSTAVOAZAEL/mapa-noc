@@ -1067,7 +1067,7 @@ svg.addEventListener('pointerdown',e=>{
   const gr=e.target.closest('[data-gresize]');
   if(gr){const g=D.groups.find(x=>x.id===gr.dataset.gresize);ui.sel={t:'group',id:g.id};ui.multi=new Set();ui.drag={kind:'gresize',id:g.id,moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();e.preventDefault();return;}
   const n=e.target.closest('[data-node]');
-  if(n){const id=n.dataset.node;
+  if(n){const id=n.dataset.node;ui.lastDown={id,t:Date.now()};
     if(!ui.multi)ui.multi=new Set();
     if(e.shiftKey||e.ctrlKey||e.metaKey){if(ui.sel?.t==='node')ui.multi.add(ui.sel.id);ui.multi.has(id)?ui.multi.delete(id):ui.multi.add(id);}
     else if(!(ui.multi.size>1&&ui.multi.has(id)))ui.multi=new Set([id]);
@@ -1122,7 +1122,7 @@ function endDrag(e){
 }
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 svg.addEventListener('wheel',e=>{if(!ui.folder)return;e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
-svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');if(!n)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===n.dataset.node);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd){const d=devById(nd.deviceId);if(!d)return;if(!d.ip){toast(`${d.name} no tiene IP registrada; agrégala con Editar equipo`);return;}copyIp(d);}});
+svg.addEventListener('dblclick',e=>{const n=e.target.closest('[data-node]');const nid=n?n.dataset.node:(ui.lastDown&&Date.now()-ui.lastDown.t<700?ui.lastDown.id:null);if(!nid)return;const nd=getDiag(ui.folder).nodes.find(x=>x.id===nid);if(nd&&!nd.deviceId){setTimeout(()=>$('#nTxt')?.focus(),20);}else if(nd){const d=devById(nd.deviceId);if(!d)return;if(!d.ip){toast(`${d.name} no tiene IP registrada; agrégala con Editar equipo`);return;}copyIp(d);}});
 function copyIp(d){const ok=()=>toast(`IP de ${d.name} copiada: ${d.ip}`);
   try{navigator.clipboard.writeText(d.ip).then(ok,fb);}catch(e){fb();}
   function fb(){const ta=document.createElement('textarea');ta.value=d.ip;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){toast('No se pudo copiar: '+d.ip);}ta.remove();}}
