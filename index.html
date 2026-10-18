@@ -1061,6 +1061,7 @@ function exampleNote(){
   return S.meta.example?`<div class="note"><span><b>Datos de ejemplo.</b> Clientes y equipos ficticios para que pruebes el flujo. Prueba el análisis de impacto en <span class="mono">AGG-GPE-02 · XGE0/0/5</span>.</span><div><button class="btn sm" data-act="wipe">Empezar vacío</button></div></div>`:'';
 }
 function sideClients(){
+  const inMap=ui.folder===MAP,allD=inMap?diagFids():[],msel=new Set(inMap?mapSel():[]);
   const hitF=new Set(),incF=new Set();
   activeIncs().forEach(inc=>incAffect(inc).fids.forEach(fid=>pathOf(fid).forEach(f=>incF.add(f.id))));
   if(ui.impact)impactOf(ui.impact.dev,ui.impact.port).forEach(i=>pathOf(i.fid).forEach(f=>hitF.add(f.id)));
@@ -1069,17 +1070,14 @@ function sideClients(){
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
       return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="${f.kind==='cliente'||f.kind==='sitio'?'Clic para abrir o cerrar · arrastra para mover':'Clic para abrir el diagrama · arrastra para mover'}">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
-        ${ui.cmpMode?`<input type="checkbox" class="cmpk" data-cmp="${f.id}"${ui.cmp?.has(f.id)?' checked':''} title="Incluir en la comparación">`:''}<span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
+        ${inMap?(()=>{const ds=subtree(f.id).filter(x=>allD.includes(x)),on=ds.filter(x=>msel.has(x)).length;return ds.length?`<input type="checkbox" class="cmpk" data-mapf="${f.id}"${on===ds.length?' checked':''}${on&&on<ds.length?' data-ind="1"':''} title="Ver en el mapa">`:`<input type="checkbox" class="cmpk" disabled title="Sin diagramas con equipos">`;})():''}${inMap&&allD.includes(f.id)?`<span class="dotc" style="background:${svcColor(f.id)};width:8px;height:8px;border-radius:50%;flex:none"></span>`:''}<span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${(f.alsoIn||[]).length?`<span title="Línea privada: también en ${esc(f.alsoIn.map(x=>folById(x)?.name).filter(Boolean).join(', '))}" style="color:var(--accent);font-size:12px">↔</span>`:''}${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
-        <span class="ra">${f.kind!=='servicio'&&f.kind!=='carpeta'?`<button data-mapof="${f.id}" title="Ver en el mapa todos los diagramas de ${esc(f.name)}">${MAPICO}</button>`:''}<button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button></span>
+        <span class="ra">${inMap&&allD.includes(f.id)?`<button data-openmap="${f.id}" title="Abrir este diagrama">↗</button>`:''}${f.kind!=='servicio'&&f.kind!=='carpeta'?`<button data-mapof="${f.id}" title="Ver en el mapa todos los diagramas de ${esc(f.name)}">${MAPICO}</button>`:''}${inMap?'':`<button data-addchild="${f.id}" title="Agregar ${esc(KINDS[CHILD_KIND[f.kind]])}">+</button><button data-editf="${f.id}" title="Renombrar o eliminar">⋯</button>`}</span>
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
   const tree=branch(null);
-  const cmpN=ui.cmp?.size||0,cmpD=cmpN?[...new Set([...ui.cmp].flatMap(subDiags))].length:0;
-  const cmpBar=ui.cmpMode?`<div class="cmpBar"><span><b>Comparar en el mapa.</b> Marca uno o más clientes, sitios o servicios (de clientes distintos si quieres) para ver qué infraestructura comparten.</span>
-    <span>${cmpN?`${cmpN} seleccionado${cmpN===1?'':'s'} · ${cmpD} diagrama${cmpD===1?'':'s'}`:'Nada seleccionado'}</span>
-    <div class="bb"><button class="btn sm pri" data-act="cmpGo"${cmpD?'':' disabled'}>${MAPICO} Ver juntos en el mapa</button><button class="btn sm" data-act="cmpClear">Limpiar</button><button class="btn sm" data-act="cmpMode">Cerrar</button></div></div>`:'';
+  const mapPanel=inMap?mapPanelHTML():'';
   return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="newClient">+ Cliente</button></div>
-    <div class="treeTools"><button class="btn sm" data-act="mapAllTree" title="Mapa general: todos los clientes, sitios y servicios juntos">${MAPICO} Mapa</button><button class="btn sm${ui.cmpMode?' pri':''}" data-act="cmpMode" title="Elige varios clientes, sitios o servicios y velos juntos en el mapa">☑ Comparar</button><span style="flex:1"></span><button class="btn sm" data-act="treeCollapse" title="Compactar todo el árbol">⊟</button><button class="btn sm" data-act="treeExpand" title="Desplegar todo el árbol">⊞</button></div>`+cmpBar+
+    <div class="treeTools">${inMap?`<button class="btn sm pri" data-act="mapExit" title="Salir del mapa general">✕ Salir del mapa</button>`:`<button class="btn sm" data-act="mapAllTree" title="Mapa general: todos los clientes, sitios y servicios juntos">${MAPICO} Mapa</button><button class="btn sm" data-act="cmpMode" title="Abre el mapa vacío para que marques en este árbol qué clientes, sitios o servicios ver juntos">☑ Comparar</button>`}<span style="flex:1"></span><button class="btn sm" data-act="treeCollapse" title="Compactar todo el árbol">⊟</button><button class="btn sm" data-act="treeExpand" title="Desplegar todo el árbol">⊞</button></div>`+mapPanel+
     (tree?tree+`<div class="dropRoot" data-froot="1" ${ui.dragF?'':'hidden'}>Suelta aquí para dejarlo en el nivel principal</div>`:'')+(tree?'':`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
 }
 function sideDevices(){
@@ -1611,8 +1609,21 @@ function layoutMap(N,E,LOC){
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 }
 function refreshMap(fitAfter){ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(fitAfter)requestAnimationFrame(fit);}
-function openMap(){ui.view='diagram';const first=ui.folder!==MAP;if(first&&ui.folder)ui.prevFolder=ui.folder;ui.folder=MAP;ui.tab='mapa';document.body.classList.remove('showSide');
+function openMap(){ui.view='diagram';const first=ui.folder!==MAP;if(first&&ui.folder)ui.prevFolder=ui.folder;ui.folder=MAP;ui.tab='clientes';document.body.classList.remove('showSide');
   ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(first&&!ui.vps[MAP+'_seen']){ui.vps[MAP+'_seen']=1;requestAnimationFrame(fit);}}
+function mapPanelHTML(){const all=diagFids(),sel=new Set(mapSel());
+  const D=getDiag(MAP),shared=D.nodes.filter(n=>n.svcCount>1).sort((a,b)=>b.svcCount-a.svcCount||ncmp(devById(a.deviceId)?.name,devById(b.deviceId)?.name));
+  const cls=new Set(mapSel().map(f=>clientOf(f)?.id));
+  let box;
+  if(sel.size<2)box=`<div class="shareBox none"><span>${sel.size?'Marca otro cliente, sitio o servicio':'Marca en el árbol los clientes, sitios o servicios'} para ver qué equipos comparten.</span></div>`;
+  else if(!shared.length)box=`<div class="shareBox none"><b>No comparten ningún equipo.</b><span class="mapNote">Los ${sel.size} diagramas seleccionados son independientes.</span></div>`;
+  else box=`<div class="shareBox"><span><b class="big">${shared.length}</b> equipo${shared.length===1?'':'s'} compartido${shared.length===1?'':'s'} entre ${sel.size} diagramas de ${cls.size} cliente${cls.size===1?'':'s'}</span>
+    ${shared.map(n=>{const d=devById(n.deviceId);return `<button class="srow" data-mapnode="${n.id}">${gsvg(d?.type)}<span class="nm">${esc(d?.name)}</span><span class="c">×${n.svcCount}</span></button>`;}).join('')}</div>`;
+  return `<div class="cmpBar"><div style="display:flex;gap:6px;align-items:center"><b class="grow" style="flex:1">${MAPICO} Mapa: ${sel.size} de ${all.length} diagramas</b><button class="btn sm" data-act="mapAll">Todos</button><button class="btn sm" data-act="mapNone">Ninguno</button></div>
+    <span style="color:var(--muted)">Marca o desmarca en el árbol lo que quieres ver junto.</span>
+    ${box}
+    <label class="chk" style="font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
+    <div class="bb"><button class="btn sm" data-act="mapRelayout">Reacomodar automáticamente</button></div></div>`;}
 function sideMap(){
   const all=diagFids(),sel=new Set(mapSel());
   if(!all.length)return `<p class="sub" style="color:var(--muted)">Todavía no hay diagramas con equipos. Cuando tengas servicios dibujados, aquí podrás verlos juntos.</p>`;
@@ -2731,9 +2742,11 @@ document.addEventListener('click',e=>{
   const rcl=t.closest('[data-rkcli]');if(rcl){openFolder(rcl.dataset.rkcli);return;}
   const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
   const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
+  const omp=t.closest('[data-openmap]');if(omp){e.stopPropagation();openFolder(omp.dataset.openmap);return;}
   const mof=t.closest('[data-mapof]');if(mof){e.stopPropagation();const f=folById(mof.dataset.mapof);mapOf(subDiags(mof.dataset.mapof),f?`Mapa de ${f.name}`:'');return;}
-  const cmk=t.closest('[data-cmp]');if(cmk){e.stopPropagation();ui.cmp=ui.cmp||new Set();const id=cmk.dataset.cmp;if(cmk.checked)ui.cmp.add(id);else ui.cmp.delete(id);renderSide();return;}
-  const op0=t.closest('[data-open]');if(op0&&op0.matches('.row[data-fdrag]')){const f=folById(op0.dataset.open);if(f&&(f.kind==='cliente'||f.kind==='sitio')){e.preventDefault();const id=f.id;if(!kids(id).length){toast(`${f.name} todavía no tiene ${f.kind==='cliente'?'sitios':'servicios'}; agrégalos con el botón +`);return;}ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}}
+  if(t.matches&&t.matches('.row [data-mapf]')){e.stopPropagation();return;}
+  const op0=t.closest('[data-open]');if(op0&&op0.matches('.row[data-fdrag]')&&ui.folder===MAP&&!t.closest('.ra')){const f=folById(op0.dataset.open);if(f&&f.kind!=='cliente'&&f.kind!=='sitio'){e.preventDefault();const cb=op0.querySelector('[data-mapf]');if(cb){cb.checked=!cb.checked;cb.dispatchEvent(new Event('change',{bubbles:true}));}return;}}
+  if(op0&&op0.matches('.row[data-fdrag]')){const f=folById(op0.dataset.open);if(f&&(f.kind==='cliente'||f.kind==='sitio')){e.preventDefault();const id=f.id;if(!kids(id).length){toast(`${f.name} todavía no tiene ${f.kind==='cliente'?'sitios':'servicios'}; agrégalos con el botón +`);return;}ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}}
   const op=t.closest('[data-open]');if(op){e.preventDefault();sres.hidden=true;openFolder(op.dataset.open);return;}
   const dv=t.closest('[data-dev]');if(dv){devModal(dv.dataset.dev);return;}
   const sn=t.closest('[data-selnode]');if(sn){const n=getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
@@ -2771,9 +2784,8 @@ document.addEventListener('click',e=>{
     case 'devPickClear':ui.devPick=new Set();renderView();break;
     case 'toTree':ui.tab='clientes';renderSide();break;
     case 'mapAllTree':mapOf(null);break;
-    case 'cmpMode':ui.cmpMode=!ui.cmpMode;if(!ui.cmp)ui.cmp=new Set();renderSide();break;
-    case 'cmpClear':ui.cmp=new Set();renderSide();break;
-    case 'cmpGo':{const ids=[...(ui.cmp||[])];mapOf(ids.flatMap(subDiags),'Activa «Resaltar solo lo compartido» para ver lo que tienen en común');break;}
+    case 'cmpMode':S.meta.mapSel=[];save(false);if(ui.folder===MAP)refreshMap(false);else openMap();toast('Marca en el árbol los clientes, sitios o servicios que quieres comparar');break;
+    case 'mapExit':{const pf=ui.prevFolder&&folById(ui.prevFolder)?ui.prevFolder:null;ui.tab='clientes';if(pf)openFolder(pf);else{ui.folder=null;ui.sel=null;renderAll();}break;}
     case 'treeCollapse':S.folders.forEach(f=>{if(kids(f.id).length)ui.collapsed.add(f.id);});renderSide();break;
     case 'treeExpand':ui.collapsed.clear();renderSide();break;
     case 'addTxt':ui.dropAt=null;addText();break;
