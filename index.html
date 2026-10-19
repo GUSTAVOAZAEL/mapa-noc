@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mapa NOC</title>
+<title>NOCout</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Cpath%20d%3D%22M11%2033%20L22%2015%20L31.5%2029%22%20fill%3D%22none%22%20stroke%3D%22%230A6C87%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%2211%22%20cy%3D%2233%22%20r%3D%225%22%20fill%3D%22%230A6C87%22/%3E%3Ccircle%20cx%3D%2222%22%20cy%3D%2215%22%20r%3D%225%22%20fill%3D%22%230A6C87%22/%3E%3Cpath%20d%3D%22M34.0%2023.0L35.4%2028.2L40.0%2025.5L37.3%2030.1L42.5%2031.5L37.3%2032.9L40.0%2037.5L35.4%2034.8L34.0%2040.0L32.6%2034.8L28.0%2037.5L30.7%2032.9L25.5%2031.5L30.7%2030.1L28.0%2025.5L32.6%2028.2Z%22%20fill%3D%22%23E0662B%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -632,8 +633,8 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h12M3 9h12M3 13h12"/></svg>
     </button>
     <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="5" cy="11" r="2.6"/><circle cx="17" cy="5" r="2.6"/><circle cx="17" cy="17" r="2.6"/><path d="M7.4 10 14.6 6.2M7.4 12l7.2 3.8"/></svg>
-      Mapa NOC
+      <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 33 L22 15 L31.5 29" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="33" r="5" fill="var(--accent)"/><circle cx="22" cy="15" r="5" fill="var(--accent)"/><path d="M34.0 23.0L35.4 28.2L40.0 25.5L37.3 30.1L42.5 31.5L37.3 32.9L40.0 37.5L35.4 34.8L34.0 40.0L32.6 34.8L28.0 37.5L30.7 32.9L25.5 31.5L30.7 30.1L28.0 25.5L32.6 28.2Z" fill="#E0662B"/></svg>
+      <span>NOC<span style="color:var(--accent)">out</span></span>
     </div>
     <div class="viewSeg" role="tablist" aria-label="Vista">
       <button data-view="clients" title="Clientes en tarjetas"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.2"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.2"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.2"/></svg><span>Clientes</span></button>
@@ -2096,7 +2097,7 @@ function renderInsp(){
   $('#insp').classList.toggle('idle',!ui.sel);
   if(ui.folder===MAP&&!ui.sel){el.innerHTML=mapInspector();return;}
   if(!D||!ui.sel){
-    if(!ui.folder){el.innerHTML=`<h3>Mapa NOC</h3><p class="sub">Selecciona un servicio para ver su diagrama.</p>`;return;}
+    if(!ui.folder){el.innerHTML=`<h3>NOCout</h3><p class="sub">Selecciona un servicio para ver su diagrama.</p>`;return;}
     const f=folById(ui.folder),devs=[...new Set(D.nodes.filter(n=>n.deviceId).map(n=>n.deviceId))].map(devById).filter(Boolean);
     el.innerHTML=`${suggestHTML(ui.folder,'insp')}
       <div><span class="lbl">${esc(KINDS[f?.kind]||'')}</span><h3>${esc(f?.name)}</h3></div>
@@ -2381,7 +2382,7 @@ async function getCap(name){try{if(window.claude&&window.claude.use)return await
 async function exportJSON(){
   const data=JSON.stringify({...S,meta:{...S.meta,exportedAt:new Date().toISOString()}},null,1);
   const owner=fold(S.meta.owner||'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  const filename=`mapa-noc${owner?'-'+owner:''}-${today()}.json`;
+  const filename=`nocout${owner?'-'+owner:''}-${today()}.json`;
   const done=()=>{S.meta.lastExport=today();S.meta.dirty=0;save(false);toast('Respaldo exportado');};
   if(window.claude){
     const dl=await getCap('downloads');
@@ -2410,7 +2411,7 @@ function importModal(){
 }
 $('#fileJson').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{askMerge(JSON.parse(r.result));}catch(err){modal('Archivo no válido','<p>No se pudo leer el archivo como JSON.</p>',[{l:'Cerrar'}]);}};r.readAsText(f);};
 function askMerge(inc){
-  if(!inc||!Array.isArray(inc.devices)||!Array.isArray(inc.folders)){modal('Archivo no válido','<p>El JSON no tiene el formato de Mapa NOC.</p>',[{l:'Cerrar'}]);return;}
+  if(!inc||!Array.isArray(inc.devices)||!Array.isArray(inc.folders)){modal('Archivo no válido','<p>El JSON no tiene el formato de NOCout (o Mapa NOC).</p>',[{l:'Cerrar'}]);return;}
   const who=inc.meta?.owner?` de <b>${esc(inc.meta.owner)}</b>`:'';
   modal('Importar datos',`<p>El archivo${who} trae <b>${inc.devices.length}</b> equipos, <b>${inc.folders.length}</b> carpetas y <b>${Object.keys(inc.diagrams||{}).length}</b> diagramas.</p>
     <div class="choice"><button data-m="merge"><b>Combinar con lo mío</b><span>Los equipos se empatan por IP o nombre. Agrega carpetas, diagramas y conexiones que no tengas; lo tuyo no se borra.</span></button>
