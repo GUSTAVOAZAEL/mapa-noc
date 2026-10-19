@@ -1154,7 +1154,7 @@ function renderCanvas(){
   if(fid===MAP&&ui.mapLOC)D.groups=mapGroups(D.nodes,ui.mapLOC);
   vpG.setAttribute('transform',`translate(${vp.x},${vp.y}) scale(${vp.k})`);
   const path=pathOf(fid);
-  if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.length} equipos</span>`;}
+  if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.filter(n=>n.deviceId).length} equipos${D.nodes.some(n=>n.el)?` · ${D.nodes.filter(n=>n.el).length} elementos`:''}</span>`;}
   else $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span>${esc(f.name)}</span><span>›</span>`).join('')+`<b>${esc(path.at(-1)?.name||'')}</b>`;
   // impacto en este diagrama
   let hit=null;
@@ -1327,7 +1327,7 @@ function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]))
   if(msgs.length)toast('Ubicación: '+msgs.join(' · '));}
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
-  if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.deviceId]={x:o.x,y:o.y};});save(false);}
+  if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.pk]={x:o.x,y:o.y};});save(false);}
   else if((g.kind==='node'||g.kind==='gresize')&&g.moved){const D=getDiag(ui.folder);if(!locAllOff()){if(g.kind==='node')placeAfterMove(D,g.orig);applyGroupPlaces(D);linkSiteDevs(D);fixLoc(D);}save();renderInsp();rc();}
   if(g.kind==='box'){const D=getDiag(ui.folder),x0=Math.min(g.x0,g.x),x1=Math.max(g.x0,g.x),y0=Math.min(g.y0,g.y),y1=Math.max(g.y0,g.y);
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
@@ -1527,8 +1527,10 @@ const svcChips=list=>`<div class="svcs">${list.map(f=>`<span class="svc" data-op
 function buildMap(){
   const fids=mapSel(),nodes=new Map(),edges=new Map();
   fids.forEach(fid=>{const D=S.diagrams[fid];if(!D)return;const nm={};
-    D.nodes.forEach(n=>{if(!n.deviceId||!devById(n.deviceId))return;nm[n.id]=n.deviceId;
-      if(!nodes.has(n.deviceId))nodes.set(n.deviceId,{id:'m_'+n.deviceId,deviceId:n.deviceId,x:0,y:0,svc:new Set(),orig:{x:n.x,y:n.y}});
+    D.nodes.forEach(n=>{
+      if(n.el){const k='x_'+fid+'_'+n.id;nm[n.id]=k;nodes.set(k,{id:'m_'+k,pk:k,el:true,label:n.label,sub:n.sub,icon:n.icon,shape:n.shape,color:n.color,notes:n.notes,srcFid:fid,srcId:n.id,x:0,y:0,svc:new Set([fid]),orig:{x:n.x,y:n.y}});return;}
+      if(!n.deviceId||!devById(n.deviceId))return;nm[n.id]=n.deviceId;
+      if(!nodes.has(n.deviceId))nodes.set(n.deviceId,{id:'m_'+n.deviceId,pk:n.deviceId,deviceId:n.deviceId,x:0,y:0,svc:new Set(),orig:{x:n.x,y:n.y}});
       nodes.get(n.deviceId).svc.add(fid);});
     D.edges.forEach(e=>{const a=nm[e.from],b=nm[e.to];if(!a||!b)return;
       const fw=a<b,k=fw?`${a}|${b}|${norm(e.fp)}|${norm(e.tp)}`:`${b}|${a}|${norm(e.tp)}|${norm(e.fp)}`;
@@ -1582,9 +1584,13 @@ function structLayout(N,LOC){
 }
 function layoutMap(N,E,LOC){
   S.mapPos=S.mapPos||{};const P=S.mapPos;
-  const free=N.filter(n=>!P[n.deviceId]);
-  N.forEach(n=>{if(P[n.deviceId]){n.x=P[n.deviceId].x;n.y=P[n.deviceId].y;}});
-  if(!free.length){if(resolveOverlap(N,()=>true,60)){N.forEach(n=>P[n.deviceId]={x:n.x,y:n.y});try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}return;}
+  N.forEach(n=>{if(P[n.pk]){n.x=P[n.pk].x;n.y=P[n.pk].y;}});
+  /* elementos nuevos: junto al equipo con el que se conectan, conservando su posición relativa del diagrama */
+  {const byId={};N.forEach(n=>byId[n.id]=n);let again=true,guard=0;while(again&&guard++<6){again=false;
+    N.forEach(n=>{if(!n.el||P[n.pk])return;const e=E.find(e=>(e.from===n.id&&P[byId[e.to]?.pk])||(e.to===n.id&&P[byId[e.from]?.pk]));
+      const a=e?byId[e.from===n.id?e.to:e.from]:N.filter(m=>m!==n&&P[m.pk]&&m.deviceId&&(m.svcList||[]).includes(n.srcFid)).sort((p,q)=>Math.hypot(p.orig.x-n.orig.x,p.orig.y-n.orig.y)-Math.hypot(q.orig.x-n.orig.x,q.orig.y-n.orig.y))[0];if(!a)return;n.x=Math.round((a.x+n.orig.x-a.orig.x)/8)*8;n.y=Math.round((a.y+n.orig.y-a.orig.y)/8)*8;P[n.pk]={x:n.x,y:n.y};n._new=1;again=true;});}}
+  const free=N.filter(n=>!P[n.pk]);
+  if(!free.length){if(resolveOverlap(N,n=>!!n._new||N.every(m=>!m._new),60)){N.forEach(n=>P[n.pk]={x:n.x,y:n.y});try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}return;}
   const idx={};N.forEach((n,i)=>idx[n.id]=i);
   let move=new Set(free.map(n=>n.id)),rects=[];
   const st=free.length===N.length&&LOC?structLayout(N,LOC):null;
@@ -1608,7 +1614,7 @@ function layoutMap(N,E,LOC){
   }
   free.forEach(n=>{n.x=Math.round(n.x/8)*8;n.y=Math.round(n.y/8)*8;});
   resolveOverlap(N,n=>move.has(n.id)||!st);
-  N.forEach(n=>{P[n.deviceId]={x:n.x,y:n.y};});
+  N.forEach(n=>{P[n.pk]={x:n.x,y:n.y};});
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 }
 function refreshMap(fitAfter){ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(fitAfter)requestAnimationFrame(fit);}
@@ -1652,7 +1658,7 @@ function sideMap(){
 function mapInspector(){
   const D=getDiag(MAP),M=mapSel(),sh=D.nodes.filter(n=>n.svcCount>1).length;
   return `<div><span class="lbl">Vista combinada</span><h3>Mapa general</h3></div>
-    <dl class="kv"><dt>Diagramas</dt><dd>${M.length}</dd><dt>Equipos</dt><dd>${D.nodes.length}</dd><dt>Compartidos</dt><dd>${sh}</dd><dt>Conexiones</dt><dd>${D.edges.length}</dd></dl>
+    <dl class="kv"><dt>Diagramas</dt><dd>${M.length}</dd><dt>Equipos</dt><dd>${D.nodes.filter(n=>n.deviceId).length}</dd>${D.nodes.some(n=>n.el)?`<dt>Elementos</dt><dd>${D.nodes.filter(n=>n.el).length}</dd>`:''}<dt>Compartidos</dt><dd>${sh}</dd><dt>Conexiones</dt><dd>${D.edges.length}</dd></dl>
     <div class="acc"><span class="lbl">Leyenda</span>${svcChips(M)}</div>
     <p class="sub" style="margin:0">Los equipos con número están en varios diagramas. Elige qué clientes o servicios ver en el panel de la izquierda. Este mapa es de solo lectura: para editar, abre el diagrama del servicio.</p>`;
 }
@@ -2124,6 +2130,11 @@ function renderInsp(){
   }
   if(ui.sel.t==='node'){
     const n=D.nodes.find(x=>x.id===ui.sel.id);if(!n){ui.sel=null;return renderInsp();}
+    if(n.el&&ui.folder===MAP){
+      el.innerHTML=`${close}<span class="lbl">Elemento sin inventario</span><h3 style="margin:0">${esc(n.label||'Elemento')}</h3>${n.sub?`<div class="sub">${esc(n.sub)}</div>`:''}
+        ${n.notes?`<p style="margin:0;white-space:pre-wrap">${esc(n.notes)}</p>`:''}
+        <div class="acc"><span class="lbl">Está en el diagrama</span>${svcChips(n.svcList)}</div>
+        <p class="sub" style="margin:0">Para editarlo, abre su diagrama.</p>`;return;}
     if(n.el){
       el.innerHTML=`${close}<span class="lbl">Elemento sin inventario</span>
         <div class="fld"><span class="lbl">Nombre</span><input class="inp" id="elLabel" value="${esc(n.label||'')}" placeholder="Caja de empalme 12"></div>
@@ -2766,7 +2777,7 @@ document.addEventListener('click',e=>{
     case 'incFromSheet':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
     case 'mapAll':S.meta.mapSel=null;save(false);refreshMap(true);break;
     case 'mapNone':S.meta.mapSel=[];save(false);refreshMap(false);break;
-    case 'mapRelayout':{const D=getDiag(MAP);S.mapPos=S.mapPos||{};D.nodes.forEach(n=>delete S.mapPos[n.deviceId]);save(false);refreshMap(true);break;}
+    case 'mapRelayout':{const D=getDiag(MAP);S.mapPos=S.mapPos||{};D.nodes.forEach(n=>delete S.mapPos[n.pk]);save(false);refreshMap(true);break;}
     case 'addDev':ui.addFrom=null;ui.dropAt=null;pickDevModal();break;
     case 'blankDev':$('#plusMenu').hidden=true;ui.addFrom=null;ui.dropAt=ui.blankAt;pickDevModal();break;
     case 'blankEl':$('#plusMenu').hidden=true;ui.dropAt=ui.blankAt;addElement(null);break;

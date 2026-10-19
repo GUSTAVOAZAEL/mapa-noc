@@ -65,6 +65,7 @@ El mapa general se maneja desde el mismo árbol de clientes, sin cambiar el pane
 - **Resaltar solo lo compartido** atenúa todo lo demás.
 - **Mostrar ubicaciones** dibuja los edificios, salas, gabinetes y racks que capturaste en tus diagramas, unidos y anidados igual que en *Ubicación física*. Tocar el título de una ubicación abre su detalle.
 - Al seleccionar un equipo ves en qué diagramas aparece y puedes abrirlos. Impacto e incidencias también se marcan en el mapa.
+- Los **elementos sin inventario** (LAN del cliente, caja de empalme, splitter, poste…) también aparecen en el mapa, con sus líneas. Cada uno es propio de su diagrama, así que no se cuentan como compartidos. La primera vez se colocan junto al equipo con el que se conectan (o cerca de los equipos de su diagrama) y después se quedan donde los acomodes. Al darles clic ves en qué diagrama están.
 - Puedes arrastrar los equipos para acomodar el mapa; esa posición se guarda aparte y no cambia tus diagramas.
 - El mapa es de solo lectura: para agregar o cambiar conexiones, abre el diagrama del servicio.
 
