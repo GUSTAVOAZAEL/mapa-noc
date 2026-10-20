@@ -225,7 +225,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .edge.hit .pl rect{stroke:var(--hit);fill:var(--hit-soft)}
 .edge.sel .pl rect{stroke:var(--accent)}
 .ml text{font:italic 11px var(--f-ui);fill:var(--muted)}
-.tmp{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4}
+.tmp{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
 
 /* inspector */
 .insp{overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
@@ -1270,7 +1270,7 @@ function fit(){
   const pad=50,k=Math.max(.25,Math.min(1.4,Math.min((r.width-pad*2)/(x1-x0||1),(r.height-pad*2-40)/(y1-y0||1))));
   vp.k=k;vp.x=(r.width-(x1-x0)*k)/2-x0*k;vp.y=(r.height-(y1-y0)*k)/2-y0*k+16;rc();
 }
-function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.2,Math.min(2.5,vp.k*f));vp.x=cx-(cx-vp.x)*k/vp.k;vp.y=cy-(cy-vp.y)*k/vp.k;vp.k=k;rc();}
+function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.08,Math.min(2.5,vp.k*f));vp.x=cx-(cx-vp.x)*k/vp.k;vp.y=cy-(cy-vp.y)*k/vp.k;vp.k=k;rc();}
 
 svg.addEventListener('pointerdown',e=>{
   if(!ui.folder||e.button>0)return;
@@ -1334,6 +1334,12 @@ function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]))
     if(!dv.place){const c=ctr(n,n.x,n.y),hit=before.filter(A=>inR(A,A.x,A.y,c)).sort((a,b)=>PKINDS.indexOf(b.kind)-PKINDS.indexOf(a.kind))[0];if(hit){dv.place=hit.placeId;msgs.push(`${dv.name} → ${placePath(hit.placeId)}`);}}
   });
   if(msgs.length)toast('Ubicación: '+msgs.join(' · '));}
+/* equipo bajo el puntero, por geometría y con margen (no depende de qué elemento SVG quede encima) */
+function nodeAtPoint(e,skip){const D=getDiag(ui.folder);if(!D)return null;const p=toWorld(e),m=12/getVp().k;let best=null,bd=1e9;
+  for(let i=D.nodes.length-1;i>=0;i--){const n=D.nodes[i];if(n.id===skip)continue;const d=dims(n),x0=n.x-m,y0=n.y-m,x1=n.x+d.w+m,y1=n.y+d.h+m;
+    if(p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1){const inside=p.x>=n.x&&p.x<=n.x+d.w&&p.y>=n.y&&p.y<=n.y+d.h;if(inside)return n.id;
+      const dist=Math.min(Math.abs(p.x-n.x),Math.abs(p.x-n.x-d.w),Math.abs(p.y-n.y),Math.abs(p.y-n.y-d.h));if(dist<bd){bd=dist;best=n.id;}}}
+  return best;}
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
   if(ui.folder===MAP&&g.kind==='node'&&!g.moved&&g.mapG){const G=g.mapG;locState={dev:null,q:G.label};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}
@@ -1343,11 +1349,12 @@ function endDrag(e){
     ui.multi=new Set(D.nodes.filter(n=>{const d=dims(n);return n.x<x1&&n.x+d.w>x0&&n.y<y1&&n.y+d.h>y0;}).map(n=>n.id));
     ui.sel=ui.multi.size>1?{t:'multi'}:ui.multi.size===1?{t:'node',id:[...ui.multi][0]}:null;renderInsp();}
   if(g.kind==='reend'){
-    const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-node]');
-    if(t)reconnect(g.eid,g.end,t.dataset.node);
+    const tid=nodeAtPoint(e);
+    if(tid)reconnect(g.eid,g.end,tid);else rc();
   }
   if(g.kind==='link'){
-    const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-node]');
+    const tid=nodeAtPoint(e,g.from),t=tid&&{dataset:{node:tid}};
+    if(!t)rc();
     if(t&&t.dataset.node!==g.from){
       const D=getDiag(ui.folder,true),a=D.nodes.find(n=>n.id===g.from),b=D.nodes.find(n=>n.id===t.dataset.node);
       const medium=((a?.deviceId||a?.el)&&(b?.deviceId||b?.el))?'fibra':'logico';
@@ -1358,6 +1365,21 @@ function endDrag(e){
   }
   rc();
 }
+/* zoom y desplazamiento con dos dedos (tablet / celular) */
+const TP=new Map();
+svg.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;TP.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(TP.size===2&&ui.folder){e.stopImmediatePropagation();e.preventDefault();const g=ui.drag;
+    if(g&&g.kind==='node'&&g.orig)g.orig.forEach(([o,x,y])=>{o.x=x;o.y=y;});
+    ui.drag=null;svg.classList.remove('panning');ui.lastBlank=null;ui.lastDown=null;
+    const [a,b]=[...TP.values()],r=svg.getBoundingClientRect(),vp=getVp();
+    ui.pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top,k:vp.k,vx:vp.x,vy:vp.y};
+    try{svg.setPointerCapture(e.pointerId);}catch(err){}rc();}},true);
+svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!TP.has(e.pointerId))return;TP.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(!ui.pinch||TP.size<2)return;e.stopImmediatePropagation();const P=ui.pinch,[a,b]=[...TP.values()],r=svg.getBoundingClientRect(),vp=getVp();
+  const k=Math.max(.08,Math.min(2.5,P.k*(Math.hypot(a.x-b.x,a.y-b.y)/P.d))),mx=(a.x+b.x)/2-r.left,my=(a.y+b.y)/2-r.top;
+  vp.k=k;vp.x=mx-(P.mx-P.vx)*k/P.k;vp.y=my-(P.my-P.vy)*k/P.k;rc();},true);
+const tpEnd=e=>{if(e.pointerType!=='touch')return;TP.delete(e.pointerId);if(ui.pinch){e.stopImmediatePropagation();if(TP.size<2){ui.pinch=null;ui.drag=null;ui.pinchEnd=Date.now();}}};
+svg.addEventListener('pointerup',tpEnd,true);svg.addEventListener('pointercancel',tpEnd,true);
 svg.addEventListener('pointerup',endDrag);svg.addEventListener('pointercancel',endDrag);
 svg.addEventListener('wheel',e=>{if(!ui.folder)return;e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
 function inlineEdit(n){const old=$('#inEd');if(old)old.remove();
@@ -1396,7 +1418,7 @@ $('#autoLocTog').onclick=e=>{e.stopPropagation();let p=$('#locPop');if(p){p.remo
 document.addEventListener('click',e=>{const p=$('#locPop');if(p&&!p.contains(e.target)&&e.target.id!=='autoLocTog')p.remove();},true);
 $('#layerSel').onchange=e=>{S.meta.layer=e.target.value;save(false);rc();};
 setInterval(()=>{if(activeIncs().length&&$('#modal').hidden&&!$('#pane').contains(document.activeElement)){renderSide();rc();}},60000);
-function blankMenu(e,pt){const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();ui.blankAt={x:pt.x,y:pt.y};
+function blankMenu(e,pt){ui.menuAt=Date.now();const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();ui.blankAt={x:pt.x,y:pt.y};
   m.innerHTML=`<button data-act="blankDev">${gsvg('Switch')}<span>Equipo<small>Del inventario o uno nuevo, en este punto</small></span></button>
     <button data-act="blankEl">${gsvg('Mufla')}<span>Elemento<small>Caja de empalme, splitter, poste… sin inventario</small></span></button>
     <button data-act="blankTxt"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h12M9 4v11"/></svg><span>Texto<small>Nota en este punto</small></span></button>
@@ -1502,7 +1524,7 @@ function reconnect(eid,end,nodeId){
   toast('Conexión movida a '+(nNew?.deviceId?devById(nNew.deviceId)?.name:'texto'));
 }
 function openPlusMenu(nodeId,ev){
-  const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();
+  const m=$('#plusMenu'),wr=m.parentElement.getBoundingClientRect();ui.menuAt=Date.now();
   ui.plusNode=nodeId;
   const D=getDiag(ui.folder),n=D.nodes.find(x=>x.id===nodeId);
   if(!(ui.multi?.has(nodeId)))ui.multi=new Set([nodeId]);
@@ -1519,6 +1541,7 @@ function openPlusMenu(nodeId,ev){
   const x=Math.min(ev.clientX-wr.left+10,wr.width-m.offsetWidth-6),y=Math.min(ev.clientY-wr.top+10,wr.height-m.offsetHeight-6);
   m.style.left=Math.max(6,x)+'px';m.style.top=Math.max(6,y)+'px';
 }
+$('#plusMenu').addEventListener('click',e=>{if(Date.now()-(ui.menuAt||0)<450){e.stopPropagation();e.preventDefault();}},true);
 document.addEventListener('pointerdown',e=>{const m=$('#plusMenu');if(!m.hidden&&!e.target.closest('#plusMenu')&&!e.target.closest('[data-plus]'))m.hidden=true;},true);
 
 
