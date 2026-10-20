@@ -155,7 +155,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .inEd{position:fixed;z-index:70;resize:none;overflow:hidden;border:1.5px solid var(--accent);border-radius:5px;background:var(--panel);color:var(--ink);font-family:var(--f-ui);padding:1px 4px;box-shadow:0 4px 14px rgba(0,0,0,.15);outline:none;white-space:pre}
 #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block;background:var(--panel-2)}
 #cv.panning{cursor:grabbing}
-.hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;pointer-events:none;max-width:calc(100% - 70px)}
+.hint{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;pointer-events:none;max-width:calc(100% - 190px)}
 .banners{position:absolute;left:10px;top:10px;right:10px;display:grid;gap:6px;pointer-events:none}
 .banners>*{pointer-events:auto}
 .incBanner{display:flex;gap:10px;align-items:center;background:var(--danger-soft);border:1px solid var(--danger);border-radius:6px;padding:6px 8px 6px 12px;font-size:13px;flex-wrap:wrap}
@@ -174,7 +174,9 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .empty{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;padding:20px}
 .empty div{max-width:340px;text-align:center;color:var(--muted);display:grid;gap:8px}
 .empty h3{margin:0;color:var(--ink);font:600 18px var(--f-cond)}
-.zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+.zoom{position:absolute;right:10px;bottom:10px;display:flex;align-items:flex-end;gap:6px}
+.zoom .zcol{display:flex;flex-direction:column;gap:4px}
+.zoom #tFit{background:var(--panel)}
 
 /* svg */
 .node .nb{fill:var(--node);stroke:var(--line);stroke-width:1.2}
@@ -678,7 +680,6 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
         <button class="btn sm mOnly" data-act="addEl">+ Elemento</button>
         <button class="btn sm mOnly" data-act="addGrp">+ Grupo</button>
         <button class="btn sm" id="bUndo" title="Deshacer (Ctrl+Z)" disabled>↶</button><button class="btn sm" id="bRedo" title="Rehacer (Ctrl+Y)" disabled>↷</button>
-        <button class="btn sm" id="tFit">Ajustar vista</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
         <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
         <button class="btn sm pillTog" id="autoLocTog" title="Mostrar u ocultar todos los grupos de ubicación (ciudad, edificio, sitio, piso, sala, gabinete, rack)">📍 Ubicaciones</button>
@@ -703,8 +704,9 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
       <div class="impBanner impCard" id="impBanner" hidden></div>
       <div class="hint" id="hint">Arrastra el punto <b>●</b> de un equipo hacia otro para conectarlos · Shift+clic o Shift+arrastrar selecciona varios · rueda para zoom</div>
       <div class="zoom">
-        <button class="btn ic sm" id="zIn" aria-label="Acercar">+</button>
-        <button class="btn ic sm" id="zOut" aria-label="Alejar">−</button>
+        <button class="btn sm" id="tFit" title="Ajustar vista para ver todo el diagrama">⤢ Ajustar vista</button>
+        <div class="zcol"><button class="btn ic sm" id="zIn" aria-label="Acercar">+</button>
+        <button class="btn ic sm" id="zOut" aria-label="Alejar">−</button></div>
       </div>
     </div>
   </main>
