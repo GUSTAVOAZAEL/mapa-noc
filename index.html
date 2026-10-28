@@ -51,6 +51,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sres button:hover,.sres button.on{background:var(--panel-2)}
 .sres .k{font:500 10.5px/1 var(--f-ui);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:58px;flex:none}
 .sres .sub{color:var(--muted);font-size:12px;margin-left:auto;font-family:var(--f-mono)}
+.sydot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:none}
+#bSync[data-st="ok"] .sydot{display:inline-block;background:#2E9E5B}#bSync[data-st="busy"] .sydot,#bSync[data-st="pull"] .sydot,#bSync[data-st="wait"] .sydot{display:inline-block;background:var(--hit)}#bSync[data-st="err"] .sydot{display:inline-block;background:var(--danger)}
+.syUser{display:flex;gap:10px;align-items:center;margin-bottom:10px}.syUser img{width:40px;height:40px;border-radius:50%}.syUser div{display:grid}.syUser span{color:var(--muted);font-size:12.5px}
+.choice button span{color:var(--muted);font-size:12.5px}
 .status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .status i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
 .status.warn i{background:var(--hit)}
@@ -660,6 +664,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
     </div>
     <div class="status" id="status"><i></i><span></span></div>
     <div class="acts">
+      <button class="btn" id="bSync" data-st="off"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 12.5h7a3 3 0 0 0 .4-6 4 4 0 0 0-7.6-.9A3.5 3.5 0 0 0 4.5 12.5z"/></svg><i class="sydot"></i><span class="lb">Equipo</span></button>
       <button class="btn" id="bImport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m-3-3 3 3 3-3M3 12v2h10v-2"/></svg><span class="lb">Importar</span></button>
       <button class="btn pri" id="bExport"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 10V2M5 5l3-3 3 3M3 12v2h10v-2"/></svg><span class="lb">Exportar JSON</span></button>
       <button class="btn ic" id="bSettings" aria-label="Ajustes"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
@@ -992,6 +997,120 @@ function load(){try{const r=localStorage.getItem(LS);if(r){const d=JSON.parse(r)
 var S_READY=false;
 let S=ensureTypes(load()||sample());
 let saveT=null,saveOk=true;
+/* ---------- sincronización con GitHub (repositorio privado) ---------- */
+const SYNC_LS='nocout-sync';
+const SHARED_KEYS=['devices','folders','diagrams','types','incidents','places','elTypes','mapPos'];
+const SY={cfg:null,base:null,sha:null,state:'off',msg:'',busy:false,pushT:null,pollT:null,lastAt:null,lastBy:null,applying:false};
+function syCfgLoad(){try{const c=JSON.parse(localStorage.getItem(SYNC_LS)||'null');if(c&&c.repo&&c.token){SY.cfg=c;SY.sha=c.sha||null;try{SY.base=c.base?JSON.parse(c.base):null;}catch(e){SY.base=null;}}}catch(e){}}
+function syCfgSave(){if(!SY.cfg){try{localStorage.removeItem(SYNC_LS);}catch(e){}return;}try{localStorage.setItem(SYNC_LS,JSON.stringify({...SY.cfg,sha:SY.sha,base:SY.base?JSON.stringify(SY.base):null}));}catch(e){}}
+const syShared=d=>{const o={};SHARED_KEYS.forEach(k=>{if(d[k]!==undefined)o[k]=JSON.parse(JSON.stringify(d[k]));});return o;};
+const b64e=str=>{const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);};
+const b64d=b=>new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\n/g,'')),c=>c.charCodeAt(0)));
+async function gh(path,opt={}){const c=SY.cfg;const r=await fetch('https://api.github.com'+path,{...opt,headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+c.token,'X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{}),...(opt.headers||{})},cache:'no-store'});
+  let j=null;try{j=await r.json();}catch(e){}if(!r.ok){const er=new Error(j?.message||('HTTP '+r.status));er.status=r.status;throw er;}return j;}
+const syFile=()=>`/repos/${SY.cfg.repo}/contents/${encodeURIComponent(SY.cfg.path||'nocout.json').replace(/%2F/g,'/')}`;
+async function syGet(){let j;try{j=await gh(syFile()+'?ref='+encodeURIComponent(SY.cfg.branch||'main'));}catch(e){if(e.status===404)return null;throw e;}
+  let txt=j.content?b64d(j.content):'';if(!txt&&j.size>0){const bl=await gh(`/repos/${SY.cfg.repo}/git/blobs/${j.sha}`);txt=b64d(bl.content);}
+  return{sha:j.sha,data:JSON.parse(txt)};}
+async function syLastAuthor(){try{const c=await gh(`/repos/${SY.cfg.repo}/commits?path=${encodeURIComponent(SY.cfg.path||'nocout.json')}&sha=${encodeURIComponent(SY.cfg.branch||'main')}&per_page=1`);const x=c[0];return x?{by:x.author?.login||x.commit?.author?.name||'',at:x.commit?.author?.date}:null;}catch(e){return null;}}
+/* fusión de 3 vías por entidad (id) y por campo */
+const jeq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function m3val(b,l,r){if(jeq(l,b))return r;if(jeq(r,b))return l;if(jeq(l,r))return l;
+  if(l&&r&&typeof l==='object'&&typeof r==='object'&&!Array.isArray(l)&&!Array.isArray(r)){const o={},ks=new Set([...Object.keys(l),...Object.keys(r),...Object.keys(b||{})]);
+    ks.forEach(k=>{const v=m3any(b?.[k],l[k],r[k]);if(v!==undefined)o[k]=v;});return o;}
+  return l===undefined?r:l;}
+function m3arr(b,l,r){b=b||[];l=l||[];r=r||[];const idOk=a=>a.every(x=>x&&typeof x==='object'&&x.id!=null);
+  if(!(idOk(b)&&idOk(l)&&idOk(r)))return m3val(b,l,r);
+  const B=new Map(b.map(x=>[x.id,x])),L=new Map(l.map(x=>[x.id,x])),R=new Map(r.map(x=>[x.id,x]));
+  const order=[...r.map(x=>x.id),...l.map(x=>x.id).filter(id=>!R.has(id))];const out=[];
+  order.forEach(id=>{const bv=B.get(id),lv=L.get(id),rv=R.get(id);let v;
+    if(bv&&!lv&&rv)v=jeq(rv,bv)?undefined:rv;else if(bv&&lv&&!rv)v=jeq(lv,bv)?undefined:lv;else v=m3val(bv,lv,rv);if(v!==undefined)out.push(v);});
+  return out;}
+function m3any(b,l,r){if(Array.isArray(l)||Array.isArray(r))return m3arr(Array.isArray(b)?b:[],Array.isArray(l)?l:[],Array.isArray(r)?r:[]);return m3val(b,l,r);}
+function m3obj(b,l,r){b=b||{};l=l||{};r=r||{};const o={};new Set([...Object.keys(l),...Object.keys(r)]).forEach(k=>{
+  const bv=b[k],lv=l[k],rv=r[k];if(bv!==undefined&&lv===undefined&&rv!==undefined){if(!jeq(rv,bv))o[k]=rv;return;}if(bv!==undefined&&rv===undefined&&lv!==undefined){if(!jeq(lv,bv))o[k]=lv;return;}
+  const v=k.startsWith('d')||typeof (lv??rv)!=='object'?m3any(bv,lv,rv):m3any(bv,lv,rv);if(v!==undefined)o[k]=v;});return o;}
+function syMerge(base,local,remote){const o={};SHARED_KEYS.forEach(k=>{const b=base?.[k],l=local[k],r=remote[k];
+  if(k==='diagrams'){o[k]={};const ks=new Set([...Object.keys(l||{}),...Object.keys(r||{})]);ks.forEach(fid=>{const bd=b?.[fid],ld=l?.[fid],rd=r?.[fid];
+      if(bd&&!ld&&rd){if(!jeq(bd,rd))o[k][fid]=rd;return;}if(bd&&ld&&!rd){if(!jeq(bd,ld))o[k][fid]=ld;return;}
+      const D={};['nodes','edges','groups'].forEach(z=>D[z]=m3arr(bd?.[z],ld?.[z],rd?.[z]));Object.keys({...(ld||{}),...(rd||{})}).forEach(z=>{if(!['nodes','edges','groups'].includes(z))D[z]=m3val(bd?.[z],ld?.[z],rd?.[z]);});o[k][fid]=D;});}
+  else if(k==='mapPos')o[k]=m3obj(b,l,r);
+  else o[k]=m3any(b,l,r);
+  if(o[k]===undefined)delete o[k];});return o;}
+function syApply(shared){SY.applying=true;shared=JSON.parse(JSON.stringify(shared));SHARED_KEYS.forEach(k=>{if(shared[k]!==undefined)S[k]=shared[k];});ensureTypes(S);
+  if(ui.folder&&ui.folder!==MAP&&!folById(ui.folder))ui.folder=null;if(ui.sel?.t==='node'&&!getDiag(ui.folder||'')?.nodes?.some(n=>n.id===ui.sel.id))ui.sel=null;
+  try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}if(typeof UNDO!=='undefined')UNDO.last=JSON.stringify(S);if(ui.folder===MAP)ui.mapD=buildMap();SY.applying=false;}
+function sySet(state,msg){SY.state=state;SY.msg=msg||'';syBadge();}
+function syBadge(){const b=$('#bSync');if(!b)return;const st=SY.cfg?SY.state:'off';b.dataset.st=st;
+  const tx={off:'Equipo',ok:'Sincronizado',busy:'Guardando…',pull:'Actualizando…',err:'Sin conexión',wait:'Cambios pendientes'}[st]||'Equipo';
+  b.querySelector('.lb').textContent=tx;b.title=SY.cfg?`Repositorio ${SY.cfg.repo}${SY.lastAt?' · última sincronización '+new Date(SY.lastAt).toLocaleTimeString():''}${SY.msg?'\n'+SY.msg:''}`:'Trabajar en equipo: sincroniza con un repositorio privado de GitHub';}
+function syEditing(){const a=document.activeElement;return !!(ui.drag||ui.pinch||(a&&a.matches&&a.matches('input,textarea,select,[contenteditable]')&&!a.matches('#q'))||!$('#modal').hidden);}
+async function syPull(silent){if(!SY.cfg||SY.busy)return;if(silent&&syEditing())return;SY.busy=true;if(!silent)sySet('pull');
+  try{const rem=await syGet();if(!rem){SY.busy=false;sySet('ok');return;}
+    if(rem.sha!==SY.sha){const local=syShared(S),merged=syMerge(SY.base||rem.data,local,rem.data);const localChanged=!jeq(syShared(S),SY.base||{});
+      const au=await syLastAuthor();syApply(merged);SY.base=rem.data;SY.sha=rem.sha;syCfgSave();renderAll();
+      if(au&&au.by&&au.by!==SY.cfg.login)toast(`Datos del equipo actualizados (último cambio de @${au.by})`);
+      if(!jeq(merged,rem.data)){SY.busy=false;syQueuePush(200);return;}}
+    SY.lastAt=Date.now();sySet(jeq(syShared(S),SY.base)?'ok':'wait');}
+  catch(e){sySet('err',e.message);}SY.busy=false;}
+async function syPush(){if(!SY.cfg)return;if(SY.busy){syQueuePush(1500);return;}const local=syShared(S);if(SY.base&&jeq(local,SY.base)){sySet('ok');return;}
+  const bd=(SY.base?.devices||[]).length,ld=(local.devices||[]).length;
+  if(bd>=5&&ld<bd*0.5&&!SY.okWipe){sySet('wait','Se detuvo la subida: se borrarían muchos equipos');
+    modal('¿Subir este cambio al equipo?',`<p>Con este cambio el repositorio pasaría de <b>${bd}</b> a <b>${ld}</b> equipos. Esto afectaría a todos tus compañeros.</p><p class="sub">Si fue un error (por ejemplo, cargaste el ejemplo o empezaste vacío), elige <b>Recuperar los del equipo</b>.</p>`,
+      [{l:'Recuperar los del equipo',f:async()=>{closeModal();syApply(SY.base);renderAll();sySet('ok');}},{l:'Sí, subir',k:'dan pri',f:()=>{closeModal();SY.okWipe=true;syPush().then(()=>{SY.okWipe=false;});}}]);return;}
+  SY.busy=true;sySet('busy');
+  for(let attempt=0;attempt<3;attempt++){
+    try{const body={message:`NOCout: cambios de ${SY.cfg.name||SY.cfg.login||'usuario'}`,content:b64e(JSON.stringify(syShared(S),null,1)),branch:SY.cfg.branch||'main'};if(SY.sha)body.sha=SY.sha;
+      const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');return;}
+    catch(e){if(e.status===409||e.status===422){try{const rem=await syGet();if(rem){const merged=syMerge(SY.base||rem.data,syShared(S),rem.data);syApply(merged);SY.base=rem.data;SY.sha=rem.sha;renderAll();continue;}}catch(e2){}}
+      SY.busy=false;sySet('err',e.message);return;}}
+  SY.busy=false;sySet('err','No se pudo guardar después de varios intentos');}
+function syQueuePush(ms){if(!SY.cfg)return;clearTimeout(SY.pushT);sySet('wait');SY.pushT=setTimeout(syPush,ms??2500);}
+function syStart(){clearInterval(SY.pollT);if(!SY.cfg){syBadge();return;}SY.pollT=setInterval(()=>{if(!document.hidden)syPull(true);},60000);syPull();}
+window.addEventListener('focus',()=>{if(SY.cfg)syPull(true);});
+window.addEventListener('online',()=>{if(SY.cfg)syPush();});
+function syncModal(){const c=SY.cfg||{repo:'',branch:'main',path:'nocout.json',token:''};
+  const connected=!!SY.cfg;
+  modal('Trabajar en equipo (GitHub)',connected?`
+    <div class="syUser">${c.avatar?`<img src="${esc(c.avatar)}" alt="">`:''}<div><b>${esc(c.name||c.login)}</b><span class="mono">@${esc(c.login)}</span></div></div>
+    <dl class="kv"><dt>Repositorio</dt><dd class="mono">${esc(c.repo)}</dd><dt>Archivo</dt><dd class="mono">${esc(c.path||'nocout.json')} · ${esc(c.branch||'main')}</dd><dt>Estado</dt><dd>${esc({ok:'Sincronizado',busy:'Guardando…',pull:'Actualizando…',err:'Sin conexión — '+SY.msg,wait:'Cambios pendientes de subir'}[SY.state]||'—')}</dd>${SY.lastAt?`<dt>Última vez</dt><dd>${new Date(SY.lastAt).toLocaleString()}</dd>`:''}</dl>
+    <p class="sub" style="margin:8px 0 0">Tus cambios se suben solos unos segundos después de hacerlos, y cada minuto se revisa si un compañero cambió algo. El historial completo (quién cambió qué y cuándo) está en GitHub.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" id="syNow">Sincronizar ahora</button><a class="btn sm" target="_blank" rel="noopener" href="https://github.com/${esc(c.repo)}/commits/${esc(c.branch||'main')}">Ver historial en GitHub ↗</a></div>`
+  :`<p class="sub" style="margin:0 0 10px">Guarda los datos en un <b>repositorio privado de GitHub</b> para que tú y tus compañeros vean y editen la misma información desde cualquier lugar. Solo entran las personas que agregues como colaboradores del repositorio.</p>
+    <div class="fld"><span class="lbl">Repositorio (dueño/nombre)</span><input class="inp mono" id="syRepo" placeholder="GUSTAVOAZAEL/nocout-datos" value="${esc(c.repo)}"></div>
+    <div class="fld"><span class="lbl">Tu token personal de GitHub</span><input class="inp mono" id="syTok" type="password" placeholder="github_pat_…" autocomplete="off"></div>
+    <details style="font-size:13px;margin:-4px 0 10px"><summary style="cursor:pointer;color:var(--accent)">¿Cómo saco mi token?</summary><ol style="margin:6px 0 0;padding-left:18px;display:grid;gap:4px">
+      <li>En GitHub: tu foto → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>
+      <li>Nombre: <i>NOCout</i>. Vencimiento: el que prefieras (por ejemplo 1 año).</li>
+      <li><b>Resource owner</b>: el dueño del repositorio (por ejemplo GUSTAVOAZAEL). <b>Repository access</b>: <i>Only select repositories</i> → elige el repositorio de NOCout.</li>
+      <li><b>Permissions → Repository permissions → Contents: Read and write</b>. Nada más.</li>
+      <li><b>Generate token</b>, cópialo y pégalo aquí. Se guarda solo en este navegador.</li></ol></details>
+    <details style="font-size:13px;margin:0 0 6px"><summary style="cursor:pointer;color:var(--muted)">Opciones avanzadas</summary><div class="two" style="margin-top:6px"><div class="fld"><span class="lbl">Rama</span><input class="inp mono" id="syBr" value="${esc(c.branch||'main')}"></div><div class="fld"><span class="lbl">Archivo</span><input class="inp mono" id="syPath" value="${esc(c.path||'nocout.json')}"></div></div></details>
+    <div id="syErr" class="err"></div>`,
+  connected?[{l:'Desconectar',k:'dan',f:()=>modal('Desconectar',`<p>Este navegador dejará de sincronizar. Tus datos se quedan aquí y los del equipo siguen en GitHub.</p>`,[{l:'Cancelar',f:syncModal},{l:'Desconectar',k:'dan pri',f:()=>{clearInterval(SY.pollT);SY.cfg=null;SY.base=null;SY.sha=null;syCfgSave();sySet('off');closeModal();toast('Sincronización desactivada en este navegador');}}])},{l:'Cerrar'}]
+  :[{l:'Cancelar'},{l:'Conectar',k:'pri',f:syConnect}]);
+  const n=$('#syNow');if(n)n.onclick=async()=>{await syPull();await syPush();syncModal();};}
+async function syConnect(){const repo=$('#syRepo').value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/$/,''),token=$('#syTok').value.trim(),err=$('#syErr');
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){err.textContent='Escribe el repositorio como dueño/nombre, por ejemplo GUSTAVOAZAEL/nocout-datos.';return;}
+  if(!token){err.textContent='Pega tu token personal.';return;}
+  const prev=SY.cfg;SY.cfg={repo,token,branch:$('#syBr').value.trim()||'main',path:$('#syPath').value.trim()||'nocout.json'};err.textContent='Verificando…';
+  try{const u=await gh('/user');SY.cfg.login=u.login;SY.cfg.name=u.name||u.login;SY.cfg.avatar=u.avatar_url;
+    const r=await gh('/repos/'+repo);if(!r.private&&!confirm('Ese repositorio es PÚBLICO: cualquiera podría ver los datos de tus clientes. ¿Continuar de todos modos?')){SY.cfg=prev;err.textContent='Usa un repositorio privado.';return;}
+    if(r.permissions&&!r.permissions.push){SY.cfg=prev;err.textContent='Tu token puede leer pero no escribir en ese repositorio. Revisa que tenga permiso Contents: Read and write y que seas colaborador.';return;}
+    const rem=await syGet();
+    if(!rem){SY.sha=null;SY.base=null;syCfgSave();
+      modal('Repositorio vacío',`<p>Todavía no hay datos de NOCout en <b>${esc(repo)}</b>. ¿Subo tus datos actuales para que sean la base del equipo?</p><p class="sub">${S.meta.example?'<b>Ojo:</b> ahora tienes los datos de ejemplo cargados.':''}</p>`,
+        [{l:'Cancelar',f:()=>{SY.cfg=prev;syCfgSave();closeModal();}},{l:'Subir mis datos',k:'pri',f:async()=>{closeModal();await syPush();syStart();toast('Datos subidos. Comparte el repositorio con tus compañeros.');}}]);return;}
+    const mine=syShared(S),same=jeq(mine,rem.data),hasMine=(S.devices||[]).length&&!S.meta.example;
+    const finish=(mode)=>{if(mode==='team'){syApply(rem.data);S.meta.example=false;}else{mergeData(JSON.parse(JSON.stringify({...rem.data,devices:rem.data.devices||[],folders:rem.data.folders||[]})));S.meta.example=false;try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+      SY.base=rem.data;SY.sha=rem.sha;syCfgSave();closeModal();renderAll();syStart();if(mode!=='team')syQueuePush(300);toast(`Conectado como @${SY.cfg.login}`);};
+    if(same||!hasMine){finish('team');return;}
+    modal('Ya hay datos del equipo',`<p>El repositorio ya tiene datos de NOCout (${(rem.data.devices||[]).length} equipos, ${(rem.data.folders||[]).filter(f=>f.kind==='cliente').length} clientes). Tú también tienes datos en este navegador.</p>
+      <div class="choice" style="display:grid;gap:8px"><button data-sy="team"><b>Usar los del equipo</b><span>Reemplaza lo de este navegador por lo del repositorio (exporta un respaldo antes si lo necesitas).</span></button>
+      <button data-sy="merge"><b>Combinar los míos con los del equipo</b><span>Agrega lo que tienes y no está en el repositorio; si algo existe en ambos, se queda tu versión.</span></button></div>`,[{l:'Cancelar',f:()=>{SY.cfg=prev;syCfgSave();closeModal();}}]);
+    $('#mB').onclick=e=>{const b=e.target.closest('[data-sy]');if(b)finish(b.dataset.sy);};}
+  catch(e){SY.cfg=prev;err.textContent=e.status===401?'El token no es válido o ya venció.':e.status===404?'No encuentro ese repositorio, o tu token no tiene acceso a él.':'No se pudo conectar: '+e.message;}}
+
 const UNDO={past:[],future:[],last:null,t:0,busy:false};
 function undoTrack(){if(UNDO.busy)return;let cur;try{cur=JSON.stringify(S);}catch(e){return;}
   if(UNDO.last&&cur!==UNDO.last){const now=Date.now();if(now-UNDO.t>800||!UNDO.past.length){UNDO.past.push(UNDO.last);if(UNDO.past.length>60)UNDO.past.shift();}UNDO.t=now;UNDO.future=[];}
@@ -1016,10 +1135,11 @@ function undoApply(dir){const from=dir<0?UNDO.past:UNDO.future,to=dir<0?UNDO.fut
   to.push(JSON.stringify(S));const snap=from.pop();UNDO.busy=true;S=ensureTypes(JSON.parse(snap));UNDO.last=snap;UNDO.t=0;
   if(ui.folder&&ui.folder!==MAP&&!folById(ui.folder))ui.folder=null;ui.sel=null;ui.multi=new Set();
   if(ui.folder===MAP)ui.mapD=buildMap();
-  try{localStorage.setItem(LS,snap);}catch(e){}UNDO.busy=false;renderAll();undoBtns();toast(dir<0?'Cambio deshecho':'Cambio rehecho');}
+  try{localStorage.setItem(LS,snap);}catch(e){}UNDO.busy=false;renderAll();undoBtns();if(SY.cfg)syQueuePush();toast(dir<0?'Cambio deshecho':'Cambio rehecho');}
 function save(markDirty=true){
   if(markDirty)S.meta.dirty=(S.meta.dirty||0)+1;
   if(markDirty)undoTrack();
+  if(markDirty&&SY.cfg&&!SY.applying)syQueuePush();
   clearTimeout(saveT);
   saveT=setTimeout(()=>{try{localStorage.setItem(LS,JSON.stringify(S));saveOk=true;}catch(e){saveOk=false;}renderStatus();},250);
   renderStatus();
@@ -1077,6 +1197,7 @@ function renderStatus(){
   if(!saveOk){el.className='status warn';sp.textContent='No se pudo guardar en este navegador. Exporta tu respaldo.';return;}
   const le=S.meta.lastExport;
   el.className='status'+((S.meta.dirty&&le)||(!le&&!S.meta.example)?' warn':'');setTimeout(()=>{el.title=sp.textContent;},0);
+  if(SY.cfg){el.className='status';sp.textContent='Sincronizado con el equipo vía GitHub ('+SY.cfg.repo+')';return;}
   sp.textContent='Guardado en este navegador · '+(le?('respaldo '+le+(S.meta.dirty?` · ${S.meta.dirty} cambios sin exportar`:'')):'sin respaldo exportado');
 }
 
@@ -2950,7 +3071,7 @@ $('#cardsView').addEventListener('keydown',e=>{const t=e.target;if(!t.dataset||!
   if(e.key==='Enter'&&t.tagName==='INPUT'){e.preventDefault();const td=t.closest('td'),ci=[...td.parentNode.children].indexOf(td),nx=t.closest('tr').nextElementSibling;const n=nx&&nx.children[ci]&&nx.children[ci].querySelector('.c');t.blur();if(n)n.focus();}});
 $('#cardsView').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cpage],[data-dcard],.svrow')){e.preventDefault();e.target.click();}});
 document.addEventListener('input',e=>{if(e.target.matches('[data-dcol-custom]')&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=e.target.value;save();renderView();}}});
-$('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
+$('#bSync').onclick=syncModal;$('#bExport').onclick=exportJSON;$('#bImport').onclick=importModal;$('#bSettings').onclick=settingsModal;
 $('#menuBtn').onclick=()=>document.body.classList.toggle('showSide');
 $('#scrim').onclick=()=>document.body.classList.remove('showSide');
 
@@ -2983,7 +3104,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;setTimeout(()=>{syCfgLoad();syStart();},0);try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>

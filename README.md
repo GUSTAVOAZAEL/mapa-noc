@@ -55,6 +55,16 @@ En el panel de **Clientes** (y en la lista del mapa general) cada cliente va en 
 
 Si diste de alta el mismo equipo dos veces con nombres distintos (por ejemplo *ASR MTY 9010 1* y *mty-asr9010-1*): en **Equipos** marca la casilla de ambos (esquina de la tarjeta, o junto al nombre en la tabla) y presiona **⇄ Unificar**. Eliges cuál se queda y, cuando los datos no coinciden, qué nombre, IP, tipo, marca, modelo, ubicación, etc. conservar. Redes, accesos y puertos se suman; las notas se juntan y se anotan las IPs y nombres que no quedaron. El equipo que se va se reemplaza por el que se queda en todos los diagramas (sus líneas pasan al que se queda), incidencias y sitios. Se puede deshacer con Ctrl+Z.
 
+## Trabajar en equipo (GitHub)
+
+Los datos pueden vivir en un **repositorio privado de GitHub** para que varias personas vean y editen lo mismo desde cualquier lugar.
+
+1. **Una vez (el administrador):** crea un repositorio **privado** (por ejemplo `nocout-datos`, puede ir vacío) y en *Settings → Collaborators* invita a tus compañeros.
+2. **Cada persona:** genera un token en GitHub → *Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*. Resource owner: el dueño del repo; *Only select repositories* → `nocout-datos`; *Repository permissions → Contents: Read and write*.
+3. En NOCout presiona **☁ Equipo** (arriba), escribe `dueño/nocout-datos` y pega el token. El primero que se conecta sube sus datos; los demás eligen *Usar los del equipo* o *Combinar*.
+
+Después todo es automático: tus cambios se suben unos segundos después de hacerlos, cada minuto (y al volver a la pestaña) se bajan los de tus compañeros, y si dos personas cambian cosas distintas al mismo tiempo se juntan solas (si cambian el mismo dato, gana el último). El botón muestra el estado (● verde sincronizado, naranja pendiente, rojo sin conexión). Si un cambio fuera a borrar más de la mitad de los equipos del repositorio, NOCout pregunta antes de subirlo. El historial de quién cambió qué está en GitHub (*Ver historial*). El token se guarda solo en ese navegador; **Desconectar** lo quita.
+
 ## Mapa general
 
 El mapa general se maneja desde el mismo árbol de clientes, sin cambiar el panel: **Mapa** (arriba del árbol) junta todo; el ícono de mapa en la fila de un **cliente** o **sitio** muestra solo sus diagramas; **☑ Comparar** abre el mapa vacío. Mientras estás en el mapa, cada fila del árbol tiene una casilla: marca o desmarca clientes, sitios o servicios (de clientes distintos si quieres) y el mapa se actualiza al momento. Arriba del árbol ves cuántos diagramas van, **Todos / Ninguno**, los equipos compartidos, y *Resaltar solo lo compartido*. Los equipos se quedan donde tú los acomodes. **↗** en un servicio abre su diagrama y **✕ Salir del mapa** regresa. El mapa une en un solo diagrama todos los servicios que elijas, sin mezclar tus diagramas individuales:
