@@ -223,9 +223,9 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - Al arrastrar una conexión hacia otro equipo basta con soltarla encima o muy cerca de su borde.
 - **Copiar y pegar (Ctrl+C / Ctrl+V)**: equipos, elementos y textos seleccionados (con las líneas entre ellos). En otro diagrama se pega el mismo equipo del inventario; si ya estaba en ese diagrama se crea un equipo nuevo "-COPIA" sin IP para que lo edites.
 - **Tipo de línea**: en el panel de la conexión se elige viendo el trazo (privada, fibra, cobre, radio, lógico); el nombre aparece al pasar el puntero.
-- **Puerto en la línea**: al seleccionar una conexión aparecen en el diagrama los recuadros de puerto de cada punta (**+ puerto** si está vacío); clic para escribirlo (con sugerencias), **Enter** guarda, **Tab** pasa a la otra punta.
+- **Puerto en la línea**: al seleccionar una conexión aparecen en el diagrama los recuadros de puerto de cada punta (un cuadrito vacío si no tiene); clic para escribirlo (con sugerencias), **Enter** guarda, **Tab** pasa a la otra punta.
 - **Impacto**: el resumen amarillo se minimiza al dar clic en un espacio vacío y queda una pastilla ⚡; vuelve a mostrarse al tocar la pastilla o el equipo analizado.
-- **Servicios nuevos** traen un elemento con ícono de usuario y el nombre del servicio (si renombras el servicio, se actualiza). En el mapa general, al seleccionar ese elemento se resaltan los equipos de ese servicio y lo demás se atenúa.
+- **Servicios nuevos** traen un elemento "solo ícono" de usuario con el nombre del servicio (si renombras el servicio, se actualiza). En el mapa general, al seleccionar ese elemento se resaltan los equipos de ese servicio y lo demás se atenúa.
 - **Deshacer / Rehacer**: botones **↶ ↷** en la barra del diagrama, o **Ctrl+Z** y **Ctrl+Y** (también Ctrl+Shift+Z). Guarda hasta 60 pasos de la sesión: borrar equipos, líneas o grupos, moverlos, cambios en el panel, en la tabla de equipos, etc.
 - Doble clic en una **parte vacía** del diagrama: aparece un menú para agregar **Equipo, Elemento, Texto o Grupo** justo en ese punto.
 - Doble clic sobre un **texto** del diagrama: lo editas ahí mismo (Enter hace un salto de línea; **Ctrl+Enter** o clic fuera guarda; **Esc** cancela). En un **elemento** (caja de empalme, etc.) el doble clic edita su nombre (Enter guarda).

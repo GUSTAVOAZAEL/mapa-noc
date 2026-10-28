@@ -1251,7 +1251,7 @@ function renderCanvas(){
       s+=`<g class="dm"><line x1="${px2-nx*R}" y1="${py2-ny*R}" x2="${px2+nx*R}" y2="${py2+ny*R}"/>${mlines(tx,ty+3,e.demarcLabel||'Demarcación',22)}${e.demarcA||e.demarcB?`<text class="sd" x="${tx}" y="${ty+(ny>0?-9:15)}" text-anchor="middle">${esc(trunc(e.demarcA||'',14))} ⟷ ${esc(trunc(e.demarcB||'',14))}</text>`:''}<title>Punto de demarcación${e.demarcA||e.demarcB?`: ${esc(e.demarcA||'')} | ${esc(e.demarcB||'')}`:''}</title></g>`;}
     s+=`<line class="eh" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></g>`;
     out+=s;
-    if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend')){const pe=(end,x,y,v)=>{const tx=v||'+ puerto',w=Math.max(54,tx.length*6.6+12);return `<g class="pedit${v?' has':''}" data-pedit="${end}" data-x="${x}" data-y="${y}"><rect x="${x-w/2}" y="${y-9}" width="${w}" height="18" rx="4"/>${v?'':`<text x="${x}" y="${y+3.5}">${tx}</text>`}<title>${v?'Clic para cambiar el puerto o IP':'Clic para escribir el puerto o IP'}</title></g>`;};
+    if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend')){const pe=(end,x,y,v)=>{const w=v?Math.max(24,v.length*6.4+10):22,h=v?18:14;return `<g class="pedit${v?' has':''}" data-pedit="${end}" data-x="${x}" data-y="${y}"><rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="3"/><title>${v?'Clic para cambiar el puerto o IP':'Clic para escribir el puerto o IP'}</title></g>`;};
       const ax2=a.deviceId||a.el,bx2=b.deviceId||b.el;
       endH+=(ax2?pe('fp',x1+(x2-x1)*t,y1+(y2-y1)*t,e.fp):'')+(bx2?pe('tp',x1+(x2-x1)*(1-t),y1+(y2-y1)*(1-t),e.tp):'');}
     if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend'))endH+=`<circle class="eend" data-eend="from" cx="${x1}" cy="${y1}" r="7"><title>Arrastra para cambiar el origen</title></circle><circle class="eend" data-eend="to" cx="${x2}" cy="${y2}" r="7"><title>Arrastra para cambiar el destino</title></circle>`;
@@ -2345,7 +2345,7 @@ function folderModal(id,parentId,kind){
       const name=$('#fName').value.trim();if(!name){$('#fErr').textContent='Escribe un nombre.';return;}
       const also=[...document.querySelectorAll('.fAlso:checked')].map(x=>x.value);
       if(f){if(S.diagrams[f.id])S.diagrams[f.id].nodes.forEach(n=>{if(n.svcTag&&n.label===f.name)n.label=name;});f.name=name;f.kind=$('#fKind').value;f.alsoIn=also;const np=$('#fParent').value||null;if((f.parentId||null)!==np){f.parentId=np;if(np)ui.collapsed.delete(np);}}else{const nf={id:uid('f'),name,kind:$('#fKind').value,parentId:parentId||null,alsoIn:also};S.folders.push(nf);
-        if(nf.kind==='servicio'){S.diagrams[nf.id]={nodes:[{id:uid('x'),el:true,svcTag:true,label:name,sub:'Servicio',icon:'Usuario',shape:'small',color:'#0A6C87',x:0,y:0}],edges:[],groups:[]};}ui.folder=nf.id;ui.justCreated=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
+        if(nf.kind==='servicio'){S.diagrams[nf.id]={nodes:[{id:uid('x'),el:true,svcTag:true,label:name,icon:'Usuario',shape:'icon',color:'#0A6C87',x:0,y:0}],edges:[],groups:[]};}ui.folder=nf.id;ui.justCreated=nf.id;ui.sel=null;if(parentId)ui.collapsed.delete(parentId);}
       save();closeModal();renderAll();requestAnimationFrame(fit);
       if(!f&&ui.view==='clients'&&ui.justCreated){const nid=ui.justCreated;ui.justCreated=null;const nf=folById(nid);
         modal('Listo',`<p><b>${esc(nf.name)}</b> se creó como ${esc((KINDS[nf.kind]||'').toLowerCase())}. ¿Quieres empezar a dibujar su diagrama?</p>`,[{l:'Seguir aquí'},{l:'Abrir diagrama',k:'pri',f:()=>openFolder(nid)}]);}
@@ -2983,7 +2983,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
