@@ -30,6 +30,11 @@
   --hit:#F2A33A; --hit-soft:#3B2B13; --danger:#F07560; --danger-soft:#3A1D18;
   --grid:#24323E; --edge:#93A4B3; --demarc:#F06BB0; --node:#18232D; --overlay:rgba(0,0,0,.55); color-scheme:dark}
 
+.canvasWrap[data-cv]{color:var(--ink)}
+.canvasWrap[data-cv="light"]{--bg:#E8ECF0;--panel:#FFFFFF;--panel-2:#F3F5F7;--ink:#15212C;--muted:#5A6978;--line:#D3DBE2;--accent:#0A6C87;--accent-ink:#FFFFFF;--accent-soft:#DDEEF3;--hit:#B05F00;--hit-soft:#FBE9CC;--danger:#B4321C;--danger-soft:#F7E1DC;--grid:#C6D0D9;--edge:#536373;--demarc:#B3266E;--node:#FFFFFF;color-scheme:light}
+.canvasWrap[data-cv="dark"]{--bg:#0D1318;--panel:#151E26;--panel-2:#1B2630;--ink:#E1E8EE;--muted:#8C9AA7;--line:#2A3845;--accent:#4BB4D1;--accent-ink:#06222B;--accent-soft:#163743;--hit:#F2A33A;--hit-soft:#3B2B13;--danger:#F07560;--danger-soft:#3A1D18;--grid:#24323E;--edge:#93A4B3;--demarc:#F06BB0;--node:#18232D;color-scheme:dark}
+.canvasWrap[data-cv="dark"] .geo path{--geo-us:#1d2733;--geo-mx:#1f2a22;--geo-st:#3b4b5c}.canvasWrap[data-cv="dark"] .geo text{--geo-tx:#5f7184}
+.canvasWrap[data-cv="light"] .geo path{--geo-us:#e9f0f7;--geo-mx:#edf3e6;--geo-st:#8fa3b5}.canvasWrap[data-cv="light"] .geo text{--geo-tx:#7d8d9c}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-ui);overflow:hidden}
 [hidden]{display:none!important}
@@ -709,6 +714,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
         <button class="btn sm" id="bUndo" title="Deshacer (Ctrl+Z)" disabled>↶</button><button class="btn sm" id="bRedo" title="Rehacer (Ctrl+Y)" disabled>↷</button>
         <select class="layerSel" id="layerSel" title="Capa de incidencias" aria-label="Capa de incidencias"><option value="activas">Incidencias: activas</option><option value="historial">Incidencias: historial</option><option value="ocultas">Incidencias: ocultas</option></select>
         <button class="btn sm pillTog" id="pillTog" title="Mostrar u ocultar las etiquetas V / T / D de los equipos">V·T·D</button>
+        <button class="btn sm" id="cvTheme" title="Fondo del diagrama: automático">◐</button>
         <button class="btn sm pillTog" id="autoLocTog" title="Mostrar u ocultar todos los grupos de ubicación (ciudad, edificio, sitio, piso, sala, gabinete, rack)">📍 Ubicaciones</button>
         <select class="layerSel secSel" id="secSel" title="Resaltar una red" aria-label="Resaltar una red"><option value="">Todas las redes</option><option value="voz">Red de voz</option><option value="transporte">Red de transporte</option><option value="datos">Red de datos</option></select>
       </div>
@@ -3134,6 +3140,8 @@ function delSel(){
   else D.edges=D.edges.filter(e=>e.id!==ui.sel.id);
   ui.sel=null;save();renderAll();
 }
+function applyCv(){const v=S.meta.cvTheme||'';const w=document.querySelector('.canvasWrap');if(w){if(v)w.dataset.cv=v;else delete w.dataset.cv;}const b=$('#cvTheme');if(b){b.textContent=v==='dark'?'☾':v==='light'?'☀':'◐';b.title='Fondo del diagrama: '+(v==='dark'?'oscuro':v==='light'?'claro':'automático (según la app)')+' · clic para cambiar';}}
+$('#cvTheme').onclick=()=>{const o=['','light','dark'],v=S.meta.cvTheme||'';S.meta.cvTheme=o[(o.indexOf(v)+1)%3];save(false);applyCv();rc();toast(S.meta.cvTheme==='dark'?'Fondo del diagrama oscuro':S.meta.cvTheme==='light'?'Fondo del diagrama claro':'Fondo según el tema de la app');};
 $('#impMini').onclick=()=>{ui.impMin=false;rc();};
 $('#bUndo').onclick=()=>undoApply(-1);$('#bRedo').onclick=()=>undoApply(1);
 document.addEventListener('keydown',e=>{
@@ -3186,7 +3194,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;setTimeout(()=>{syCfgLoad();syStart();},0);try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;try{applyCv();}catch(e){}setTimeout(()=>{syCfgLoad();syStart();},0);try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
