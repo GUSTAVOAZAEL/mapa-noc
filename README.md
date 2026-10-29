@@ -105,6 +105,8 @@ Mientras dibujas un diagrama, el panel derecho (sin nada seleccionado) y la vent
 
 Para cosas que deben verse en el diagrama pero no se gestionan (caja de empalme, splitter, ODF, poste, registro, un proveedor externo…) usa **+ Elemento** (panel derecho) o **Elemento conectado** en el menú **+** de un equipo.
 
+**Elementos en grupos:** un elemento (caja de empalme, splitter, LAN…) que arrastras dentro de un grupo de ubicación toma esa ubicación igual que un equipo: se mueve con el grupo, el recuadro automático lo rodea y en el mapa general aparece dentro de su ubicación. Si lo sacas, la pierde; en su panel ves la ruta y puedes quitarla.
+
 **Tipos de elemento propios:** en la ventana de **+ Elemento** (o *Elemento conectado* del menú +) presiona **＋ Nuevo tipo**, ponle nombre, ícono, forma y color, y se queda guardado como opción del menú para todos tus diagramas (viaja en tu JSON). La ✕ en la esquina lo quita del menú sin borrar los elementos ya dibujados.
 
 - No se agregan al inventario ni cuentan en el análisis de impacto o el mapa general.

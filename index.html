@@ -880,7 +880,7 @@ function migratePlaces(d){
 }
 function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x.id===id);
   const under=(id,anc)=>{let x=P(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=P(x.parentId);}return false;};
-  (D.nodes||[]).forEach(n=>{if(!n.deviceId)return;const dev=data.devices.find(x=>x.id===n.deviceId);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
+  (D.nodes||[]).forEach(n=>{const dev=n.deviceId?data.devices.find(x=>x.id===n.deviceId):(n.el?n:null);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
     const gs=(D.groups||[]).filter(g=>g.placeId&&P(g.placeId)&&(data!==S||locVis(P(g.placeId).kind))&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h).sort((a,b)=>PKINDS.indexOf(P(b.placeId).kind)-PKINDS.indexOf(P(a.placeId).kind)||a.w*a.h-b.w*b.h);
     if(!gs.length)return;const pid=gs[0].placeId;if(dev.place&&(dev.place===pid||under(dev.place,pid)))return;dev.place=pid;});}
 const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
@@ -894,8 +894,9 @@ function migrateSitio(d){d.places=d.places||[];Object.values(d.diagrams||{}).for
 const locVis=k=>!(S.meta.locHide||[]).includes(k);
 const locAllOff=()=>PKINDS.every(k=>!locVis(k));
 function locBoxes(D){return [...(D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>({pid:g.placeId,x:g.x,y:g.y,w:g.w,h:g.h,ex:true,g})),...autoGroups(D).map(a=>({pid:a.placeId,x:a.x,y:a.y,w:a.w,h:a.h}))];}
+const hold=n=>n.deviceId?devById(n.deviceId):(n.el?n:null),hn=h=>h.name||h.label||'Elemento';
 function shiftPlace(D,pid,dx,dy){dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
-  D.nodes.forEach(n=>{const dv=n.deviceId&&devById(n.deviceId);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
+  D.nodes.forEach(n=>{const dv=hold(n);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
   (D.groups||[]).forEach(g=>{if(g.placeId&&(g.placeId===pid||placeUnder(g.placeId,pid))){g.x+=dx;g.y+=dy;}});}
 /* Separa los grupos de ubicación para que no se encimen: hermanos lado a lado y equipos ajenos fuera */
 function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;let moves=0;const G=18;
@@ -905,12 +906,12 @@ function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;let moves=0;cons
     for(const L of Object.values(sib)){if(did)break;L.sort((a,b)=>a.x-b.x||a.y-b.y);
       for(let i=0;i<L.length&&!did;i++)for(let j=i+1;j<L.length&&!did;j++){const a=L[i],b=L[j];
         if(a.x<b.x+b.w+G&&b.x<a.x+a.w+G&&a.y<b.y+b.h+G&&b.y<a.y+a.h+G){const dx=a.x+a.w+G-b.x,dy=a.y+a.h+G-b.y;if(dx<=dy)shiftPlace(D,b.pid,dx,0);else shiftPlace(D,b.pid,0,dy);did=true;}}}
-    if(!did)for(const n of D.nodes){if(!n.deviceId)continue;const dv=devById(n.deviceId),d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;
+    if(!did)for(const n of D.nodes){if(!n.deviceId&&!(n.el&&n.place))continue;const dv=hold(n),d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;
       const bad=B.filter(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h&&!(dv&&dv.place&&(dv.place===b.pid||placeUnder(dv.place,b.pid))));
       if(!bad.length)continue;const t=bad.sort((a,b)=>b.w*b.h-a.w*a.h)[0];
       const opts=[[t.x+t.w+G-n.x,0],[0,t.y+t.h+G-n.y],[t.x-G-d.w-n.x,0],[0,t.y-G-d.h-n.y]].sort((a,b)=>Math.abs(a[0])+Math.abs(a[1])-Math.abs(b[0])-Math.abs(b[1]));
       n.x=Math.round((n.x+opts[0][0])/8)*8;n.y=Math.round((n.y+opts[0][1])/8)*8;did=true;break;}
-    if(!did)for(const n of D.nodes){const dv=n.deviceId&&devById(n.deviceId);if(!dv||!dv.place)continue;const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);
+    if(!did)for(const n of D.nodes){const dv=hold(n);if(!dv||!dv.place)continue;const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);
       if(!b||!b.ex)continue;const d=dims(n),g=b.g,P=14,x0=Math.min(g.x,n.x-P),y0=Math.min(g.y,n.y-34),x1=Math.max(g.x+g.w,n.x+d.w+P),y1=Math.max(g.y+g.h,n.y+d.h+P);
       if(x0===g.x&&y0===g.y&&x1===g.x+g.w&&y1===g.y+g.h)continue;g.x=Math.floor(x0/8)*8;g.y=Math.floor(y0/8)*8;g.w=Math.ceil((x1-g.x)/8)*8;g.h=Math.ceil((y1-g.y)/8)*8;did=true;break;}
     if(!did)break;moves++;}
@@ -925,7 +926,7 @@ function placeColor(pid){for(const D of Object.values(S.diagrams||{}))for(const 
 function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];
   const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>g.placeId)),box={},dep={};
   const ext=(pid,x0,y0,x1,y1)=>{const b=box[pid];if(!b)box[pid]=[x0,y0,x1,y1];else{b[0]=Math.min(b[0],x0);b[1]=Math.min(b[1],y0);b[2]=Math.max(b[2],x1);b[3]=Math.max(b[3],y1);}};
-  D.nodes.forEach(n=>{if(!n.deviceId)return;const dv=devById(n.deviceId);if(!dv||!dv.place)return;const d=dims(n);placeChain(dv.place).forEach((p,i)=>{dep[p.id]=i;ext(p.id,n.x,n.y,n.x+d.w,n.y+d.h+6);});});
+  D.nodes.forEach(n=>{const dv=hold(n);if(!dv||!dv.place)return;const d=dims(n);placeChain(dv.place).forEach((p,i)=>{dep[p.id]=i;ext(p.id,n.x,n.y,n.x+d.w,n.y+d.h+6);});});
   (D.groups||[]).forEach(g=>{if(!g.placeId||!placeById(g.placeId)||!ex.has(g.placeId))return;placeChain(g.placeId).slice(0,-1).forEach((p,i)=>{dep[p.id]=i;ext(p.id,g.x,g.y,g.x+g.w,g.y+g.h);});});
   const out=[];Object.keys(box).sort((a,b)=>dep[b]-dep[a]).forEach(pid=>{if(ex.has(pid)||placeChain(pid).slice(0,-1).some(p=>ex.has(p.id)))return;const pl=placeById(pid),b=box[pid];
     if(!locVis(pl.kind)){if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...b);return;}
@@ -933,7 +934,7 @@ function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];
     out.push({id:'ag:'+pid,auto:true,ro:true,kind:pl.kind,placeId:pid,label:pl.name,color:placeColor(pid),x:r[0],y:r[1],w:r[2]-r[0],h:r[3]-r[1]});
     if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...r);});
   return out;}
-function autoMembers(D,pid){return D.nodes.filter(n=>{const dv=n.deviceId&&devById(n.deviceId);return dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid));});}
+function autoMembers(D,pid){return D.nodes.filter(n=>{const dv=hold(n);return dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid));});}
 function placeUnder(id,anc){let x=placeById(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=placeById(x.parentId);}return false;}
 function ensureTypes(d){
   if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
@@ -1507,12 +1508,12 @@ svg.addEventListener('pointermove',e=>{
 function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]));const msgs=[];
   const ctr=(n,x,y)=>{const d=dims(n);return[x+d.w/2,y+d.h/2];};const inR=(G,gx,gy,[cx,cy])=>cx>=gx&&cx<=gx+G.w&&cy>=gy&&cy<=gy+G.h;
   const before=autoGroups(D);
-  orig.forEach(([n,x,y])=>{if(!n.deviceId)return;const dv=devById(n.deviceId);if(!dv)return;
+  orig.forEach(([n,x,y])=>{const dv=hold(n);if(!dv)return;
     // salió de un grupo dibujado → se quita esa ubicación
     if(dv.place)D.groups.forEach(G=>{if(!G.placeId||!dv.place||!(dv.place===G.placeId||placeUnder(dv.place,G.placeId)))return;const gp=op.get(G)||[G.x,G.y];
-      if(inR(G,gp[0],gp[1],ctr(n,x,y))&&!inR(G,G.x,G.y,ctr(n,n.x,n.y))){dv.place=placeById(G.placeId).parentId||undefined;if(!dv.place)delete dv.place;msgs.push(`${dv.name} salió de ${placeById(G.placeId).name}`);}});
+      if(inR(G,gp[0],gp[1],ctr(n,x,y))&&!inR(G,G.x,G.y,ctr(n,n.x,n.y))){dv.place=placeById(G.placeId).parentId||undefined;if(!dv.place)delete dv.place;msgs.push(`${hn(dv)} salió de ${placeById(G.placeId).name}`);}});
     // equipo sin ubicación soltado dentro de una ubicación automática
-    if(!dv.place){const c=ctr(n,n.x,n.y),hit=before.filter(A=>inR(A,A.x,A.y,c)).sort((a,b)=>PKINDS.indexOf(b.kind)-PKINDS.indexOf(a.kind))[0];if(hit){dv.place=hit.placeId;msgs.push(`${dv.name} → ${placePath(hit.placeId)}`);}}
+    if(!dv.place){const c=ctr(n,n.x,n.y),hit=before.filter(A=>inR(A,A.x,A.y,c)).sort((a,b)=>PKINDS.indexOf(b.kind)-PKINDS.indexOf(a.kind))[0];if(hit){dv.place=hit.placeId;msgs.push(`${hn(dv)} → ${placePath(hit.placeId)}`);}}
   });
   if(msgs.length)toast('Ubicación: '+msgs.join(' · '));}
 /* equipo bajo el puntero, por geometría y con margen (no depende de qué elemento SVG quede encima) */
@@ -1794,7 +1795,7 @@ function buildMap(){
   const fids=mapSel(),nodes=new Map(),edges=new Map();
   fids.forEach(fid=>{const D=S.diagrams[fid];if(!D)return;const nm={};
     D.nodes.forEach(n=>{
-      if(n.el){const k='x_'+fid+'_'+n.id;nm[n.id]=k;nodes.set(k,{id:'m_'+k,pk:k,el:true,svcTag:n.svcTag,label:n.label,sub:n.sub,icon:n.icon,shape:n.shape,color:n.color,notes:n.notes,srcFid:fid,srcId:n.id,x:0,y:0,svc:new Set([fid]),orig:{x:n.x,y:n.y}});return;}
+      if(n.el){const k='x_'+fid+'_'+n.id;nm[n.id]=k;nodes.set(k,{id:'m_'+k,pk:k,el:true,svcTag:n.svcTag,place:n.place,label:n.label,sub:n.sub,icon:n.icon,shape:n.shape,color:n.color,notes:n.notes,srcFid:fid,srcId:n.id,x:0,y:0,svc:new Set([fid]),orig:{x:n.x,y:n.y}});return;}
       if(!n.deviceId||!devById(n.deviceId))return;nm[n.id]=n.deviceId;
       if(!nodes.has(n.deviceId))nodes.set(n.deviceId,{id:'m_'+n.deviceId,pk:n.deviceId,deviceId:n.deviceId,x:0,y:0,svc:new Set(),orig:{x:n.x,y:n.y}});
       nodes.get(n.deviceId).svc.add(fid);});
@@ -1815,6 +1816,7 @@ function mapGroups(N,LOC){
   const locs=[...LOC.values()].sort((a,b)=>(GRANK[b.kind]??0)-(GRANK[a.kind]??0));
   locs.forEach(l=>{let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,any=false;
     l.devs.forEach(d=>{const n=byDev[d];if(!n)return;any=true;const dm=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+dm.w);y1=Math.max(y1,n.y+dm.h);});
+    N.forEach(n=>{if(!n.el||n.place!==l.key)return;any=true;const dm=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+dm.w);y1=Math.max(y1,n.y+dm.h);});
     locs.forEach(c=>{if(c.parent===l.key&&boxes[c.key]){const b=boxes[c.key];any=true;x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w);y1=Math.max(y1,b.y+b.h);}});
     if(!any)return;if(PKINDS.includes(l.kind)&&!locVis(l.kind)){boxes[l.key]={x:x0,y:y0,w:x1-x0,h:y1-y0};return;}const pad=16;
     const b={id:'mg_'+out.length,kind:l.kind,label:l.label,color:l.color||'',notes:l.notes,x:x0-pad,y:y0-pad-26,w:x1-x0+pad*2,h:y1-y0+pad*2+26,ro:true};
@@ -2410,6 +2412,7 @@ function renderInsp(){
         <div class="fld"><span class="lbl">Forma</span><select class="inp" id="elShape">${Object.entries(SHAPE_NAMES).map(([k,v])=>`<option value="${k}"${shapeOf(n)===k?' selected':''}>${v}</option>`).join('')}</select></div>
         <div class="fld"><span class="lbl">Ícono</span><div class="igrid">${Object.keys(GLYPHS).map(k=>`<button data-elgl="${k}" class="${k===(n.icon||'Mufla')?'on':''}"><svg width="20" height="20" viewBox="0 0 18 18">${glyph(k)}</svg>${GLYPH_NAMES[k]}</button>`).join('')}</div></div>
         <div class="fld"><span class="lbl">Color del ícono</span>${swatches('data-elcol',n.color,'var(--accent)')}</div>
+        <div class="fld"><span class="lbl">Ubicación física</span>${n.place&&placeById(n.place)?`<div class="pathBox">${pathHTML(n.place)}<button class="btn sm" data-act="elPlaceClr" style="margin-top:6px">Quitar ubicación</button></div>`:'<span class="endHint">Arrástralo dentro de un grupo (ciudad, edificio, sala, rack…) y toma esa ubicación.</span>'}</div>
         <div class="fld"><span class="lbl">Notas</span><textarea class="inp" id="elNotes" rows="3" placeholder="Ubicación, distribución de hilos, a dónde se reparte…">${esc(n.notes||'')}</textarea></div>
         <p class="sub" style="margin:0">Los elementos no van al inventario ni al análisis de impacto. Puedes poner varios iguales en el mismo diagrama.</p>
         <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dupEl">Duplicar</button><button class="btn sm dan" data-act="delSel">Eliminar elemento</button></div>`;return;
@@ -3080,6 +3083,7 @@ document.addEventListener('click',e=>{
     case 'cmpMode':S.meta.mapSel=[];save(false);if(ui.folder===MAP)refreshMap(false);else openMap();toast('Marca en el árbol los clientes, sitios o servicios que quieres comparar');break;
     case 'mapExit':{const pf=ui.prevFolder&&folById(ui.prevFolder)?ui.prevFolder:null;ui.tab='clientes';if(pf)openFolder(pf);else{ui.folder=null;ui.sel=null;renderAll();}break;}
     case 'noop':break;
+    case 'elPlaceClr':{const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.sel?.id);if(n){delete n.place;save();renderInsp();rc();}break;}
     case 'blankImg':{$('#plusMenu').hidden=true;const at=ui.blankAt;const fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.onchange=()=>{if(fi.files[0])addImageNode(fi.files[0],at);};fi.click();break;}
     case 'imgBig':{const n=getDiag(ui.folder).nodes.find(x=>x.id===ui.sel?.id);if(n?.img)imgView(n);break;}
     case 'treeCollapse':S.folders.forEach(f=>{if(kids(f.id).length)ui.collapsed.add(f.id);});renderSide();break;
