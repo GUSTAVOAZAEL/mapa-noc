@@ -1081,7 +1081,8 @@ async function syPush(){if(!SY.cfg)return;if(SY.busy){syQueuePush(1500);return;}
   for(let attempt=0;attempt<3;attempt++){
     try{const body={message:`NOCout: cambios de ${SY.cfg.name||SY.cfg.login||'usuario'}`,content:b64e(JSON.stringify(syShared(S),null,1)),branch:SY.cfg.branch||'main'};if(SY.sha)body.sha=SY.sha;
       const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();return;}
-    catch(e){if(e.status===409||e.status===422){try{const rem=await syGet();if(rem){const merged=syMerge(SY.base||rem.data,syShared(S),rem.data);syApply(merged);SY.base=rem.data;SY.sha=rem.sha;renderAll();continue;}}catch(e2){}}
+    catch(e){if(!SY.sha&&(e.status===404||e.status===422)&&!SY.noBranch&&/branch|ref/i.test(e.message||'')){SY.noBranch=true;try{const body={message:`NOCout: datos iniciales de ${SY.cfg.name||SY.cfg.login}`,content:b64e(JSON.stringify(syShared(S),null,1))};const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();return;}catch(e3){SY.busy=false;sySet('err',e3.message);return;}}
+      if(e.status===409||e.status===422){try{const rem=await syGet();if(rem){const merged=syMerge(SY.base||rem.data,syShared(S),rem.data);syApply(merged);SY.base=rem.data;SY.sha=rem.sha;renderAll();continue;}}catch(e2){}}
       SY.busy=false;sySet('err',e.message);return;}}
   SY.busy=false;sySet('err','No se pudo guardar después de varios intentos');}
 function syQueuePush(ms){if(!SY.cfg)return;clearTimeout(SY.pushT);sySet('wait');SY.pushT=setTimeout(syPush,ms??2500);}
@@ -1099,11 +1100,9 @@ function syncModal(){const c=SY.cfg||{repo:'',branch:'main',path:'nocout.json',t
     <div class="fld"><span class="lbl">Repositorio (dueño/nombre)</span><input class="inp mono" id="syRepo" placeholder="GUSTAVOAZAEL/nocout-datos" value="${esc(c.repo)}"></div>
     <div class="fld"><span class="lbl">Tu token personal de GitHub</span><input class="inp mono" id="syTok" type="password" placeholder="github_pat_…" autocomplete="off"></div>
     <details style="font-size:13px;margin:-4px 0 10px"><summary style="cursor:pointer;color:var(--accent)">¿Cómo saco mi token?</summary><ol style="margin:6px 0 0;padding-left:18px;display:grid;gap:4px">
-      <li>En GitHub: tu foto → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>
-      <li>Nombre: <i>NOCout</i>. Vencimiento: el que prefieras (por ejemplo 1 año).</li>
-      <li><b>Resource owner</b>: el dueño del repositorio (por ejemplo GUSTAVOAZAEL). <b>Repository access</b>: <i>Only select repositories</i> → elige el repositorio de NOCout.</li>
-      <li><b>Permissions → Repository permissions → Contents: Read and write</b>. Nada más.</li>
-      <li><b>Generate token</b>, cópialo y pégalo aquí. Se guarda solo en este navegador.</li></ol></details>
+      <li><b>Si el repositorio es tuyo</b> (eres el dueño): tu foto → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>. <i>Only select repositories</i> → el repositorio de NOCout; <b>Repository permissions → Contents: Read and write</b>.</li>
+      <li><b>Si te invitaron como colaborador</b> (el repositorio es de otra persona): primero acepta la invitación; luego <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b>, marca solo <b>repo</b> y elige un vencimiento. (Los tokens "fine-grained" no funcionan para repositorios de otra persona.)</li>
+      <li>Copia el token y pégalo aquí. Se guarda solo en este navegador; no lo compartas.</li></ol></details>
     <details style="font-size:13px;margin:0 0 6px"><summary style="cursor:pointer;color:var(--muted)">Opciones avanzadas</summary><div class="two" style="margin-top:6px"><div class="fld"><span class="lbl">Rama</span><input class="inp mono" id="syBr" value="${esc(c.branch||'main')}"></div><div class="fld"><span class="lbl">Archivo</span><input class="inp mono" id="syPath" value="${esc(c.path||'nocout.json')}"></div></div></details>
     <div id="syErr" class="err"></div>`,
   connected?[{l:'Desconectar',k:'dan',f:()=>modal('Desconectar',`<p>Este navegador dejará de sincronizar. Tus datos se quedan aquí y los del equipo siguen en GitHub.</p>`,[{l:'Cancelar',f:syncModal},{l:'Desconectar',k:'dan pri',f:()=>{clearInterval(SY.pollT);SY.cfg=null;SY.base=null;SY.sha=null;syCfgSave();sySet('off');closeModal();toast('Sincronización desactivada en este navegador');}}])},{l:'Cerrar'}]
