@@ -174,6 +174,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .imgph{fill:var(--muted);font:12px var(--f-ui)}.imgcap{fill:var(--ink);font:600 12px var(--f-ui)}
 .verF .vfb{fill:color-mix(in srgb,var(--panel) 55%,transparent);stroke:var(--muted);stroke-width:5;stroke-opacity:.55}
 .verF.sel .vfb{stroke:var(--accent);stroke-opacity:.9}
+.verF .gh{fill:transparent;cursor:move}.verF .vfb{pointer-events:none}
 .verF .vfh{fill:transparent}.verF .vft{fill:var(--muted);font:600 13px var(--f-ui);pointer-events:none}
 .verF .vfs{stroke:var(--muted);stroke-width:4;stroke-opacity:.45}
 .verF .vfp{fill:var(--ink);font:13px var(--f-ui);pointer-events:none}.verF .vfp .vk{fill:var(--muted);font:600 10.5px var(--f-ui);letter-spacing:.08em}
@@ -897,7 +898,7 @@ function migratePlaces(d){
 }
 function applyGroupPlaces(D,data){data=data||S;const P=id=>data.places.find(x=>x.id===id);
   const under=(id,anc)=>{let x=P(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=P(x.parentId);}return false;};
-  (D.nodes||[]).forEach(n=>{const dev=n.deviceId?data.devices.find(x=>x.id===n.deviceId):(n.el?n:null);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
+  (D.nodes||[]).forEach(n=>{if(vGroups(D).length&&!isLive(D,n))return;const dev=n.deviceId?data.devices.find(x=>x.id===n.deviceId):(n.el?n:null);if(!dev)return;const dm=dims(n),cx=n.x+dm.w/2,cy=n.y+dm.h/2;
     const gs=(D.groups||[]).filter(g=>g.placeId&&P(g.placeId)&&(data!==S||locVis(P(g.placeId).kind))&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h).sort((a,b)=>PKINDS.indexOf(P(b.placeId).kind)-PKINDS.indexOf(P(a.placeId).kind)||a.w*a.h-b.w*b.h);
     if(!gs.length)return;const pid=gs[0].placeId;if(dev.place&&(dev.place===pid||under(dev.place,pid)))return;dev.place=pid;});}
 const placeById=id=>id&&(S.places||[]).find(p=>p.id===id);
@@ -911,19 +912,20 @@ function migrateSitio(d){d.places=d.places||[];Object.values(d.diagrams||{}).for
 const locVis=k=>!(S.meta.locHide||[]).includes(k);
 const locAllOff=()=>PKINDS.every(k=>!locVis(k));
 function locBoxes(D){return [...(D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>({pid:g.placeId,x:g.x,y:g.y,w:g.w,h:g.h,ex:true,g})),...autoGroups(D).map(a=>({pid:a.placeId,x:a.x,y:a.y,w:a.w,h:a.h}))];}
-const hold=n=>n.deviceId?devById(n.deviceId):(n.el?n:null),hn=h=>h.name||h.label||'Elemento';
-function shiftPlace(D,pid,dx,dy){dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
+const hold=n=>{if(HOLD_D&&!isLive(HOLD_D,n))return null;return n.deviceId?devById(n.deviceId):(n.el?n:null);},hn=h=>h.name||h.label||'Elemento';
+let HOLD_D=null;
+function shiftPlace(D,pid,dx,dy){HOLD_D=D;dx=Math.ceil(dx/8)*8;dy=Math.ceil(dy/8)*8;
   D.nodes.forEach(n=>{const dv=hold(n);if(dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid))){n.x+=dx;n.y+=dy;}});
   (D.groups||[]).forEach(g=>{if(g.placeId&&(g.placeId===pid||placeUnder(g.placeId,pid))){g.x+=dx;g.y+=dy;}});}
 /* Separa los grupos de ubicación para que no se encimen: hermanos lado a lado y equipos ajenos fuera */
-function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;let moves=0;const G=18;
+function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;HOLD_D=D;let moves=0;const G=18;
   for(let it=0;it<80;it++){const B=locBoxes(D);if(!B.length)break;const byP={};B.forEach(b=>byP[b.pid]=b);
     const parentOf=b=>{let p=placeById(placeById(b.pid)?.parentId),gd=0;while(p&&gd++<20){if(byP[p.id])return p.id;p=placeById(p.parentId);}return '';};
     const sib={};B.forEach(b=>{const k=parentOf(b);(sib[k]=sib[k]||[]).push(b);});let did=false;
     for(const L of Object.values(sib)){if(did)break;L.sort((a,b)=>a.x-b.x||a.y-b.y);
       for(let i=0;i<L.length&&!did;i++)for(let j=i+1;j<L.length&&!did;j++){const a=L[i],b=L[j];
         if(a.x<b.x+b.w+G&&b.x<a.x+a.w+G&&a.y<b.y+b.h+G&&b.y<a.y+a.h+G){const dx=a.x+a.w+G-b.x,dy=a.y+a.h+G-b.y;if(dx<=dy)shiftPlace(D,b.pid,dx,0);else shiftPlace(D,b.pid,0,dy);did=true;}}}
-    if(!did)for(const n of D.nodes){if(!n.deviceId&&!(n.el&&n.place))continue;const dv=hold(n),d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;
+    if(!did)for(const n of D.nodes){if(!isLive(D,n))continue;if(!n.deviceId&&!(n.el&&n.place))continue;const dv=hold(n),d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;
       const bad=B.filter(b=>cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h&&!(dv&&dv.place&&(dv.place===b.pid||placeUnder(dv.place,b.pid))));
       if(!bad.length)continue;const t=bad.sort((a,b)=>b.w*b.h-a.w*a.h)[0];
       const opts=[[t.x+t.w+G-n.x,0],[0,t.y+t.h+G-n.y],[t.x-G-d.w-n.x,0],[0,t.y-G-d.h-n.y]].sort((a,b)=>Math.abs(a[0])+Math.abs(a[1])-Math.abs(b[0])-Math.abs(b[1]));
@@ -940,7 +942,7 @@ function placeNewNode(D,n){const dv=devById(n.deviceId);if(!dv||!dv.place)return
   let x=b.x+b.w-14+24,y=b.y+36;if(!b.ex){/* junto a los demás equipos de esa ubicación */}
   let gd=0;while(hit(x,y)&&gd++<30)y+=gn.h+24;n.x=Math.round(x/8)*8;n.y=Math.round(y/8)*8;return true;}
 function placeColor(pid){for(const D of Object.values(S.diagrams||{}))for(const g of (D.groups||[]))if(g.placeId===pid&&g.color)return g.color;return '';}
-function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];
+function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];HOLD_D=D;
   const ex=new Set((D.groups||[]).filter(g=>g.placeId&&placeById(g.placeId)&&locVis(placeById(g.placeId).kind)).map(g=>g.placeId)),box={},dep={};
   const ext=(pid,x0,y0,x1,y1)=>{const b=box[pid];if(!b)box[pid]=[x0,y0,x1,y1];else{b[0]=Math.min(b[0],x0);b[1]=Math.min(b[1],y0);b[2]=Math.max(b[2],x1);b[3]=Math.max(b[3],y1);}};
   D.nodes.forEach(n=>{const dv=hold(n);if(!dv||!dv.place)return;const d=dims(n);placeChain(dv.place).forEach((p,i)=>{dep[p.id]=i;ext(p.id,n.x,n.y,n.x+d.w,n.y+d.h+6);});});
@@ -951,7 +953,7 @@ function autoGroups(D){if(!D||ui.folder===MAP||locAllOff())return [];
     out.push({id:'ag:'+pid,auto:true,ro:true,kind:pl.kind,placeId:pid,label:pl.name,color:placeColor(pid),x:r[0],y:r[1],w:r[2]-r[0],h:r[3]-r[1]});
     if(pl.parentId&&box[pl.parentId])ext(pl.parentId,...r);});
   return out;}
-function autoMembers(D,pid){return D.nodes.filter(n=>{const dv=hold(n);return dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid));});}
+function autoMembers(D,pid){HOLD_D=D;return D.nodes.filter(n=>{const dv=hold(n);return dv&&dv.place&&(dv.place===pid||placeUnder(dv.place,pid));});}
 function placeUnder(id,anc){let x=placeById(id),gd=0;while(x&&gd++<20){if(x.id===anc)return true;x=placeById(x.parentId);}return false;}
 function ensureTypes(d){
   if(!Array.isArray(d.types))d.types=mkTypes(DEFAULT_TYPES);
@@ -1067,7 +1069,7 @@ function syMerge(base,local,remote){const o={};SHARED_KEYS.forEach(k=>{const b=b
   else if(k==='mapPos')o[k]=m3obj(b,l,r);
   else o[k]=m3any(b,l,r);
   if(o[k]===undefined)delete o[k];});return o;}
-function syApply(shared){SY.applying=true;shared=JSON.parse(JSON.stringify(shared));SHARED_KEYS.forEach(k=>{if(shared[k]!==undefined)S[k]=shared[k];});ensureTypes(S);
+function syApply(shared){SY.applying=true;shared=JSON.parse(JSON.stringify(shared));SHARED_KEYS.forEach(k=>{if(shared[k]!==undefined)S[k]=shared[k];});try{migrateVersions(S);}catch(e){}ensureTypes(S);
   if(ui.folder&&ui.folder!==MAP&&!folById(ui.folder))ui.folder=null;if(ui.sel?.t==='node'&&!getDiag(ui.folder||'')?.nodes?.some(n=>n.id===ui.sel.id))ui.sel=null;
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}if(typeof UNDO!=='undefined')UNDO.last=JSON.stringify(S);if(ui.folder===MAP)ui.mapD=buildMap();SY.applying=false;}
 function sySet(state,msg){SY.state=state;SY.msg=msg||'';syBadge();}
@@ -1149,10 +1151,10 @@ function copyNodes(){const D=getDiag(ui.folder);const ids=ui.multi?.size?[...ui.
   ui.clip={nodes:JSON.parse(JSON.stringify(ns)),edges:JSON.parse(JSON.stringify(D.edges.filter(e=>set.has(e.from)&&set.has(e.to)))),from:ui.folder,n:0};
   toast(`${ns.length} copiado${ns.length===1?'':'s'} · Ctrl+V para pegar aquí o en otro diagrama`);return true;}
 function pasteNodes(){const C=ui.clip,D=getDiag(ui.folder,true);if(!C)return;C.n=(C.from===ui.folder?(C.n||0):0)+1;if(C.from!==ui.folder)C.from=ui.folder,C.n=1;
-  const off=24*C.n,map={},newIds=[],dupDevs=[];
+  const off=24*C.n,map={},newIds=[],dupDevs=[];const pasteIntoVer=C.nodes.length&&C.nodes.every(n=>{const p={...n,x:n.x+off,y:n.y+off};return !isLive(D,p);});
   C.nodes.forEach(n=>{const nn=JSON.parse(JSON.stringify(n));nn.id=uid(n.deviceId?'n':n.el?'x':'t');nn.x=n.x+off;nn.y=n.y+off;
     if(n.deviceId){const d=devById(n.deviceId);if(!d)return;
-      if(D.nodes.some(o=>o.deviceId===n.deviceId)){let nm=d.name+'-COPIA',i=2;while(S.devices.some(x=>norm(x.name)===norm(nm)))nm=d.name+'-COPIA'+(i++);
+      if(D.nodes.some(o=>o.deviceId===n.deviceId&&isLive(D,o))&&!pasteIntoVer){let nm=d.name+'-COPIA',i=2;while(S.devices.some(x=>norm(x.name)===norm(nm)))nm=d.name+'-COPIA'+(i++);
         const nd={...JSON.parse(JSON.stringify(d)),id:uid('d'),name:nm,ip:''};delete nd.place;S.devices.push(nd);nn.deviceId=nd.id;dupDevs.push(nm);}}
     D.nodes.push(nn);map[n.id]=nn.id;newIds.push(nn.id);});
   C.edges.forEach(e=>{if(map[e.from]&&map[e.to])D.edges.push({...JSON.parse(JSON.stringify(e)),id:uid('e'),from:map[e.from],to:map[e.to]});});
@@ -1189,7 +1191,7 @@ function usage(id){let c=0;for(const D of Object.values(S.diagrams))if(D.nodes.s
 
 /* ---------- impacto ---------- */
 function diagHits(D,devId,port){
-  const pn=norm(port);const nodes=D.nodes.filter(n=>n.deviceId===devId);if(!nodes.length)return null;
+  const pn=norm(port);const nodes=D.nodes.filter(n=>n.deviceId===devId&&isLive(D,n));if(!nodes.length)return null;
   const ids=new Set(nodes.map(n=>n.id)),edges=new Set(),hitNodes=new Set();
   D.edges.forEach(e=>{const a=ids.has(e.from),b=ids.has(e.to);if(!a&&!b)return;const ok=!pn||(a&&norm(e.fp)===pn)||(b&&norm(e.tp)===pn);if(ok){edges.add(e.id);hitNodes.add(a?e.from:e.to);}});
   if(!pn)nodes.forEach(n=>hitNodes.add(n.id));
@@ -1200,7 +1202,7 @@ function impactOf(devId,port){
   const pn=norm(port),items=[];
   for(const [fid,D] of Object.entries(S.diagrams)){
     if(!folById(fid))continue;
-    const nodes=D.nodes.filter(n=>n.deviceId===devId); if(!nodes.length)continue;
+    const nodes=D.nodes.filter(n=>n.deviceId===devId&&isLive(D,n)); if(!nodes.length)continue;
     const ids=new Set(nodes.map(n=>n.id)),edges=new Set(),ports=new Set(),hitNodes=new Set();
     D.edges.forEach(e=>{
       const a=ids.has(e.from),b=ids.has(e.to); if(!a&&!b)return;
@@ -1361,9 +1363,10 @@ function renderCanvas(){
   const sdim=new Set();if(SV)D.nodes.forEach(n=>{if(n.deviceId&&!((devById(n.deviceId)?.sections)||[]).includes(SV))sdim.add(n.id);});
   // grupos (detrás)
   const inside=(g,n)=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;};
-  let out=(fid===MAP&&S.meta.geoBg?geoLayer():'')+(fid!==MAP?versionsSVG(D):'');const AG=ui.ag=autoGroups(D);
+  let out=(fid===MAP&&S.meta.geoBg?geoLayer():'')+'';const AG=ui.ag=autoGroups(D);
   const gHid=g=>{const k=g.placeId&&placeById(g.placeId)?placeById(g.placeId).kind:g.kind;return PKINDS.includes(k)&&!locVis(k);};
   [...D.groups.filter(g=>!gHid(g)),...AG].sort((a,b)=>b.w*b.h-a.w*a.h).forEach(g=>{
+    if(g.kind==='version'){out+=verGroupSVG(g,ui.sel?.t==='group'&&ui.sel.id===g.id);return;}
     const col=g.color||'var(--muted)',sel=(ui.sel?.t==='group'||ui.sel?.t==='agroup')&&ui.sel.id===g.id;
     const gi=inc&&D.nodes.some(n=>inc.nodes.has(n.id)&&inside(g,n));
     const gpl=placeById(g.placeId),gk=gpl?gpl.kind:g.kind,gl=gpl?gpl.name:(g.kind==='sitio'&&folById(g.siteId)?sitePath(g.siteId):(g.label||''));
@@ -1442,7 +1445,7 @@ function renderCanvas(){
   if(ui.drag?.kind==='link'){const a=nm[ui.drag.from];if(a){const G=geom(a);out+=`<line class="tmp" x1="${a.x+G.hd[0]}" y1="${a.y+G.hd[1]}" x2="${ui.drag.x}" y2="${ui.drag.y}"/>`;}}
   vpG.innerHTML=out;verBtn();
   {const mm=$('#impMini');if(mm)mm.hidden=!(ui.impact&&ui.impMin);if(ui.impact&&ui.impMin&&mm){const d0=devById(ui.impact.dev);mm.innerHTML=`⚡ Impacto en <b>${esc(d0?.name||'')}${ui.impact.port?' · '+esc(ui.impact.port):''}</b> ▸`;}}
-  if(ui.impact&&!ui.impMin){const ib2=$('#impBanner'),wr=ib2.parentElement.getBoundingClientRect(),n0=D.nodes.find(n=>n.deviceId===ui.impact.dev);
+  if(ui.impact&&!ui.impMin){const ib2=$('#impBanner'),wr=ib2.parentElement.getBoundingClientRect(),n0=(ui.folder===MAP?D.nodes.find(n=>n.deviceId===ui.impact.dev):liveNode(D,ui.impact.dev));
     ib2.classList.remove('left','free');
     if(n0){const G=geom(n0);let x=vp.x+(n0.x+G.w+(G.hd?28:0))*vp.k+12,y=vp.y+n0.y*vp.k+Math.min(G.h*vp.k/2,30)-26;
       if(x+260>wr.width){x=vp.x+n0.x*vp.k-262;ib2.classList.add('left');}
@@ -1524,7 +1527,7 @@ svg.addEventListener('pointermove',e=>{
   if(g.kind==='box'){g.x=pt.x;g.y=pt.y;rc();}
   if(g.kind==='link'||g.kind==='reend'){g.x=pt.x;g.y=pt.y;rc();}
 });
-function placeAfterMove(D,orig){const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]));const msgs=[];
+function placeAfterMove(D,orig){HOLD_D=D;const op=new Map(orig.map(([o,x,y])=>[o,[x,y]]));const msgs=[];
   const ctr=(n,x,y)=>{const d=dims(n);return[x+d.w/2,y+d.h/2];};const inR=(G,gx,gy,[cx,cy])=>cx>=gx&&cx<=gx+G.w&&cy>=gy&&cy<=gy+G.h;
   const before=autoGroups(D);
   orig.forEach(([n,x,y])=>{const dv=hold(n);if(!dv)return;
@@ -1744,6 +1747,46 @@ document.addEventListener('paste',e=>{const t=e.target;if(t&&t.closest&&t.closes
   const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(!it)return;e.preventDefault();addImageNode(it.getAsFile(),ui.lastPt);});
 
 
+
+/* ---------- grupos de versión: lo que queda dentro sigue editable pero no cuenta para impacto, ubicación ni mapa ---------- */
+const vGroups=D=>(D?.groups||[]).filter(g=>g.kind==='version');
+function verOf(D,n){const V=vGroups(D);if(!V.length)return null;const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;let best=null;V.forEach(g=>{if(cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h&&(!best||g.w*g.h<best.w*best.h))best=g;});return best;}
+const isLive=(D,n)=>!verOf(D,n);
+const liveNode=(D,devId)=>D.nodes.find(n=>n.deviceId===devId&&isLive(D,n))||null;
+function nodesBox(ns){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;ns.forEach(n=>{const d=dims(n);x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x+d.w);y1=Math.max(y1,n.y+d.h);});return{x:x0,y:y0,w:x1-x0,h:y1-y0};}
+function makeVersionGroup(D,ns,meta){const b=nodesBox(ns),num=vGroups(D).reduce((m,g)=>Math.max(m,g.vnum||0),0)+1;
+  const g={id:uid('g'),kind:'version',label:'',vnum:num,vlabel:meta.label||'',vticket:meta.ticket||'',vreason:meta.reason||'',vby:SY.cfg?.login||S.meta.owner||'',vdate:new Date().toISOString(),
+    x:Math.floor((b.x-28)/8)*8,y:Math.floor((b.y-28-VHEAD)/8)*8};g.w=Math.ceil((b.w+56+VPAN)/8)*8;g.h=Math.ceil(Math.max(b.h+56+VHEAD,250)/8)*8;D.groups.push(g);return g;}
+function copyAsVersion(D,ns,meta){const set=new Set(ns.map(n=>n.id)),b=nodesBox(ns),cb=contentBox(D),W=b.w+56+VPAN,dx=Math.round((cb.x-W-140-b.x)/8)*8,map={},clones=[];
+  ns.forEach(n=>{const c=JSON.parse(JSON.stringify(n));c.id=uid(n.deviceId?'n':n.el?'x':n.img?'m':'t');c.x=n.x+dx;D.nodes.push(c);map[n.id]=c.id;clones.push(c);});
+  D.edges.filter(e=>set.has(e.from)&&set.has(e.to)).forEach(e=>D.edges.push({...JSON.parse(JSON.stringify(e)),id:uid('e'),from:map[e.from],to:map[e.to]}));
+  return makeVersionGroup(D,clones,meta);}
+function verGroupSVG(g,sel){const px=g.x+g.w-VPAN,lines=[];const add=(k,t)=>{lines.push(`<tspan class="vk" x="${px+18}" dy="${lines.length?22:0}">${esc(k)}</tspan>`);wrapTxt(t||'—',26).forEach(l=>lines.push(`<tspan x="${px+18}" dy="17">${esc(l)}</tspan>`));};
+  add('VERSIÓN',`${g.vnum||''}${g.vlabel?' · '+g.vlabel:''}`);add('FECHA',fmtDate(g.vdate));add('TICKET',g.vticket);add('RAZÓN',g.vreason);if(g.vby)add('GUARDÓ','@'+g.vby);
+  return `<g class="grp verF${sel?' sel':''}" data-group="${g.id}"><rect class="vfb" x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="18"/>
+    <rect class="gh" data-ghead="${g.id}" x="${g.x}" y="${g.y}" width="${g.w}" height="${VHEAD}"/><text class="vft" x="${g.x+22}" y="${g.y+22}">🕘 Versión ${g.vnum||''}${g.vlabel?' · '+esc(g.vlabel):''} · no cuenta para impacto ni mapa</text>
+    <line class="vfs" x1="${px}" y1="${g.y+10}" x2="${px}" y2="${g.y+g.h-10}"/><text class="vfp" x="${px+18}" y="${g.y+34}">${lines.join('')}</text>
+    <rect class="gr" data-gresize="${g.id}" x="${g.x+g.w-13}" y="${g.y+g.h-13}" width="13" height="13" rx="2"/><title>Versión anterior: lo de adentro se puede editar, pero no cuenta para el análisis de impacto, la ubicación ni el mapa general</title></g>`;}
+function versionMetaModal(title,cb){modal(title,`<div class="fld"><span class="lbl">Nombre</span><input class="inp" id="vLabel" placeholder="Antes de migrar a Telco 2"></div>
+    <div class="fld"><span class="lbl">Ticket</span><input class="inp mono" id="vTicket" placeholder="CHG-1234 (opcional)"></div>
+    <div class="fld"><span class="lbl">Razón</span><textarea class="inp" id="vReason" rows="2" placeholder="Migración de Telco Chapultepec a Telco 2; se conserva para rollback"></textarea></div>`,
+  [{l:'Cancelar'},{l:'Guardar',k:'pri',f:()=>{const m={label:$('#vLabel').value.trim(),ticket:$('#vTicket').value.trim(),reason:$('#vReason').value.trim()};closeModal();cb(m);}}]);setTimeout(()=>$('#vLabel')?.focus(),30);}
+function versionsModal(){const D=getDiag(ui.folder);if(!D||ui.folder===MAP)return;const V=vGroups(D);
+  modal('Versiones de este diagrama',`<div class="choice"><button data-vact="copyAll"><b>Guardar copia del diagrama actual como versión</b><span>Se duplica todo lo actual dentro de un recuadro de versión, a un lado. Después editas el diagrama normal con el cambio (por ejemplo la migración) y la versión queda para rollback.</span></button></div>
+    <p class="sub" style="margin:8px 0 0">¿Solo una parte? Selecciona los equipos (Shift+clic o Shift+arrastrar) y en el panel derecho usa <b>Guardar copia como versión</b> o <b>Agrupar como versión</b> (si ya los tienes dibujados y quieres marcarlos como el camino anterior).</p>
+    ${V.length?`<hr class="sep"><span class="lbl">Versiones en este diagrama</span><div class="verList">${[...V].sort((a,b)=>(b.vnum||0)-(a.vnum||0)).map(g=>`<div class="verRow"><div><b>Versión ${g.vnum||''}${g.vlabel?' · '+esc(g.vlabel):''}</b><span>${esc(fmtDate(g.vdate))}${g.vticket?' · '+esc(g.vticket):''}${g.vby?' · @'+esc(g.vby):''}</span>${g.vreason?`<span>${esc(g.vreason)}</span>`:''}</div><div class="vb"><button class="btn sm" data-vgo="${g.id}">Ir</button></div></div>`).join('')}</div>`:''}`,[{l:'Cerrar'}],{wide:true});
+  $('#mB').addEventListener('click',e=>{const a=e.target.closest('[data-vact]');if(a){const live=D.nodes.filter(n=>isLive(D,n));if(!live.length){toast('No hay nada en el diagrama actual');return;}
+      versionMetaModal('Guardar copia como versión',m=>{const g=copyAsVersion(D,live,m);save();renderAll();goGroup(g);toast(`Versión ${g.vnum} guardada a un lado. Ya puedes editar el diagrama actual.`);});return;}
+    const go=e.target.closest('[data-vgo]');if(go){const g=V.find(x=>x.id===go.dataset.vgo);closeModal();if(g)goGroup(g);}});}
+function goGroup(g){const r=svg.getBoundingClientRect(),vp=getVp(),k=Math.max(.1,Math.min(1.2,Math.min((r.width-60)/g.w,(r.height-110)/g.h)));vp.k=k;vp.x=(r.width-g.w*k)/2-g.x*k;vp.y=(r.height-g.h*k)/2-g.y*k+16;ui.sel={t:'group',id:g.id};ui.multi=new Set();renderInsp();rc();}
+function verBtn(){const b=$('#verBtn');if(!b)return;const D=ui.folder&&ui.folder!==MAP?getDiag(ui.folder):null,n=vGroups(D).length;b.hidden=!D;b.classList.toggle('has',n>0);b.innerHTML=n?`🕘 ${n} versi${n===1?'ón':'ones'}`:'🕘 Versiones';b.title=n?'Este diagrama tiene versiones anteriores':'Guardar una versión del diagrama (por ejemplo antes de una migración)';}
+function migrateVersions(d){Object.values(d.diagrams||{}).forEach(D=>{if(!D.versions||!D.versions.length)return;
+  D.versions.forEach(v=>{const dt=v.data||{};const map={},clones=[];const bb=v.bb||{x:0,y:0};const ox=(v.x||0)+28-(bb.x||0),oy=(v.y||0)+28+VHEAD-(bb.y||0);
+    (dt.nodes||[]).forEach(n=>{const c=JSON.parse(JSON.stringify(n));c.id=uid('n');c.x=n.x+ox;c.y=n.y+oy;D.nodes.push(c);map[n.id]=c.id;clones.push(c);});
+    (dt.edges||[]).forEach(e=>{if(map[e.from]&&map[e.to])D.edges.push({...e,id:uid('e'),from:map[e.from],to:map[e.to]});});
+    if(clones.length){const g=makeVersionGroup(D,clones,{label:v.label,ticket:v.ticket,reason:v.reason});g.vnum=v.num||g.vnum;g.vdate=v.date||g.vdate;g.vby=v.by||'';}});
+  delete D.versions;});}
+
 /* ---------- versiones del diagrama (foto de solo lectura dentro del mismo diagrama) ---------- */
 const VPAN=250,VPAD=28,VHEAD=34;
 function captureVersion(D){const keep={sel:ui.sel,multi:ui.multi,impact:ui.impact,layer:S.meta.layer,noVer:ui.noVer};
@@ -1780,7 +1823,7 @@ function versionsSVG(D){if(!D.versions||!D.versions.length||ui.noVer)return '';l
 function restoreVersion(D,v){saveVersion(D,{label:'Antes de restaurar v'+v.num,reason:'Guardada automáticamente al restaurar la versión '+v.num});
   const d=JSON.parse(JSON.stringify(v.data));D.nodes=d.nodes||[];D.edges=d.edges||[];D.groups=d.groups||[];ui.sel=null;ui.multi=new Set();save();renderAll();
   toast(`Diagrama restaurado a la versión ${v.num}. Lo anterior quedó guardado como otra versión.`);}
-function versionsModal(){const D=getDiag(ui.folder);if(!D||ui.folder===MAP)return;const V=D.versions||[];
+function versionsModalOld(){const D=getDiag(ui.folder);if(!D||ui.folder===MAP)return;const V=D.versions||[];
   modal('Versiones de este diagrama',`<div class="fld"><span class="lbl">Guardar el diagrama actual como versión</span>
       <input class="inp" id="vLabel" placeholder="Nombre corto (ej. Antes de migrar a Telco 2)">
       <div class="two" style="margin-top:6px"><input class="inp mono" id="vTicket" placeholder="Ticket (opcional)"><span></span></div>
@@ -1795,10 +1838,10 @@ function versionsModal(){const D=getDiag(ui.folder);if(!D||ui.folder===MAP)retur
     else if(id.vres){modal('Restaurar versión '+v.num,`<p>El diagrama regresará a como estaba en <b>${esc(verLabel(v))}</b> (${esc(fmtDate(v.date))}). Lo que hay ahora se guardará como una versión nueva, así que no se pierde.</p>`,[{l:'Cancelar',f:versionsModal},{l:'Restaurar',k:'pri',f:()=>{closeModal();restoreVersion(D,v);}}]);}
     else if(id.vdel){modal('Eliminar versión '+v.num,`<p>Se borrará <b>${esc(verLabel(v))}</b>. Esto no cambia el diagrama actual.</p>`,[{l:'Cancelar',f:versionsModal},{l:'Eliminar',k:'dan pri',f:()=>{D.versions=D.versions.filter(x=>x!==v);save();versionsModal();rc();}}]);}});}
 function goVersion(v){const r=svg.getBoundingClientRect(),vp=getVp(),sz=verSize(v),k=Math.max(.1,Math.min(1,Math.min((r.width-60)/sz.w,(r.height-100)/sz.h)));vp.k=k;vp.x=(r.width-sz.w*k)/2-v.x*k;vp.y=(r.height-sz.h*k)/2-v.y*k+16;ui.sel={t:'ver',id:v.id};renderInsp();rc();}
-function verBtn(){const b=$('#verBtn');if(!b)return;const D=ui.folder&&ui.folder!==MAP?getDiag(ui.folder):null,n=D?.versions?.length||0;b.hidden=!D;b.classList.toggle('has',n>0);b.innerHTML=n?`🕘 ${n} versi${n===1?'ón':'ones'}`:'🕘 Versiones';b.title=n?'Este diagrama tiene versiones anteriores guardadas':'Guardar una versión del diagrama (por ejemplo antes de una migración)';}
+function verBtnOld(){const b=$('#verBtn');if(!b)return;const D=ui.folder&&ui.folder!==MAP?getDiag(ui.folder):null,n=D?.versions?.length||0;b.hidden=!D;b.classList.toggle('has',n>0);b.innerHTML=n?`🕘 ${n} versi${n===1?'ón':'ones'}`:'🕘 Versiones';b.title=n?'Este diagrama tiene versiones anteriores guardadas':'Guardar una versión del diagrama (por ejemplo antes de una migración)';}
 
 function addDeviceNode(devId){noteRecent(devId);
-  const D=getDiag(ui.folder,true),ex=D.nodes.find(n=>n.deviceId===devId),from=ui.addFrom&&D.nodes.find(n=>n.id===ui.addFrom);ui.addFrom=null;
+  const D=getDiag(ui.folder,true),ex=liveNode(D,devId),from=ui.addFrom&&D.nodes.find(n=>n.id===ui.addFrom);ui.addFrom=null;
   const link=(a,b)=>{const ed={id:uid('e'),from:a.id,to:b.id,fp:'',tp:'',medium:'fibra',label:'',dir:'none'};D.edges.push(ed);return ed;};
   if(ex){
     if(from&&from.id!==ex.id){const ed=link(from,ex);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};save();renderAll();toast('Conectado con el equipo que ya estaba en el diagrama');return;}
@@ -1869,7 +1912,9 @@ function buildMap(){
   const fids=mapSel(),nodes=new Map(),edges=new Map();
   fids.forEach(fid=>{const D=S.diagrams[fid];if(!D)return;const nm={};
     D.nodes.forEach(n=>{
+      if(n.el&&!isLive(D,n))return;
       if(n.el){const k='x_'+fid+'_'+n.id;nm[n.id]=k;nodes.set(k,{id:'m_'+k,pk:k,el:true,svcTag:n.svcTag,place:n.place,label:n.label,sub:n.sub,icon:n.icon,shape:n.shape,color:n.color,notes:n.notes,srcFid:fid,srcId:n.id,x:0,y:0,svc:new Set([fid]),orig:{x:n.x,y:n.y}});return;}
+      if(!isLive(D,n))return;
       if(!n.deviceId||!devById(n.deviceId))return;nm[n.id]=n.deviceId;
       if(!nodes.has(n.deviceId))nodes.set(n.deviceId,{id:'m_'+n.deviceId,pk:n.deviceId,deviceId:n.deviceId,x:0,y:0,svc:new Set(),orig:{x:n.x,y:n.y}});
       nodes.get(n.deviceId).svc.add(fid);});
@@ -2260,8 +2305,8 @@ function mergeDevModal(ids){ids=ids.filter(devById);if(ids.length<2)return;let k
     if(lostIps.length)notes.push('Otras IPs: '+lostIps.join(', '));if(lostNames.length)notes.push('También conocido como: '+[...new Set(lostNames)].join(', '));
     K.notes=notes.join('\n');K.name=nameNew;
     const gone=new Set(others.map(d=>d.id));
-    Object.values(S.diagrams).forEach(D=>{const kn=D.nodes.find(n=>n.deviceId===keep);let target=kn;
-      D.nodes.filter(n=>gone.has(n.deviceId)).forEach(n=>{if(!target){n.deviceId=keep;target=n;return;}
+    Object.values(S.diagrams).forEach(D=>{const scope=n=>verOf(D,n)?.id||'live';
+      D.nodes.filter(n=>gone.has(n.deviceId)).forEach(n=>{const target=D.nodes.find(x=>x!==n&&x.deviceId===keep&&scope(x)===scope(n));if(!target){n.deviceId=keep;return;}
         D.edges.forEach(e=>{if(e.from===n.id)e.from=target.id;if(e.to===n.id)e.to=target.id;});D.nodes=D.nodes.filter(x=>x!==n);});
       D.edges=D.edges.filter(e=>e.from!==e.to);});
     (S.incidents||[]).forEach(i=>(i.scope||[]).forEach(sc=>{if(gone.has(sc.dev))sc.dev=keep;}));
@@ -2440,6 +2485,7 @@ function renderInsp(){
     el.innerHTML=`${close}<span class="lbl">Selección</span><h3>${ns.length} elementos</h3>
       <div class="acc">${ns.map(n=>n.el?`<div class="sub">Elemento: ${esc(n.label||'')}</div>`:n.deviceId?`<div class="drow" style="cursor:default">${gsvg(devById(n.deviceId)?.type)}<div class="t"><div>${esc(devById(n.deviceId)?.name)}</div></div><span></span></div>`:`<div class="sub">Texto: ${esc(trunc(n.text,30))}</div>`).join('')}</div>
       <div class="fld"><span class="lbl">Englobar en</span><div style="display:flex;gap:6px"><select class="inp" id="mKind" style="flex:1">${Object.entries(GKINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select><button class="btn sm pri" data-act="mkGroup">Crear grupo</button></div></div>
+      <div class="fld"><span class="lbl">🕘 Versión anterior</span><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="selCopyVer" title="Duplica lo seleccionado en un recuadro de versión a un lado; lo actual queda para editar">Guardar copia como versión</button><button class="btn sm" data-act="selWrapVer" title="Encierra lo seleccionado en un recuadro de versión (sin copiar)">Agrupar como versión</button></div></div>
       <p class="sub" style="margin:0">Arrastra cualquiera de ellos para moverlos juntos.</p>
       <button class="btn sm dan" data-act="delSel">Quitar ${ns.length} del diagrama</button>`;
     return;
@@ -2461,6 +2507,14 @@ function renderInsp(){
       <button class="btn sm" data-act="pinAuto">Fijar como grupo editable en este diagrama</button>
       <button class="btn sm" data-act="autoLocOff">Ocultar el nivel «${esc(GKINDS[g.kind])}»</button>`;
     return;}
+  if(ui.sel.t==='group'&&D.groups.find(x=>x.id===ui.sel.id)?.kind==='version'){const g=D.groups.find(x=>x.id===ui.sel.id),inn=D.nodes.filter(n=>verOf(D,n)===g);
+    el.innerHTML=`${close}<span class="lbl">Versión anterior</span><h3 style="margin:0">Versión ${g.vnum||''}</h3><span class="sub">${esc(fmtDate(g.vdate))}${g.vby?' · @'+esc(g.vby):''} · ${inn.length} elemento${inn.length===1?'':'s'} dentro</span>
+      <div class="fld"><span class="lbl">Nombre</span><input class="inp" id="vgLabel" value="${esc(g.vlabel||'')}" placeholder="Antes de la migración"></div>
+      <div class="fld"><span class="lbl">Ticket</span><input class="inp mono" id="vgTicket" value="${esc(g.vticket||'')}"></div>
+      <div class="fld"><span class="lbl">Razón</span><textarea class="inp" id="vgReason" rows="3">${esc(g.vreason||'')}</textarea></div>
+      <p class="sub" style="margin:0">Lo que está dentro se edita normal, pero no cuenta para el análisis de impacto, la ubicación ni el mapa general. Arrastra el título para moverla con todo; la esquina cambia el tamaño.</p>
+      <button class="btn sm pri" data-act="vgRollback">Hacer actual (rollback)</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="vgUnwrap">Quitar marco (volver a actual)</button><button class="btn sm dan" data-act="vgDelete">Eliminar versión y su contenido</button></div>`;return;}
   if(ui.sel.t==='group'){
     const g=D.groups.find(x=>x.id===ui.sel.id);if(!g){ui.sel=null;return renderInsp();}
     const inn=D.nodes.filter(n=>{const d=dims(n),cx=n.x+d.w/2,cy=n.y+d.h/2;return n.deviceId&&cx>=g.x&&cx<=g.x+g.w&&cy>=g.y&&cy<=g.y+g.h;});
@@ -2568,6 +2622,7 @@ function renderInsp(){
 $('#insp').addEventListener('input',e=>{
   const D=ui.folder&&getDiag(ui.folder);if(!D||!ui.sel)return;
   if(e.target.id==='nTxt'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){n.text=e.target.value;save();rc();}return;}
+  if(['vgLabel','vgTicket','vgReason'].includes(e.target.id)){const g=D.groups.find(x=>x.id===ui.sel?.id);if(g){g[{vgLabel:'vlabel',vgTicket:'vticket',vgReason:'vreason'}[e.target.id]]=e.target.value;save();rc();}return;}
   if(['vfLabel','vfTicket','vfReason'].includes(e.target.id)){const v=(D.versions||[]).find(x=>x.id===ui.sel?.id);if(v){v[{vfLabel:'label',vfTicket:'ticket',vfReason:'reason'}[e.target.id]]=e.target.value;save();rc();}return;}
   if(e.target.id==='imCap'||e.target.id==='imW'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='imCap')n.cap=e.target.value;else{n.w=+e.target.value;n.h=Math.round(n.w*(n.ar||n.h/n.w));}save();rc();}return;}
   if(e.target.matches('[data-ecol-custom]')){const ed=D.edges.find(x=>x.id===ui.sel.id);if(ed){ed.color=e.target.value;save();rc();}return;}
@@ -3127,7 +3182,7 @@ document.addEventListener('click',e=>{
   if(op0&&op0.matches('.row[data-fdrag]')){const f=folById(op0.dataset.open);if(f&&(f.kind==='cliente'||f.kind==='sitio')){e.preventDefault();const id=f.id;if(!kids(id).length){toast(`${f.name} todavía no tiene ${f.kind==='cliente'?'sitios':'servicios'}; agrégalos con el botón +`);return;}ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}}
   const op=t.closest('[data-open]');if(op){e.preventDefault();sres.hidden=true;openFolder(op.dataset.open);return;}
   const dv=t.closest('[data-dev]');if(dv){devModal(dv.dataset.dev);return;}
-  const sn=t.closest('[data-selnode]');if(sn){const n=getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
+  const sn=t.closest('[data-selnode]');if(sn){const n=liveNode(getDiag(ui.folder),sn.dataset.selnode)||getDiag(ui.folder).nodes.find(x=>x.deviceId===sn.dataset.selnode);if(n){ui.multi=new Set([n.id]);ui.sel={t:'node',id:n.id};renderInsp();rc();}return;}
   const cp=t.closest('[data-copy]');if(cp){copyText(cp.dataset.copy);return;}
   const a=t.closest('[data-act]');if(!a)return;
   const D=ui.folder&&getDiag(ui.folder);
@@ -3165,6 +3220,18 @@ document.addEventListener('click',e=>{
     case 'cmpMode':S.meta.mapSel=[];save(false);if(ui.folder===MAP)refreshMap(false);else openMap();toast('Marca en el árbol los clientes, sitios o servicios que quieres comparar');break;
     case 'mapExit':{const pf=ui.prevFolder&&folById(ui.prevFolder)?ui.prevFolder:null;ui.tab='clientes';if(pf)openFolder(pf);else{ui.folder=null;ui.sel=null;renderAll();}break;}
     case 'noop':break;
+    case 'vgRollback':{const D=getDiag(ui.folder),g=D.groups.find(x=>x.id===ui.sel?.id);if(!g)break;
+      modal('Hacer actual la versión '+(g.vnum||''),`<p>Lo que hoy está en el diagrama actual se guardará como una versión nueva (en su mismo lugar) y el contenido de <b>Versión ${g.vnum||''}</b> pasará a ser el actual.</p>`,[{l:'Cancelar'},{l:'Hacer actual',k:'pri',f:()=>{closeModal();
+        const live=D.nodes.filter(n=>isLive(D,n));if(live.length)makeVersionGroup(D,live,{label:'Antes del rollback a v'+(g.vnum||''),reason:'Se guardó automáticamente al hacer actual la versión '+(g.vnum||'')});
+        D.groups=D.groups.filter(x=>x!==g);ui.sel=null;save();renderAll();toast('Rollback hecho: la versión anterior es ahora el diagrama actual');}}]);break;}
+    case 'vgUnwrap':{const D=getDiag(ui.folder),g=D.groups.find(x=>x.id===ui.sel?.id);if(!g)break;const inn=D.nodes.filter(n=>verOf(D,n)===g);
+      const clash=inn.filter(n=>n.deviceId&&D.nodes.some(o=>o!==n&&o.deviceId===n.deviceId&&isLive(D,o))).map(n=>devById(n.deviceId)?.name);
+      if(clash.length){modal('No se puede quitar el marco',`<p>Estos equipos también están en el diagrama actual: <b>${esc([...new Set(clash)].join(', '))}</b>. Un equipo solo puede estar una vez en lo actual.</p><p class="sub">Si quieres regresar a esta versión usa <b>Hacer actual (rollback)</b>.</p>`,[{l:'Entendido'}]);break;}
+      D.groups=D.groups.filter(x=>x!==g);ui.sel=null;save();renderAll();toast('Marco quitado: su contenido es parte del diagrama actual');break;}
+    case 'vgDelete':{const D=getDiag(ui.folder),g=D.groups.find(x=>x.id===ui.sel?.id);if(!g)break;const inn=new Set(D.nodes.filter(n=>verOf(D,n)===g).map(n=>n.id));
+      modal('Eliminar versión '+(g.vnum||''),`<p>Se borrará la versión y los ${inn.size} elementos que tiene dentro. El diagrama actual no cambia.</p>`,[{l:'Cancelar'},{l:'Eliminar',k:'dan pri',f:()=>{D.nodes=D.nodes.filter(n=>!inn.has(n.id));D.edges=D.edges.filter(e=>!inn.has(e.from)&&!inn.has(e.to));D.groups=D.groups.filter(x=>x!==g);ui.sel=null;save();closeModal();renderAll();}}]);break;}
+    case 'selCopyVer':{const D=getDiag(ui.folder),ns=[...(ui.multi||[])].map(i=>D.nodes.find(n=>n.id===i)).filter(Boolean);if(!ns.length)break;versionMetaModal('Guardar copia como versión',m=>{const g=copyAsVersion(D,ns,m);save();renderAll();goGroup(g);toast(`Versión ${g.vnum} guardada a un lado. Lo seleccionado sigue en el diagrama actual para que lo edites.`);});break;}
+    case 'selWrapVer':{const D=getDiag(ui.folder),ns=[...(ui.multi||[])].map(i=>D.nodes.find(n=>n.id===i)).filter(Boolean);if(!ns.length)break;versionMetaModal('Agrupar como versión',m=>{const g=makeVersionGroup(D,ns,m);ui.multi=new Set();save();renderAll();goGroup(g);toast(`Marcado como Versión ${g.vnum}: ya no cuenta para impacto ni mapa`);});break;}
     case 'verRestore':{const D=getDiag(ui.folder),v=(D.versions||[]).find(x=>x.id===ui.sel?.id);if(v)modal('Restaurar versión '+v.num,`<p>El diagrama regresará a como estaba en <b>${esc(verLabel(v))}</b>. Lo actual se guardará como otra versión.</p>`,[{l:'Cancelar'},{l:'Restaurar',k:'pri',f:()=>{closeModal();restoreVersion(D,v);}}]);break;}
     case 'verHide':{const D=getDiag(ui.folder),v=(D.versions||[]).find(x=>x.id===ui.sel?.id);if(v){v.hidden=true;ui.sel=null;save();renderAll();toast('Versión oculta · la puedes volver a mostrar desde 🕘');}break;}
     case 'verDel':{const D=getDiag(ui.folder),v=(D.versions||[]).find(x=>x.id===ui.sel?.id);if(v)modal('Eliminar versión '+v.num,'<p>Se borrará esta versión. El diagrama actual no cambia.</p>',[{l:'Cancelar'},{l:'Eliminar',k:'dan pri',f:()=>{D.versions=D.versions.filter(x=>x!==v);ui.sel=null;save();closeModal();renderAll();}}]);break;}
@@ -3215,6 +3282,7 @@ function delSel(){
   const D=getDiag(ui.folder);if(!ui.sel)return;
   if(ui.sel.t==='ver'){const b=document.querySelector('[data-act="verDel"]');if(b)b.click();return;}
   if(ui.sel.t==='agroup')return;
+  if(ui.sel.t==='group'&&D.groups.find(g=>g.id===ui.sel.id)?.kind==='version'){document.querySelector('[data-act="vgDelete"]')?.click();return;}
   if(ui.sel.t==='group'){D.groups=D.groups.filter(g=>g.id!==ui.sel.id);ui.sel=null;save();renderAll();return;}
   if(ui.sel.t==='multi'){const ids=ui.multi||new Set();D.nodes=D.nodes.filter(n=>!ids.has(n.id));D.edges=D.edges.filter(e=>!ids.has(e.from)&&!ids.has(e.to));ui.multi=new Set();ui.sel=null;save();renderAll();return;}
   if(ui.sel.t==='node'){D.nodes=D.nodes.filter(n=>n.id!==ui.sel.id);D.edges=D.edges.filter(e=>e.from!==ui.sel.id&&e.to!==ui.sel.id);}
@@ -3276,7 +3344,7 @@ document.querySelectorAll('[data-rz]').forEach(el=>{
 window.addEventListener('resize',()=>{applyPanels();rc();if(ui.view==='clients'&&ui.cliPage)drawL2L();});
 
 function renderAll(){renderView();if(ui.folder===MAP&&!ui.mapLock){ui.mapLock=1;ui.mapD=buildMap();ui.mapLock=0;}renderSide();renderCanvas();renderInsp();renderStatus();}
-S_READY=true;try{applyCv();}catch(e){}setTimeout(()=>{syCfgLoad();syStart();},0);try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
+S_READY=true;try{migrateVersions(S);}catch(e){console.error(e);}try{applyCv();}catch(e){}setTimeout(()=>{syCfgLoad();syStart();},0);try{Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.svcTag&&n.shape==='small'){n.shape='icon';if(n.sub==='Servicio')delete n.sub;}}));}catch(e){}setTimeout(()=>{UNDO.last=JSON.stringify(S);undoBtns();},0);try{if(S.meta.autoLoc===false&&!S.meta.locHide)S.meta.locHide=[...PKINDS];delete S.meta.autoLoc;migratePlaces(S);migrateSitio(S);}catch(e){console.error(e);}
 renderAll();applyPanels();
 requestAnimationFrame(()=>requestAnimationFrame(fit));
 </script>
