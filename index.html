@@ -191,6 +191,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .verBtn.has{border-color:var(--accent);color:var(--accent);font-weight:600}
 .verList{display:grid;gap:8px;margin-top:6px}.verRow{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .verRow>div:first-child{display:grid;gap:2px;min-width:0}.verRow span{color:var(--muted);font-size:12.5px}.verRow .vb{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.szBox{display:flex;gap:6px;align-items:center}.szBox .inp{width:72px;text-align:center}
 .medPick{display:flex;gap:6px;flex-wrap:wrap}
 .medPick button{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 6px;cursor:pointer;color:var(--edge);display:grid;place-items:center}
 .medPick button svg line{stroke:currentColor;stroke-width:2.2}.medPick button svg circle{fill:currentColor}
@@ -2570,7 +2571,7 @@ function renderInsp(){
         <p class="sub" style="margin:0">Pega imágenes con <kbd>Ctrl+V</kbd> en el diagrama. Arrastra la esquina para cambiar el tamaño. No se muestran en el mapa general.</p>`;return;}
     if(!n.deviceId){
       el.innerHTML=`${close}<span class="lbl">Texto</span><div class="fld"><textarea id="nTxt" rows="4">${esc(n.text)}</textarea></div>
-        <div class="two"><div class="fld"><span class="lbl">Tamaño</span><select class="inp" id="nSize">${[[11,'Chico'],[13,'Normal'],[16,'Grande'],[20,'Título']].map(([v,l])=>`<option value="${v}"${(+n.size||13)===v?' selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="two"><div class="fld"><span class="lbl">Tamaño de letra (px)</span><div class="szBox"><button type="button" class="btn sm" data-tsz="-1" aria-label="Más chica">−</button><input class="inp mono" id="nSize" type="number" min="6" max="120" step="1" value="${+n.size||13}"><button type="button" class="btn sm" data-tsz="1" aria-label="Más grande">+</button></div></div>
         <div class="fld"><span class="lbl">Estilo</span><label class="chk" style="height:34px"><input type="checkbox" id="nBold"${n.bold?' checked':''}> Negritas</label></div></div>
         <div class="fld"><span class="lbl">Color del texto</span>${swatches('data-tcol',n.color,'var(--ink)')}</div>
         <button class="btn sm dan" data-act="delSel">Eliminar texto</button>`;return;
@@ -2637,7 +2638,7 @@ $('#insp').addEventListener('input',e=>{
   if(e.target.id==='imCap'||e.target.id==='imW'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='imCap')n.cap=e.target.value;else{n.w=+e.target.value;n.h=Math.round(n.w*(n.ar||n.h/n.w));}save();rc();}return;}
   if(e.target.matches('[data-ecol-custom]')){const ed=D.edges.find(x=>x.id===ui.sel.id);if(ed){ed.color=e.target.value;save();rc();}return;}
   if(e.target.matches('[data-tcol-custom]')){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){n.color=e.target.value;save();rc();}return;}
-  if(e.target.id==='nSize'||e.target.id==='nBold'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='nSize')n.size=+e.target.value;else n.bold=e.target.checked;save();rc();}return;}
+  if(e.target.id==='nSize'||e.target.id==='nBold'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.id==='nSize'){const v=+e.target.value;if(!(v>=6&&v<=120))return;n.size=v;}else n.bold=e.target.checked;save();rc();}return;}
   if(['elLabel','elSub','elShape','elNotes'].includes(e.target.id)||e.target.matches('[data-elcol-custom]')){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){const k={elLabel:'label',elSub:'sub',elShape:'shape',elNotes:'notes'}[e.target.id]||'color';n[k]=e.target.value;save();rc();}return;}
   if(e.target.id==='nShape'){const n=D.nodes.find(x=>x.id===ui.sel.id);if(n){if(e.target.value)n.shape=e.target.value;else delete n.shape;save();rc();}return;}
   if(e.target.id==='gSiteQ'){ui.sq=e.target.value;const g=D.groups.find(x=>x.id===ui.sel.id);if(g)$('#gSlist').innerHTML=siteListHTML(g);return;}
@@ -3185,6 +3186,7 @@ document.addEventListener('click',e=>{
   const imp=t.closest('[data-imp]');if(imp){sres.hidden=true;setImpact(imp.dataset.imp,imp.dataset.port);return;}
   const sd=t.closest('[data-sdev]');if(sd){sres.hidden=true;qI.value='';setImpact(sd.dataset.sdev,'');return;}
   const mdb=t.closest('[data-med]');if(mdb&&ui.sel?.t==='edge'){const ed=getDiag(ui.folder).edges.find(x=>x.id===ui.sel.id);if(ed){ed.medium=mdb.dataset.med;save();renderInsp();rc();}return;}
+  const tsz=t.closest('[data-tsz]');if(tsz){const D=getDiag(ui.folder),n=D?.nodes.find(x=>x.id===ui.sel?.id);if(n){n.size=Math.max(6,Math.min(120,(+n.size||13)+(+tsz.dataset.tsz)));const i=$('#nSize');if(i)i.value=n.size;save();rc();}return;}
   const omp=t.closest('[data-openmap]');if(omp){e.stopPropagation();openFolder(omp.dataset.openmap);return;}
   const mof=t.closest('[data-mapof]');if(mof){e.stopPropagation();const f=folById(mof.dataset.mapof);mapOf(subDiags(mof.dataset.mapof),f?`Mapa de ${f.name}`:'');return;}
   if(t.matches&&t.matches('.row [data-mapf]')){e.stopPropagation();return;}
