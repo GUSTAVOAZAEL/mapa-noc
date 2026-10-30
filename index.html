@@ -31,7 +31,15 @@
   --grid:#24323E; --edge:#93A4B3; --demarc:#F06BB0; --node:#18232D; --overlay:rgba(0,0,0,.55); color-scheme:dark}
 
 .canvasWrap[data-cv]{color:var(--ink)}
-.canvasWrap[data-cv="light"]{--bg:#E8ECF0;--panel:#FFFFFF;--panel-2:#F3F5F7;--ink:#15212C;--muted:#5A6978;--line:#D3DBE2;--accent:#0A6C87;--accent-ink:#FFFFFF;--accent-soft:#DDEEF3;--hit:#B05F00;--hit-soft:#FBE9CC;--danger:#B4321C;--danger-soft:#F7E1DC;--grid:#C6D0D9;--edge:#536373;--demarc:#B3266E;--node:#FFFFFF;color-scheme:light}
+.canvasWrap[data-cv="light"] #cv{background:#EEF2F5}
+.canvasWrap[data-cv="light"]{--grid:#C3CDD6;--edge:#4E5E6D}
+.canvasWrap[data-cv="light"] .node.txt text{fill:#15212C}
+.canvasWrap[data-cv="light"] .node:is(.sh-circle,.sh-ring,.sh-icon) .nm{fill:#15212C}.canvasWrap[data-cv="light"] .node:is(.sh-circle,.sh-ring,.sh-icon) .ipt{fill:#55636F}
+.canvasWrap[data-cv="light"] .ml text{fill:#4E5E6D}
+.canvasWrap[data-cv="light"] .grp .gt tspan:not(.k){fill:#15212C!important}
+.canvasWrap[data-cv="light"] .verF .vfp,.canvasWrap[data-cv="light"] .verF .vft{fill:#33424F}.canvasWrap[data-cv="light"] .verF .vfp .vk{fill:#6A7988}
+.canvasWrap[data-cv="light"] .dm text{stroke:#EEF2F5}
+.canvasWrap[data-cv="light"] .imgcap{fill:#15212C}
 .canvasWrap[data-cv="dark"]{--bg:#0D1318;--panel:#151E26;--panel-2:#1B2630;--ink:#E1E8EE;--muted:#8C9AA7;--line:#2A3845;--accent:#4BB4D1;--accent-ink:#06222B;--accent-soft:#163743;--hit:#F2A33A;--hit-soft:#3B2B13;--danger:#F07560;--danger-soft:#3A1D18;--grid:#24323E;--edge:#93A4B3;--demarc:#F06BB0;--node:#18232D;color-scheme:dark}
 .canvasWrap[data-cv="dark"] .geo path{--geo-us:#1d2733;--geo-mx:#1f2a22;--geo-st:#3b4b5c}.canvasWrap[data-cv="dark"] .geo text{--geo-tx:#5f7184}
 .canvasWrap[data-cv="light"] .geo path{--geo-us:#e9f0f7;--geo-mx:#edf3e6;--geo-st:#8fa3b5}.canvasWrap[data-cv="light"] .geo text{--geo-tx:#7d8d9c}
@@ -258,6 +266,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .pl text{font:10.5px var(--f-mono);fill:var(--ink)}
 .edge.hit .pl rect{stroke:var(--hit);fill:var(--hit-soft)}
 .edge.sel .pl rect{stroke:var(--accent)}
+.edge .ep{fill:var(--edge);stroke:var(--panel-2);stroke-width:.8}.edge.sel .ep{fill:var(--accent)}.edge.hit .ep{fill:var(--hit)}.edge.inc .ep{fill:var(--danger)}.edge.dim .ep,.edge.sdim .ep{opacity:.3}
 .ml text{font:italic 11px var(--f-ui);fill:var(--muted)}
 .tmp{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
 
@@ -1399,6 +1408,7 @@ function renderCanvas(){
     const dash=MEDIA[e.medium]?.d||'';
     const ms=e.dir==='both'?`marker-start="url(#${mk})"`:'',me=e.dir==='none'?'':`marker-end="url(#${mk})"`;
     let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" ${ec?`style="stroke:${ec}"`:''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
+    {const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI,sq=(x,y)=>`<rect class="ep" x="-2.6" y="-2.6" width="5.2" height="5.2" rx=".8" transform="translate(${x},${y}) rotate(${ang})" ${ec?`style="fill:${ec}"`:''}/>`;s+=(e.dir==='both'?'':sq(x1,y1))+(e.dir==='none'?sq(x2,y2):'');}
     const len=Math.hypot(x2-x1,y2-y1),t=Math.min(.3,Math.max(.12,46/(len||1))),ux=(x2-x1)/(len||1),uy=(y2-y1)/(len||1);
     const lpos=(px,py,sx,sy,txt)=>{const Lw=wrapTxt(txt||'',16),w=txt?Math.max(...Lw.map(l=>l.length))*6.4+10:22,h=txt?Lw.length*13+4:14;let d=(Math.abs(sx)*w+Math.abs(sy)*h)/2+10;d=Math.max(d,Math.min(46,len*.3));d=Math.min(d,len*.45);return[px+sx*d,py+sy*d];};
     let [fpx,fpy]=lpos(x1,y1,ux,uy,e.fp),[tpx,tpy]=lpos(x2,y2,-ux,-uy,e.tp);
