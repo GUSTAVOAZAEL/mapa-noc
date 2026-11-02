@@ -17,7 +17,7 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
 
 **Clientes**
-- La estrella **☆** de cada tarjeta (o *Personalizar*) marca al cliente como **destacado / VIP**: aparece primero, con borde dorado y la etiqueta ★ VIP; el filtro **★ Destacados** muestra solo esos.
+- La estrella **☆** de cada tarjeta (o *Personalizar*) marca al cliente como **destacado / VIP**: se muestra en su propia sección **★ Clientes VIP** arriba (el resto queda abajo en **Otros clientes**), con borde dorado y la etiqueta ★ VIP; el filtro **★ Destacados** muestra solo esos.
 - **Aa Texto** ajusta el tamaño y color de los nombres de cliente, sitio y servicio (aplica a todos).
 - Una tarjeta por cliente con su ícono o logo, color, número de sitios y servicios, y aviso si tiene incidencias activas.
 - El filtro **Con incidencia activa** muestra solo los clientes afectados.

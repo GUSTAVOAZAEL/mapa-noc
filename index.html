@@ -510,6 +510,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cvHead .inp{max-width:300px}
 .cvSec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:600 15px var(--f-cond)}
 .cvSec i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.vipSec{color:#9A7400;border-bottom:1px solid color-mix(in srgb,#C99700 35%,transparent);padding-bottom:6px;margin-top:4px}
 .cvSec .n{font:500 12px var(--f-ui);color:var(--muted)}
 .dtWrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel);max-height:calc(100vh - 210px)}
 .dtab{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;min-width:1250px}
@@ -2141,17 +2142,20 @@ function clientCards(){
   const all=S.folders.filter(f=>!f.parentId).sort((a,b)=>(!!b.vip-!!a.vip)||ncmp(a.name,b.name));const nVip=all.filter(f=>f.vip).length;
   const list=all.filter(f=>!q||fold(f.name).includes(q)).filter(f=>!onlyInc||ic.has(f.id)).filter(f=>!onlyVip||f.vip);
   const nInc=all.filter(f=>ic.has(f.id)).length;
-  return `<div class="cvHead"><h2>Clientes</h2><span class="grow"></span>
-    <input class="inp" id="cvQ" type="search" placeholder="Buscar cliente" value="${esc(ui.cvQ||'')}">
-    <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc||onlyVip?'':'on'}">Todos (${all.length})</button><button data-clif="vip" class="${onlyVip?'on':''}">★ Destacados (${nVip})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
-    <button class="btn" data-act="cliText" title="Tamaño y color de los nombres">Aa Texto</button><button class="btn pri" data-act="newClient">+ Cliente</button></div>
-  ${list.length?`<div class="cgrid cli">${list.map(f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
+  const card=f=>{const sub=subtree(f.id).slice(1).map(folById).filter(Boolean),sites=sub.filter(x=>x.parentId===f.id).length,svc=sub.filter(x=>!kids(x.id).length).length,n=ic.get(f.id)||0;
     return `<div class="ccard${n?' inc':''}${f.vip?' vip':''}" role="button" tabindex="0" data-cpage="${f.id}" style="--cc:${f.color||'var(--accent)'}">
       ${f.vip?'<span class="vipTag">★ VIP</span>':''}<button class="vipBtn${f.vip?' on':''}" data-vip="${f.id}" title="${f.vip?'Quitar de destacados':'Marcar como destacado (VIP)'}" aria-label="Destacar">${f.vip?'★':'☆'}</button>
       <span class="cimg">${cliIcon(f,48)}</span><span class="cname">${esc(f.name)}</span>
       <span class="cmeta">${sites} sitio${sites===1?'':'s'} · ${svc} servicio${svc===1?'':'s'}</span>
       ${n?`<span class="cinc">⚠ ${n} incidencia${n===1?'':'s'} activa${n===1?'':'s'}</span>`:''}
-      <button class="cedit" data-cedit="${f.id}" title="Personalizar tarjeta" aria-label="Personalizar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg></button></div>`;}).join('')}</div>`
+      <button class="cedit" data-cedit="${f.id}" title="Personalizar tarjeta" aria-label="Personalizar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg></button></div>`;};
+  return `<div class="cvHead"><h2>Clientes</h2><span class="grow"></span>
+    <input class="inp" id="cvQ" type="search" placeholder="Buscar cliente" value="${esc(ui.cvQ||'')}">
+    <div class="seg" style="margin:0"><button data-clif="" class="${onlyInc||onlyVip?'':'on'}">Todos (${all.length})</button><button data-clif="vip" class="${onlyVip?'on':''}">★ Destacados (${nVip})</button><button data-clif="inc" class="${onlyInc?'on':''}" style="${nInc?'color:var(--danger)':''}">Con incidencia activa (${nInc})</button></div>
+    <button class="btn" data-act="cliText" title="Tamaño y color de los nombres">Aa Texto</button><button class="btn pri" data-act="newClient">+ Cliente</button></div>
+  ${list.length?(()=>{const V=list.filter(f=>f.vip),R=list.filter(f=>!f.vip);
+    return (V.length?`<div class="cvSec vipSec"><i style="background:#C99700"></i>★ Clientes VIP<span class="n">${V.length}</span></div><div class="cgrid cli">${V.map(card).join('')}</div>`:'')
+      +(R.length?`${V.length?`<div class="cvSec"><i style="background:var(--muted)"></i>Otros clientes<span class="n">${R.length}</span></div>`:''}<div class="cgrid cli">${R.map(card).join('')}</div>`:'');})()
     :`<p class="emptyNote">${onlyInc?'Ningún cliente tiene incidencias activas.':all.length?'Sin coincidencias.':'Aún no tienes clientes. Crea el primero con + Cliente.'}</p>`}`;
 }
 const PENCIL='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg>';
