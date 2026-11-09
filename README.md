@@ -234,6 +234,8 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - **En tablet o celular**: pellizca con dos dedos para acercar o alejar (también desplaza la vista). Al tocar **+** el menú espera tu siguiente toque para elegir.
 - Al arrastrar una conexión hacia otro equipo basta con soltarla encima o muy cerca de su borde.
 - **Copiar y pegar (Ctrl+C / Ctrl+V)**: equipos, elementos y textos seleccionados (con las líneas entre ellos). En otro diagrama se pega el mismo equipo del inventario; si ya estaba en ese diagrama se crea un equipo nuevo "-COPIA" sin IP para que lo edites.
+- **Ctrl+V siempre pega lo último que copiaste**: si después de copiar elementos copias una imagen (captura, foto) se pega la imagen; si copias texto de otro lado se pega como un Texto en el diagrama.
+- **Pie de imagen editable en el diagrama**: clic en el pie (o en *+ Pie de imagen* con la imagen seleccionada) o doble clic en la imagen para escribirlo; Enter guarda. *Ver en grande* sigue en el panel derecho.
 - Cada punta de línea que llega a un equipo lleva un **cuadrito** que marca el punto de conexión (si la punta tiene flecha, se ve la flecha).
 - Las líneas nuevas son de **fibra (continua)** por defecto. Los puertos largos se acomodan en varias líneas y se alejan del equipo; si no caben ambos, uno se coloca arriba y otro abajo de la línea.
 - **Tipo de línea**: en el panel de la conexión se elige viendo el trazo (privada, fibra, cobre, radio, lógico); el nombre aparece al pasar el puntero.
