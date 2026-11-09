@@ -1340,8 +1340,8 @@ function trunc(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s;}
 function wrapTxt(str,n){const out=[];String(str||'').split(/\n/).forEach(par=>{let line='';par.split(/(\s+)/).forEach(w=>{if(!w.trim()){if(line)line+=' ';return;}
     while(w.length>n){if(line.trim()){out.push(line.trim());line='';}out.push(w.slice(0,n));w=w.slice(n);}
     if((line+w).trim().length>n&&line.trim()){out.push(line.trim());line='';}line+=w;});if(line.trim())out.push(line.trim());});return out.length?out:[''];}
-function lbl(x,y,t,cls){const L=wrapTxt(t,16),w=Math.max(...L.map(l=>l.length))*6.4+10,h=L.length*13+4,top=y-h/2;
-  return `<g class="${cls}"><rect x="${x-w/2}" y="${top}" width="${w}" height="${h}" rx="3"/><text x="${x}" y="${top+12}" text-anchor="middle">${L.map((l,i)=>`<tspan x="${x}" dy="${i?13:0}">${esc(l)}</tspan>`).join('')}</text></g>`;}
+function lbl(x,y,t,cls,rot){const L=wrapTxt(t,16),w=Math.max(...L.map(l=>l.length))*6.4+10,h=L.length*13+4,top=y-h/2;
+  return `<g class="${cls}"${rot?` transform="rotate(${rot.toFixed(2)} ${x} ${y})"`:''}><rect x="${x-w/2}" y="${top}" width="${w}" height="${h}" rx="3"/><text x="${x}" y="${top+12}" text-anchor="middle">${L.map((l,i)=>`<tspan x="${x}" dy="${i?13:0}">${esc(l)}</tspan>`).join('')}</text></g>`;}
 function mlines(x,y,t,n,attrs){const L=wrapTxt(t,n);return `<text x="${x}" y="${y}" text-anchor="middle"${attrs||''}>${L.map((l,i)=>`<tspan x="${x}" dy="${i?13:0}">${esc(l)}</tspan>`).join('')}</text>`;}
 function renderCanvas(){
   const fid=ui.folder,emp=$('#empty'),ib=$('#impBanner');
@@ -1413,21 +1413,21 @@ function renderCanvas(){
     let s=`<g class="${cls}" data-edge="${e.id}"><line class="ln" ${ec?`style="stroke:${ec}"`:''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${dash?`stroke-dasharray="${dash}"`:''} ${ms} ${me}/>`;
     {const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI,sq=(x,y)=>`<rect class="ep" x="-2.6" y="-2.6" width="5.2" height="5.2" rx=".8" transform="translate(${x},${y}) rotate(${ang})" ${ec?`style="fill:${ec}"`:''}/>`;s+=(e.dir==='both'?'':sq(x1,y1))+(e.dir==='none'?sq(x2,y2):'');}
     const len=Math.hypot(x2-x1,y2-y1),t=Math.min(.3,Math.max(.12,46/(len||1))),ux=(x2-x1)/(len||1),uy=(y2-y1)/(len||1);
-    const lpos=(px,py,sx,sy,txt)=>{const Lw=wrapTxt(txt||'',16),w=txt?Math.max(...Lw.map(l=>l.length))*6.4+10:22,h=txt?Lw.length*13+4:14;let d=(Math.abs(sx)*w+Math.abs(sy)*h)/2+10;d=Math.max(d,Math.min(46,len*.3));d=Math.min(d,len*.45);return[px+sx*d,py+sy*d];};
-    let [fpx,fpy]=lpos(x1,y1,ux,uy,e.fp),[tpx,tpy]=lpos(x2,y2,-ux,-uy,e.tp);
-    {const sz=t2=>{const Lw=wrapTxt(t2||'',16);return t2?[Math.max(...Lw.map(l=>l.length))*6.4+10,Lw.length*13+4]:[22,14];},A=sz(e.fp),B=sz(e.tp);
-      if(e.fp&&e.tp&&Math.abs(fpx-tpx)<(A[0]+B[0])/2+4&&Math.abs(fpy-tpy)<(A[1]+B[1])/2+4){const nx=-uy,ny=ux;
-        const oa=(Math.abs(nx)*A[1]+Math.abs(ny)*A[0])/2+4,ob=(Math.abs(nx)*B[1]+Math.abs(ny)*B[0])/2+4;
-        fpx+=nx*oa;fpy+=ny*oa;tpx-=nx*ob;tpy-=ny*ob;}}
-    if(e.fp)s+=lbl(fpx,fpy,e.fp,'pl');
-    if(e.tp)s+=lbl(tpx,tpy,e.tp,'pl');
-    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2;s+=`<g class="ml">${mlines(mx,my+12,e.label,26,ec?` style="fill:${ec}"`:'')}</g>`;}
+    let ra=Math.atan2(y2-y1,x2-x1)*180/Math.PI;if(ra>90)ra-=180;if(ra<-90)ra+=180;
+    const sz=t2=>{const Lw=wrapTxt(t2||'',16);return t2?[Math.max(...Lw.map(l=>l.length))*6.4+10,Lw.length*13+4]:[22,14];},A=sz(e.fp),B=sz(e.tp);
+    const lpos=(px,py,sx,sy,W)=>{let d=W/2+10;d=Math.min(d,len*.45);return[px+sx*d,py+sy*d];};
+    let [fpx,fpy]=lpos(x1,y1,ux,uy,A[0]),[tpx,tpy]=lpos(x2,y2,-ux,-uy,B[0]);
+    if(e.fp&&e.tp&&Math.hypot(tpx-fpx,tpy-fpy)<(A[0]+B[0])/2+4){const nx=-uy,ny=ux,oa=A[1]/2+3,ob=B[1]/2+3;
+      fpx+=nx*oa;fpy+=ny*oa;tpx-=nx*ob;tpy-=ny*ob;}
+    if(e.fp)s+=lbl(fpx,fpy,e.fp,'pl',ra);
+    if(e.tp)s+=lbl(tpx,tpy,e.tp,'pl',ra);
+    if(e.label){const mx=(x1+x2)/2,my=(y1+y2)/2,nl=wrapTxt(e.label,26).length;s+=`<g class="ml" transform="rotate(${ra.toFixed(2)} ${mx} ${my})">${mlines(mx,my-6-(nl-1)*13,e.label,26,ec?` style="fill:${ec}"`:'')}</g>`;}
     if(e.demarc){const t2=Math.min(.95,Math.max(.05,+e.demarcPos||.5)),px2=x1+(x2-x1)*t2,py2=y1+(y2-y1)*t2,L2=len||1,ux=(x2-x1)/L2,uy=(y2-y1)/L2,nx=-uy,ny=ux,R=15;
       const tx=px2+nx*(R+10)*(ny>0?-1:1),ty=py2+ny*(R+10)*(ny>0?-1:1);
       s+=`<g class="dm"><line x1="${px2-nx*R}" y1="${py2-ny*R}" x2="${px2+nx*R}" y2="${py2+ny*R}"/>${mlines(tx,ty+3,e.demarcLabel||'Demarcación',22)}${e.demarcA||e.demarcB?`<text class="sd" x="${tx}" y="${ty+(ny>0?-9:15)}" text-anchor="middle">${esc(trunc(e.demarcA||'',14))} ⟷ ${esc(trunc(e.demarcB||'',14))}</text>`:''}<title>Punto de demarcación${e.demarcA||e.demarcB?`: ${esc(e.demarcA||'')} | ${esc(e.demarcB||'')}`:''}</title></g>`;}
     s+=`<line class="eh" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/></g>`;
     out+=s;
-    if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend')){const pe=(end,x,y,v)=>{const Lw=wrapTxt(v||'',16),w=v?Math.max(...Lw.map(l=>l.length))*6.4+14:22,h=v?Lw.length*13+8:14;return `<g class="pedit${v?' has':''}" data-pedit="${end}" data-x="${x}" data-y="${y}"><rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="3"/><title>${v?'Clic para cambiar el puerto o IP':'Clic para escribir el puerto o IP'}</title></g>`;};
+    if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend')){const pe=(end,x,y,v)=>{const Lw=wrapTxt(v||'',16),w=v?Math.max(...Lw.map(l=>l.length))*6.4+14:22,h=v?Lw.length*13+8:14;return `<g class="pedit${v?' has':''}" data-pedit="${end}" data-x="${x}" data-y="${y}" transform="rotate(${ra.toFixed(2)} ${x} ${y})"><rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="3"/><title>${v?'Clic para cambiar el puerto o IP':'Clic para escribir el puerto o IP'}</title></g>`;};
       const ax2=a.deviceId||a.el,bx2=b.deviceId||b.el;
       endH+=(ax2?pe('fp',fpx,fpy,e.fp):'')+(bx2?pe('tp',tpx,tpy,e.tp):'');}
     if(sel&&fid!==MAP&&!(ui.drag?.kind==='reend'))endH+=`<circle class="eend" data-eend="from" cx="${x1}" cy="${y1}" r="7"><title>Arrastra para cambiar el origen</title></circle><circle class="eend" data-eend="to" cx="${x2}" cy="${y2}" r="7"><title>Arrastra para cambiar el destino</title></circle>`;

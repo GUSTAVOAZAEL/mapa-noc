@@ -8,7 +8,7 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 
 - **Inventario global de equipos**: cada router, switch, OLT, firewall, radio o CPE se registra una sola vez, con IP, marca, modelo, acceso (SSH, Telnet, web) y sus puertos.
 - **Carpetas por cliente**: Cliente › Sitio › Servicio. Cada carpeta tiene su propio diagrama.
-- **Diagramas tipo Draw.io**: agrega equipos del inventario y textos, y conéctalos arrastrando el punto del borde de un equipo hacia otro. En cada conexión indicas el puerto de salida, el de llegada, el medio (fibra, cobre, radio, lógico) y una etiqueta (VLAN, ONT, circuito).
+- **Diagramas tipo Draw.io**: agrega equipos del inventario y textos, y conéctalos arrastrando el punto del borde de un equipo hacia otro. En cada conexión indicas el puerto de salida, el de llegada, el medio (fibra, cobre, radio, lógico) y una etiqueta (VLAN, ONT, circuito). Las etiquetas de puerto y la etiqueta del enlace se giran siguiendo la dirección de la línea (siempre legibles, nunca de cabeza).
 - **Análisis de impacto**: eliges un equipo o un puerto y te muestra todos los clientes y servicios que pasan por ahí, con resaltado en cada diagrama y una lista lista para copiar al ticket.
 - **Búsqueda global** por equipo, IP, cliente o puerto.
 
