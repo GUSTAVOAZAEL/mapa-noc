@@ -32,6 +32,8 @@
 
 .canvasWrap[data-cv]{color:var(--ink)}
 .canvasWrap[data-cv="light"] #cv{background:#EEF2F5}
+.canvasWrap{--cvbg:var(--panel-2)}.canvasWrap[data-cv="light"]{--cvbg:#EEF2F5}
+.node:is(.sh-circle,.sh-icon) :is(.nm,.ipt){paint-order:stroke;stroke:var(--cvbg);stroke-width:3.5px;stroke-linejoin:round}
 .canvasWrap[data-cv="light"]{--grid:#C3CDD6;--edge:#4E5E6D}
 .canvasWrap[data-cv="light"] .node.txt text{fill:#15212C}
 .canvasWrap[data-cv="light"] .node:is(.sh-circle,.sh-ring,.sh-icon) .nm{fill:#15212C}.canvasWrap[data-cv="light"] .node:is(.sh-circle,.sh-ring,.sh-icon) .ipt{fill:#55636F}
@@ -856,7 +858,7 @@ function icn(t,x,y,sz){
   if(t.img)return `<image href="${esc(t.img)}" x="${x}" y="${y}" width="${sz}" height="${sz}" preserveAspectRatio="xMidYMid meet"/>`;
   const k=sz/18,sw=(sz>=30?2:1.5)/k;
   return `<g transform="translate(${x},${y}) scale(${k})" style="color:${t.color||'var(--accent)'}">${glyph(t.icon,sw.toFixed(2))}</g>`;}
-const tx=(x,y,str,n,cls,mid)=>`<text class="${cls}" x="${x}" y="${y}"${mid?' text-anchor="middle"':''}>${esc(trunc(str,n))}</text>`;
+const tx=(x,y,str,n,cls,mid)=>`<text class="${cls}" x="${x}" y="${y}"${mid?' text-anchor="middle"':''}>${esc(str)}</text>`;
 const CLOUD='M48 98C24 98 8 84 10 66C12 50 26 41 40 43C42 22 62 8 84 12C98 0 128 2 140 22C160 16 182 32 178 52C192 58 194 86 174 96C170 98 166 98 160 98Z';
 const SH={
   rect:{w:178,h:58,c:[89,29],clip:{k:'rect',x:0,y:0,w:178,h:58},hd:[178,29],bd:[174,4],pill:[178,58],
@@ -947,7 +949,7 @@ function fixLoc(D){if(!D||ui.folder===MAP||locAllOff())return 0;HOLD_D=D;let mov
     if(!did)break;moves++;}
   return moves;}
 function placeNewNode(D,n){const dv=devById(n.deviceId);if(!dv||!dv.place)return false;const B=locBoxes(D);
-  const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);if(!b)return false;const gn=SH[shapeOf(n)];
+  const ch=placeChain(dv.place);let b=null;for(let i=ch.length-1;i>=0&&!b;i--)b=B.find(x=>x.pid===ch[i].id);if(!b)return false;const gn=geom(n);
   const hit=(x,y)=>D.nodes.some(o=>{const d=dims(o);return x<o.x+d.w+16&&x+gn.w+16>o.x&&y<o.y+d.h+16&&y+gn.h+16>o.y;});
   if(b.ex){for(let y=b.y+36;y+gn.h<=b.y+b.h-8;y+=24)for(let x=b.x+16;x+gn.w<=b.x+b.w-8;x+=24)if(!hit(x,y)){n.x=Math.round(x/8)*8;n.y=Math.round(y/8)*8;return true;}}
   let x=b.x+b.w-14+24,y=b.y+36;if(!b.ex){/* junto a los demás equipos de esa ubicación */}
@@ -1314,11 +1316,27 @@ function sideImpact(){
 const svg=$('#cv'),vpG=$('#vp');
 const getVp=()=>ui.vps[ui.folder]||(ui.vps[ui.folder]={x:30,y:30,k:1});
 function shapeOf(n){if(SH[n.shape])return n.shape;if(n.el)return 'small';const t=typeOf(devById(n.deviceId)?.type);return SH[t.shape]?t.shape:'rect';}
-function geom(n){if(n.deviceId||n.el)return SH[shapeOf(n)];const d=dims(n);return{w:d.w,h:d.h,c:[d.w/2,d.h/2],clip:{k:'rect',x:0,y:0,w:d.w,h:d.h},hd:[d.w,d.h/2]};}
+const _mc=document.createElement('canvas').getContext('2d');let _mw={};
+function tw(t,font){t=String(t||'');const k=font+'|'+t;if(_mw[k]==null){_mc.font=font;_mw[k]=_mc.measureText(t).width;}return _mw[k];}
+const FCOND='"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif',FMONO='"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+try{document.fonts&&document.fonts.ready.then(()=>{_mw={};_gc={};if(typeof renderAll==='function'&&S)renderAll();});}catch(e){}
+let _gc={};
+// geometría del equipo ensanchada para que el nombre y la IP se vean completos
+function gFor(n){const sh=shapeOf(n),B=SH[sh];let nm,ip;
+  if(n.el){nm=n.label||'Elemento';ip=n.sub||'';}else{const d=devById(n.deviceId)||{};nm=d.name||'';ip=d.ip||d.type||'';}
+  const sm=sh==='small'||sh==='ring',need=Math.max(tw(nm,`600 ${sm?12:13}px ${FCOND}`),sh==='small'?0:tw(ip,`11px ${FMONO}`));
+  const W=Math.ceil(sh==='rect'?Math.max(178,40+need+14):sh==='small'?Math.max(124,30+need+10):sh==='hex'?Math.max(172,50+need+24):Math.max(B.w,need+16));
+  if(W<=B.w)return B;const key=sh+'|'+W;if(_gc[key])return _gc[key];let G;
+  if(sh==='rect'||sh==='small'){const h=B.h;G={...B,w:W,c:[W/2,h/2],clip:{k:'rect',x:0,y:0,w:W,h},hd:[W,h/2],bd:[W-4,B.bd[1]],pill:[W,h],out:c=>`<rect class="${c}" width="${W}" height="${h}" rx="${sh==='rect'?7:5}"/>`};}
+  else if(sh==='hex'){G={...B,w:W,c:[W/2,36],clip:{k:'rect',x:6,y:0,w:W-12,h:72},hd:[W,36],bd:[W-20,4],pill:[W-20,72],out:c=>`<polygon class="${c}" points="18,0 ${W-18},0 ${W},36 ${W-18},72 18,72 0,36"/>`};}
+  else if(sh==='vert'){const dx=(W-B.w)/2;G={...B,w:W,c:[W/2,75],clip:{k:'rect',x:0,y:0,w:W,h:150},hd:[W,75],bd:[W-4,4],pill:[W,150],out:c=>`<rect class="${c}" width="${W}" height="150" rx="8"/>`,body:(t,d)=>`<g transform="translate(${dx},0)">${B.body(t,d)}</g>`};}
+  else{const dx=(W-B.w)/2,C=B.clip;G={...B,w:W,c:[B.c[0]+dx,B.c[1]],clip:{...C,cx:C.cx+dx},hd:[B.hd[0]+dx,B.hd[1]],bd:[B.bd[0]+dx,B.bd[1]],pill:[B.pill[0]+dx,B.pill[1]],out:c=>`<g transform="translate(${dx},0)">${B.out(c)}</g>`,body:(t,d)=>`<g transform="translate(${dx},0)">${B.body(t,d)}</g>`};}
+  return _gc[key]=G;}
+function geom(n){if(n.deviceId||n.el)return gFor(n);const d=dims(n);return{w:d.w,h:d.h,c:[d.w/2,d.h/2],clip:{k:'rect',x:0,y:0,w:d.w,h:d.h},hd:[d.w,d.h/2]};}
 const anchorOf=n=>{const g=geom(n);return[n.x+g.c[0],n.y+g.c[1]];};
 function dims(n){
   if(n.img)return{w:n.w||240,h:n.h||160};
-  if(n.deviceId||n.el){const g=SH[shapeOf(n)];return{w:g.w,h:g.h};}
+  if(n.deviceId||n.el){const g=gFor(n);return{w:g.w,h:g.h};}
   const lines=String(n.text||' ').split('\n'),fs=+n.size||13,k=fs/13;
   return{w:Math.max(60,Math.max(...lines.map(l=>l.length))*7.1*k+18),h:lines.length*18*k+12};
 }
@@ -1861,7 +1879,7 @@ function addDeviceNode(devId){noteRecent(devId);
     if(from&&from.id!==ex.id){const ed=link(from,ex);ui.multi=new Set();ui.sel={t:'edge',id:ed.id};save();renderAll();toast('Conectado con el equipo que ya estaba en el diagrama');return;}
     ui.multi=new Set([ex.id]);ui.sel={t:'node',id:ex.id};renderCanvas();renderInsp();toast('Ese equipo ya está en el diagrama');return;}
   const n={id:uid('n'),deviceId:devId,x:0,y:0};
-  if(from){const gf=geom(from),gn=SH[shapeOf(n)];
+  if(from){const gf=geom(from),gn=geom(n);
     n.x=Math.round((from.x+gf.w+110)/8)*8;n.y=Math.round((from.y+gf.c[1]-gn.c[1])/8)*8;
     const hitsAny=()=>D.nodes.some(o=>{const d=dims(o);return n.x<o.x+d.w+20&&n.x+gn.w+20>o.x&&n.y<o.y+d.h+20&&n.y+gn.h+20>o.y;});
     let guard=0;while(hitsAny()&&guard++<30)n.y+=Math.max(48,gn.h+24);
