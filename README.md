@@ -16,6 +16,8 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 
 Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. **Equipos** concentra todo el inventario (tarjetas o tabla, filtros, **Ubicaciones**, **Tipos**, **CSV** y **+ Equipo**). En **Diagramas**, el panel izquierdo tiene solo **Árbol** (clientes › sitios › servicios), **Impacto** e **Incidencias**.
 
+**Ubicarte en el árbol:** el servicio abierto se marca con fondo de color sólido y su cliente y sitio en negritas con una línea de color. Al abrir un diagrama desde cualquier lado (buscador, favoritos, mapa, impacto) el árbol abre su cliente y sitio y se desplaza hasta él. **◎** (junto a ⊟ ⊞) te regresa al diagrama abierto; mantenlo presionado para cerrar todo lo demás y dejar solo ese camino. También puedes hacer clic en el cliente, sitio o servicio del título del diagrama para ubicarlo en el árbol.
+
 **Clientes**
 - La estrella **☆** de cada tarjeta (o *Personalizar*) marca al cliente como **destacado / VIP**: se muestra en su propia sección **★ Clientes VIP** arriba (el resto queda abajo en **Otros clientes**), con borde dorado y la etiqueta ★ VIP; el filtro **★ Destacados** muestra solo esos.
 - **Aa Texto** ajusta el tamaño y color de los nombres de cliente, sitio y servicio (aplica a todos).

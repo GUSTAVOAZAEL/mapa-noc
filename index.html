@@ -114,7 +114,11 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .tree>li>.row.on{background:var(--accent-soft)}
 .row{position:relative;display:flex;align-items:center;gap:4px;border-radius:5px;padding:3px 4px;cursor:pointer;min-width:0;min-height:28px;box-sizing:border-box}
 .row:hover{background:var(--panel-2)}
-.row.on{background:var(--accent-soft)}
+.row.on,.tree>li>.row.on{background:var(--accent);color:#fff}
+.row.on .nm{color:#fff;font-weight:600}.row.on .kind{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.35)}.row.on .car,.row.on .ra button{color:#fff}
+.row.path .nm{font-weight:700;color:var(--ink)}.row.path{box-shadow:inset 3px 0 0 var(--cc,var(--accent))}
+.tree li.onPath>ul{border-left-color:var(--cc,var(--accent));border-left-width:2px}
+.row.flash{animation:rowFlash 1.1s ease 2}@keyframes rowFlash{50%{box-shadow:0 0 0 3px var(--hit)}}
 .row .car{width:18px;height:18px;border:0;background:none;padding:0;cursor:pointer;color:var(--muted);flex:none;display:grid;place-items:center}
 .row .car.none{visibility:hidden}
 .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -122,8 +126,9 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .kind.cliente{color:var(--accent);border-color:var(--accent)}
 .row .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;opacity:.75}
 .row .ra{display:none;gap:1px;position:absolute;right:3px;top:50%;transform:translateY(-50%);background:var(--panel-2);border-radius:5px;padding:0 1px;box-shadow:-8px 0 8px -4px var(--panel-2)}
-.row.on .ra{background:var(--accent-soft);box-shadow:-8px 0 8px -4px var(--accent-soft)}
+.row.on .ra{background:var(--accent);box-shadow:-8px 0 8px -4px var(--accent)}
 .row .cmpk{margin:0 2px 0 0;flex:none;cursor:pointer}
+.icoBtns{display:inline-flex;gap:3px;margin-right:4px}.icoBtns .btn{padding-left:7px;padding-right:7px}
 .treeTools{display:flex;gap:6px;align-items:center;margin:-2px 0 8px}
 .treeTools .btn{display:inline-flex;align-items:center;gap:5px}
 .cmpBar{display:grid;gap:6px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
@@ -168,6 +173,7 @@ body.hideL .side,body.hideL #rzL,body.hideR .insp,body.hideR #rzR{display:none}
 .stage{position:relative;display:flex;flex-direction:column;overflow:hidden}
 .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .crumb{flex:1;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;font-size:13px;color:var(--muted)}
+.crl{cursor:pointer;border-radius:4px}.crl:hover{text-decoration:underline;color:var(--accent)}
 .crumb b{color:var(--ink);font:600 15px var(--f-cond);overflow:hidden;text-overflow:ellipsis}
 .tools{display:flex;gap:6px;flex-wrap:wrap}
 .canvasWrap{position:relative;flex:1;min-height:0}
@@ -1256,7 +1262,20 @@ function renderSide(){if(ui.tab==='equipos')ui.tab='clientes';
   const na=activeIncs().length,cn=$('#incCnt');cn.hidden=!na;cn.textContent=na;
   if(ui.tab==='incidencias'){const i=$('#incQ');if(i)i.value=ui.incQ||'';}
   pane.querySelectorAll('[data-ind]').forEach(x=>x.indeterminate=true);
+  if(ui.tab==='clientes'&&ui.folder&&ui.folder!==MAP&&ui.followed!==ui.folder){ui.followed=ui.folder;const r=pane.querySelector('.row.on');if(r)requestAnimationFrame(()=>treeScroll(r,false));}
+  const lb=$('#treeLocate');if(lb){let tm=null,long=false;
+    lb.onpointerdown=()=>{long=false;tm=setTimeout(()=>{long=true;treeLocate(true);},550);};
+    lb.onpointerup=lb.onpointerleave=()=>clearTimeout(tm);
+    lb.onclick=e=>{e.stopPropagation();if(!long)treeLocate(false);};}
 }
+function treeReveal(fid){pathOf(fid).slice(0,-1).forEach(f=>ui.collapsed.delete(f.id));}
+function treeScroll(r,flash){const pane=$('#pane'),pr=pane.getBoundingClientRect(),rr=r.getBoundingClientRect();
+  if(rr.top<pr.top+40||rr.bottom>pr.bottom-10)pane.scrollTop+=rr.top-pr.top-pr.height/2+rr.height/2;
+  if(flash){r.classList.remove('flash');void r.offsetWidth;r.classList.add('flash');}}
+function treeLocate(focus,fid){fid=fid||ui.folder;if(!fid||!folById(fid))return;
+  if(focus){const keep=new Set(pathOf(fid).map(f=>f.id));S.folders.forEach(f=>{if(kids(f.id).length&&!keep.has(f.id))ui.collapsed.add(f.id);});}
+  treeReveal(fid);ui.tab='clientes';ui.followed=ui.folder;renderSide();document.body.classList.add('showSide');
+  const r=$(`#pane .row[data-open="${fid}"]`);if(r)requestAnimationFrame(()=>treeScroll(r,true));if(focus)toast('Solo quedó abierto el camino del diagrama actual');}
 function exampleNote(){
   return S.meta.example?`<div class="note"><span><b>Datos de ejemplo.</b> Clientes y equipos ficticios para que pruebes el flujo. Prueba el análisis de impacto en <span class="mono">AGG-GPE-02 · XGE0/0/5</span>.</span><div><button class="btn sm" data-act="wipe">Empezar vacío</button></div></div>`:'';
 }
@@ -1265,10 +1284,11 @@ function sideClients(){
   const hitF=new Set(),incF=new Set();
   activeIncs().forEach(inc=>incAffect(inc).fids.forEach(fid=>pathOf(fid).forEach(f=>incF.add(f.id))));
   if(ui.impact)impactOf(ui.impact.dev,ui.impact.port).forEach(i=>pathOf(i.fid).forEach(f=>hitF.add(f.id)));
+  const onPath=new Set(ui.folder&&!inMap?pathOf(ui.folder).slice(0,-1).map(f=>f.id):[]);
   const branch=pid=>{const ks=kids(pid);if(!ks.length)return'';
     return '<ul'+(pid?'':' class="tree"')+'>'+ks.map(f=>{
       const has=kids(f.id).length,open=!ui.collapsed.has(f.id),dg=S.diagrams[f.id]?.nodes.length;
-      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}><div class="row${ui.folder===f.id?' on':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="${f.kind==='cliente'||f.kind==='sitio'?'Clic para abrir o cerrar · arrastra para mover':'Clic para abrir el diagrama · arrastra para mover'}">
+      return `<li${!pid?` style="--cc:${f.color||'var(--accent)'}"`:''}${onPath.has(f.id)||ui.folder===f.id?' class="onPath"':''}><div class="row${ui.folder===f.id?' on':''}${onPath.has(f.id)?' path':''}${hitF.has(f.id)?' hit':''}" data-open="${f.id}" draggable="true" data-fdrag="${f.id}" title="${f.kind==='cliente'||f.kind==='sitio'?'Clic para abrir o cerrar · arrastra para mover':'Clic para abrir el diagrama · arrastra para mover'}">
         <button class="car${has?'':' none'}" data-tog="${f.id}" aria-label="Expandir">${open?'▾':'▸'}</button>
         ${inMap?(()=>{const ds=subtree(f.id).filter(x=>allD.includes(x)),on=ds.filter(x=>msel.has(x)).length;return ds.length?`<input type="checkbox" class="cmpk" data-mapf="${f.id}"${on===ds.length?' checked':''}${on&&on<ds.length?' data-ind="1"':''} title="Ver en el mapa">`:`<input type="checkbox" class="cmpk" disabled title="Sin diagramas con equipos">`;})():''}${inMap&&allD.includes(f.id)?`<span class="dotc" style="background:${svcColor(f.id)};width:8px;height:8px;border-radius:50%;flex:none"></span>`:''}<span class="kind ${f.kind}">${esc(KINDS[f.kind]||'')}</span>${f.vip?'<span title="Cliente destacado" style="color:#C99700">★</span>':''}
         <span class="nm" title="${esc(f.name)}">${esc(f.name)}</span>${(f.alsoIn||[]).length?`<span title="Línea privada: también en ${esc(f.alsoIn.map(x=>folById(x)?.name).filter(Boolean).join(', '))}" style="color:var(--accent);font-size:12px">↔</span>`:''}${incF.has(f.id)?'<span class="incdot" title="Incidencia activa"></span>':''}${dg?'<span class="dot" title="Tiene diagrama"></span>':''}
@@ -1276,8 +1296,8 @@ function sideClients(){
       </div>${has&&open?branch(f.id):''}</li>`;}).join('')+'</ul>';};
   const tree=branch(null);
   const mapPanel=inMap?mapPanelHTML():'';
-  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><button class="btn sm" data-act="newClient">+ Cliente</button></div>
-    <div class="treeTools">${inMap?`<button class="btn sm pri" data-act="mapExit" title="Salir del mapa general">✕ Salir del mapa</button>`:`<button class="btn sm" data-act="mapAllTree" title="Mapa general: todos los clientes, sitios y servicios juntos">${MAPICO} Mapa</button><button class="btn sm" data-act="cmpMode" title="Abre el mapa vacío para que marques en este árbol qué clientes, sitios o servicios ver juntos">☑ Comparar</button><button class="btn sm${isScratch(ui.folder)?' pri':''}" data-act="scratch" title="Borrador para notas o diagramas rápidos; se guarda y es solo tuyo">📝 Borrador</button>`}<span style="flex:1"></span><button class="btn sm" data-act="treeCollapse" title="Compactar todo el árbol">⊟</button><button class="btn sm" data-act="treeExpand" title="Desplegar todo el árbol">⊞</button></div>`+mapPanel+
+  return exampleNote()+`<div class="paneHead"><span class="lbl grow">${S.folders.filter(f=>f.kind==='cliente').length} clientes</span><span class="icoBtns">${!inMap&&ui.folder&&folById(ui.folder)?`<button class="btn sm" id="treeLocate" title="Ubicar: lleva el árbol al diagrama abierto · mantén presionado para cerrar todo lo demás">◎</button>`:''}<button class="btn sm" data-act="treeCollapse" title="Compactar todo el árbol">⊟</button><button class="btn sm" data-act="treeExpand" title="Desplegar todo el árbol">⊞</button></span><button class="btn sm" data-act="newClient">+ Cliente</button></div>
+    <div class="treeTools">${inMap?`<button class="btn sm pri" data-act="mapExit" title="Salir del mapa general">✕ Salir del mapa</button>`:`<button class="btn sm" data-act="mapAllTree" title="Mapa general: todos los clientes, sitios y servicios juntos">${MAPICO} Mapa</button><button class="btn sm" data-act="cmpMode" title="Abre el mapa vacío para que marques en este árbol qué clientes, sitios o servicios ver juntos">☑ Comparar</button><button class="btn sm${isScratch(ui.folder)?' pri':''}" data-act="scratch" title="Borrador para notas o diagramas rápidos; se guarda y es solo tuyo">📝 Borrador</button>`}</div>`+mapPanel+
     (tree?tree+`<div class="dropRoot" data-froot="1" ${ui.dragF?'':'hidden'}>Suelta aquí para dejarlo en el nivel principal</div>`:'')+(tree?'':`<p class="sub" style="color:var(--muted)">Crea tu primer cliente. Dentro agrega sitios y en cada sitio sus servicios; cada uno tiene su propio diagrama.</p>`);
 }
 function sideDevices(){
@@ -1370,7 +1390,7 @@ function renderCanvas(){
   const path=pathOf(fid);
   if(fid===MAP){const M=mapSel();$('#crumb').innerHTML=`<b>Mapa general</b><span>· ${M.length} diagrama${M.length===1?'':'s'} · ${D.nodes.filter(n=>n.deviceId).length} equipos${D.nodes.some(n=>n.el)?` · ${D.nodes.filter(n=>n.el).length} elemento${D.nodes.filter(n=>n.el).length===1?'':'s'}`:''}</span>`;}
   else if(isScratch(fid))$('#crumb').innerHTML=`<b>📝 Borrador</b><span>· notas rápidas, solo para ti</span>`;
-  else $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span>${esc(f.name)}</span><span>›</span>`).join('')+`<b>${esc(path.at(-1)?.name||'')}</b>`;
+  else $('#crumb').innerHTML=path.slice(0,-1).map(f=>`<span class="crl" data-crumb="${f.id}" title="Ubicar ${esc(f.name)} en el árbol">${esc(f.name)}</span><span>›</span>`).join('')+`<b class="crl" data-crumb="${path.at(-1)?.id||''}" title="Ubicar en el árbol">${esc(path.at(-1)?.name||'')}</b>`;
   // impacto en este diagrama
   let hit=null;
   if(ui.impact){const it=fid===MAP?diagHits(D,ui.impact.dev,ui.impact.port):impactOf(ui.impact.dev,ui.impact.port).find(i=>i.fid===fid);hit=it||{nodes:new Set(),edges:new Set()};
@@ -3180,7 +3200,7 @@ qI.addEventListener('keydown',e=>{if(e.key==='Escape'){qI.value='';sres.hidden=t
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search'))sres.hidden=true;});
 
 /* ---------- delegación de clics ---------- */
-function openFolder(fid){ui.diagSeen=1;if(fid&&fid!==MAP&&S.diagrams[fid]&&fixLoc(S.diagrams[fid]))save();ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
+function openFolder(fid){ui.diagSeen=1;if(fid&&fid!==MAP&&folById(fid))treeReveal(fid);if(fid&&fid!==MAP&&S.diagrams[fid]&&fixLoc(S.diagrams[fid]))save();ui.view='diagram';if(!$('#modal').hidden)closeModal();if(ui.folder===MAP)ui.vps[MAP]=getVp();ui.folder=fid;ui.sel=null;ui.multi=new Set();document.body.classList.remove('showSide');renderAll();requestAnimationFrame(fit);}
 function setImpact(dev,port){ui.impMin=false;ui.view='diagram';if(!$('#modal').hidden)closeModal();ui.impact={dev,port:port||''};ui.tab='impacto';renderAll();}
 document.addEventListener('click',e=>{
   const t=e.target;
@@ -3215,6 +3235,7 @@ document.addEventListener('click',e=>{
   const asite=t.closest('[data-addsite]');if(asite){folderModal(null,asite.dataset.addsite,'sitio');return;}
   const asvc=t.closest('[data-addsvc]');if(asvc){const p=folById(asvc.dataset.addsvc);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
   const tab=t.closest('[data-tab]');if(tab){ui.tab=tab.dataset.tab;if(ui.tab==='mapa')openMap();else renderSide();return;}
+  const crl=t.closest('[data-crumb]');if(crl){treeLocate(false,crl.dataset.crumb);return;}
   const tog=t.closest('[data-tog]');if(tog){e.stopPropagation();const id=tog.dataset.tog;ui.collapsed.has(id)?ui.collapsed.delete(id):ui.collapsed.add(id);renderSide();return;}
   const ac=t.closest('[data-addchild]');if(ac){const p=folById(ac.dataset.addchild);folderModal(null,p.id,CHILD_KIND[p.kind]);return;}
   const ef=t.closest('[data-editf]');if(ef){folderModal(ef.dataset.editf);return;}
