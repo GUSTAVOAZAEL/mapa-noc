@@ -510,6 +510,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cvHead h2{margin:0;font:600 22px var(--f-cond);flex:none}
 .cvHead .grow{flex:1}
 .cvHead .inp{max-width:300px}
+.cvHead #cvQ{width:220px}
 .cvSec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:600 15px var(--f-cond)}
 .cvSec i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .vipSec{color:#9A7400;border-bottom:1px solid color-mix(in srgb,#C99700 35%,transparent);padding-bottom:6px;margin-top:4px}
@@ -714,8 +715,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 
   <aside class="side" id="side" style="grid-column:1;grid-row:2">
     <nav class="tabs" role="tablist">
-      <button data-tab="clientes">Clientes</button>
-      <button data-tab="equipos">Equipos</button>
+      <button data-tab="clientes" title="Clientes, sitios y servicios: clic en un servicio para abrir su diagrama">Árbol</button>
       <button data-tab="impacto">Impacto</button>
       <button data-tab="incidencias">Incidencias<span class="cnt" id="incCnt" hidden></span></button>
     </nav>
@@ -1246,16 +1246,14 @@ function renderStatus(){
 }
 
 /* ---------- panel lateral ---------- */
-function renderSide(){
+function renderSide(){if(ui.tab==='equipos')ui.tab='clientes';
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===ui.tab));
   const pane=$('#pane');
   if(ui.tab==='clientes')pane.innerHTML=sideClients();
-  else if(ui.tab==='equipos')pane.innerHTML=sideDevices();
   else if(ui.tab==='incidencias')pane.innerHTML=sideIncidents();
   else if(ui.tab==='mapa')pane.innerHTML=sideMap();
   else pane.innerHTML=sideImpact();
   const na=activeIncs().length,cn=$('#incCnt');cn.hidden=!na;cn.textContent=na;
-  if(ui.tab==='equipos'){const i=$('#devQ');if(i){i.value=ui.devQ;}}
   if(ui.tab==='incidencias'){const i=$('#incQ');if(i)i.value=ui.incQ||'';}
   pane.querySelectorAll('[data-ind]').forEach(x=>x.indeterminate=true);
 }
@@ -2314,10 +2312,11 @@ function deviceCards(){
   else if(!f)body=SEC_ORDER.map(k=>sec(k,'Red de '+SECTIONS[k].l.toLowerCase(),SECTIONS[k].c)).join('')+sec('none','Sin red asignada','var(--muted)');
   else body=f==='none'?sec('none','Sin red asignada','var(--muted)'):sec(f,'Red de '+SECTIONS[f].l.toLowerCase(),SECTIONS[f].c);
   return `<div class="cvHead"><h2>Equipos</h2><span class="grow"></span>
-    <input class="inp" id="cvQ" type="search" placeholder="Buscar por nombre, IP, puerto…" value="${esc(ui.cvQ||'')}">
+    <input class="inp" id="cvQ" type="search" placeholder="Buscar nombre, IP, puerto…" value="${esc(ui.cvQ||'')}">
     <div class="seg" style="margin:0"><button data-dlay="cards" class="${asT?'':'on'}" title="Ver como tarjetas">▦ Tarjetas</button><button data-dlay="table" class="${asT?'on':''}" title="Ver y editar como tabla">☰ Tabla</button></div>
     <div class="seg" style="margin:0">${tabs.map(([k,l])=>`<button data-dsec="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>
     <label class="chk" style="font-size:13px"><input type="checkbox" id="devIncOnly"${onlyInc?' checked':''}> Solo con incidencia</label>
+    <div class="seg" style="margin:0"><button data-act="locAll" title="Ver en qué edificio, piso, sala, gabinete o rack has englobado tus equipos">Ubicaciones</button><button data-act="types" title="Tipos de equipo: icono, color y forma">Tipos</button><button data-act="csv" title="Importar o exportar equipos en CSV">CSV</button></div>
     <button class="btn pri" data-act="newDev">+ Equipo</button></div>
     ${devPickBar()}${body||`<p class="emptyNote">${S.devices.length?'Sin coincidencias.':'Aún no tienes equipos.'}</p>`}`;
 }
@@ -2976,7 +2975,7 @@ $('#fileCsv').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new F
   const f=$('#mF');f.innerHTML='';const c=document.createElement('button');c.className='btn';c.textContent='Cancelar';c.onclick=closeModal;
   const ok=document.createElement('button');ok.className='btn pri';ok.textContent=`Importar ${res.list.length} equipos`;
   ok.onclick=()=>{res.list.forEach(d=>{const mm=match(d);if(mm&&d.sections.length)mm.sections=[...new Set([...(mm.sections||[]),...d.sections])];if(!S.types.some(t=>norm(t.name)===norm(d.type)))S.types.push({name:d.type,icon:guessIcon(d.type),color:'',img:'',shape:guessShape(guessIcon(d.type))});const m=match(d);if(m){m.ports=[...new Set([...(m.ports||[]),...d.ports])];['ip','brand','model','location','notes'].forEach(k=>{if(d[k])m[k]=d[k];});if(d.type)m.type=d.type;d.access.forEach(a=>{if(!m.access.some(x=>x.p===a.p))m.access.push(a);});}else S.devices.push({id:uid('d'),...d});});
-    save();closeModal();ui.tab='equipos';renderAll();toast(`${res.list.length} equipos importados`);};
+    save();closeModal();ui.view='devices';renderAll();toast(`${res.list.length} equipos importados`);};
   f.append(c,ok);
 };rd.readAsText(f);};
 

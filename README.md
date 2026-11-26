@@ -14,7 +14,7 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 
 ## Vistas de tarjetas: Clientes y Equipos
 
-Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. Las tarjetas son otra forma de llegar a lo mismo; el árbol y los paneles siguen igual.
+Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. **Equipos** concentra todo el inventario (tarjetas o tabla, filtros, **Ubicaciones**, **Tipos**, **CSV** y **+ Equipo**). En **Diagramas**, el panel izquierdo tiene solo **Árbol** (clientes › sitios › servicios), **Impacto** e **Incidencias**.
 
 **Clientes**
 - La estrella **☆** de cada tarjeta (o *Personalizar*) marca al cliente como **destacado / VIP**: se muestra en su propia sección **★ Clientes VIP** arriba (el resto queda abajo en **Otros clientes**), con borde dorado y la etiqueta ★ VIP; el filtro **★ Destacados** muestra solo esos.
