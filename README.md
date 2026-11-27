@@ -253,3 +253,13 @@ AGG-GPE-02,10.0.1.2,Switch,Huawei,S6730,ssh telnet,,Nodo GPE,XGE0/0/1|XGE0/0/2,
 - Doble clic en una **parte vacía** del diagrama: aparece un menú para agregar **Equipo, Elemento, Texto o Grupo** justo en ese punto.
 - Doble clic sobre un **texto** del diagrama: lo editas ahí mismo (Enter hace un salto de línea; **Ctrl+Enter** o clic fuera guarda; **Esc** cancela). En un **elemento** (caja de empalme, etc.) el doble clic edita su nombre (Enter guarda).
 - `Esc`: cerrar ventanas o quitar la selección.
+
+## 🧪 Versión de prueba: campos personalizados
+
+En `prueba.html` (https://gustavoazael.github.io/mapa-noc/prueba.html) está a prueba la captura de parámetros por equipo. Usa los mismos datos que la versión normal; la etiqueta naranja **PRUEBA** junto al logo regresa a la versión normal.
+
+- Al seleccionar un equipo, en **Campos personalizados**: **＋ Campo** (texto, número, lista de opciones o sí/no) y **＋ Tabla** (columnas que tú defines, por ejemplo Endpoints, NAPs o SFPs). Al crearlo eliges si es para **todos los equipos de ese tipo** (plantilla) o **solo ese equipo**.
+- **★ Principal** deja el campo siempre visible arriba; lo demás queda plegado con su conteo. **↗** abre una tabla en ventana amplia; **⚙** renombra, cambia opciones o columnas, o elimina.
+- **👁** marca el dato para verse en el diagrama: con **ⓘ Detalles** (barra del diagrama) aparece como chip en el equipo; sin Detalles, solo al seleccionarlo.
+- En una **conexión**: **Datos de la conexión** (Endpoint, Prioridad, Ruta…). Los valores de las tablas de los equipos de cada punta salen como sugerencia; con 👁 se muestran como chip sobre la línea (con Detalles, o al pasar el mouse / seleccionarla).
+- El buscador de arriba también encuentra valores de estos campos y tablas.
