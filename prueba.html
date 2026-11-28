@@ -1131,7 +1131,7 @@ async function syPull(silent){if(!SY.cfg||SY.busy)return;if(silent&&syEditing())
       const au=await syLastAuthor();syApply(merged);SY.base=rem.data;SY.sha=rem.sha;syCfgSave();renderAll();
       if(au&&au.by&&au.by!==SY.cfg.login)toast(`Datos del equipo actualizados (último cambio de @${au.by})`);
       if(!jeq(merged,rem.data)){SY.busy=false;syQueuePush(200);return;}}
-    SY.lastAt=Date.now();sySet(jeq(syShared(S),SY.base)?'ok':'wait');}
+    SY.lastAt=Date.now();sySet(jeq(syShared(S),SY.base)?'ok':'wait');imgRetry();imgBackfill();}
   catch(e){sySet('err',e.message);}SY.busy=false;}
 async function syPush(){if(!SY.cfg)return;if(SY.busy){syQueuePush(1500);return;}const local=syShared(S);if(SY.base&&jeq(local,SY.base)){sySet('ok');return;}
   const bd=(SY.base?.devices||[]).length,ld=(local.devices||[]).length;
@@ -1141,8 +1141,8 @@ async function syPush(){if(!SY.cfg)return;if(SY.busy){syQueuePush(1500);return;}
   SY.busy=true;sySet('busy');
   for(let attempt=0;attempt<3;attempt++){
     try{const body={message:`NOCout: cambios de ${SY.cfg.name||SY.cfg.login||'usuario'}`,content:b64e(JSON.stringify(syShared(S),null,1)),branch:SY.cfg.branch||'main'};if(SY.sha)body.sha=SY.sha;
-      const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();return;}
-    catch(e){if(!SY.sha&&(e.status===404||e.status===422)&&!SY.noBranch&&/branch|ref/i.test(e.message||'')){SY.noBranch=true;try{const body={message:`NOCout: datos iniciales de ${SY.cfg.name||SY.cfg.login}`,content:b64e(JSON.stringify(syShared(S),null,1))};const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();return;}catch(e3){SY.busy=false;sySet('err',e3.message);return;}}
+      const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();imgBackfill();return;}
+    catch(e){if(!SY.sha&&(e.status===404||e.status===422)&&!SY.noBranch&&/branch|ref/i.test(e.message||'')){SY.noBranch=true;try{const body={message:`NOCout: datos iniciales de ${SY.cfg.name||SY.cfg.login}`,content:b64e(JSON.stringify(syShared(S),null,1))};const j=await gh(syFile(),{method:'PUT',body:JSON.stringify(body)});SY.sha=j.content.sha;SY.base=syShared(S);SY.lastAt=Date.now();syCfgSave();SY.busy=false;sySet('ok');imgFlush();imgBackfill();return;}catch(e3){SY.busy=false;sySet('err',e3.message);return;}}
       if(e.status===409||e.status===422){try{const rem=await syGet();if(rem){const merged=syMerge(SY.base||rem.data,syShared(S),rem.data);syApply(merged);SY.base=rem.data;SY.sha=rem.sha;renderAll();continue;}}catch(e2){}}
       SY.busy=false;sySet('err',e.message);return;}}
   SY.busy=false;sySet('err','No se pudo guardar después de varios intentos');}
@@ -1455,7 +1455,7 @@ function renderCanvas(){
   });
   // imágenes (detrás de líneas y equipos)
   D.nodes.forEach(n=>{if(!n.img)return;const sel=(ui.sel?.t==='node'&&ui.sel.id===n.id)||(ui.multi?.size>1&&ui.multi.has(n.id)),src=imgSrc(n);
-    out+=`<g class="node imgn${sel?' sel':''}" data-node="${n.id}" transform="translate(${n.x},${n.y})"><rect class="imgb" width="${n.w}" height="${n.h}" rx="4"/>${src?`<image href="${src}" width="${n.w}" height="${n.h}" preserveAspectRatio="xMidYMid meet"/>`:`<text x="${n.w/2}" y="${n.h/2}" text-anchor="middle" class="imgph">${src===''?'Imagen no disponible':'Cargando imagen…'}</text>`}${n.cap?`<text x="${n.w/2}" y="${n.h+16}" text-anchor="middle" class="imgcap"${fid!==MAP?` data-capedit="${n.id}"`:''}>${esc(n.cap)}<title>Clic para editar el pie de imagen</title></text>`:sel&&fid!==MAP?`<text x="${n.w/2}" y="${n.h+16}" text-anchor="middle" class="imgcap ph" data-capedit="${n.id}">+ Pie de imagen</text>`:''}${sel&&fid!==MAP?`<rect class="gr" data-iresize="${n.id}" x="${n.w-8}" y="${n.h-8}" width="13" height="13" rx="2" style="opacity:1"/>`:''}<title>Imagen · doble clic para escribir el pie de imagen</title></g>`;});
+    out+=`<g class="node imgn${sel?' sel':''}" data-node="${n.id}" transform="translate(${n.x},${n.y})"><rect class="imgb" width="${n.w}" height="${n.h}" rx="4"/>${src?`<image href="${src}" width="${n.w}" height="${n.h}" preserveAspectRatio="xMidYMid meet"/>`:`<text x="${n.w/2}" y="${n.h/2}" text-anchor="middle" class="imgph">${src===''?'Imagen aún no disponible':'Cargando imagen…'}</text>`}${n.cap?`<text x="${n.w/2}" y="${n.h+16}" text-anchor="middle" class="imgcap"${fid!==MAP?` data-capedit="${n.id}"`:''}>${esc(n.cap)}<title>Clic para editar el pie de imagen</title></text>`:sel&&fid!==MAP?`<text x="${n.w/2}" y="${n.h+16}" text-anchor="middle" class="imgcap ph" data-capedit="${n.id}">+ Pie de imagen</text>`:''}${sel&&fid!==MAP?`<rect class="gr" data-iresize="${n.id}" x="${n.w-8}" y="${n.h-8}" width="13" height="13" rx="2" style="opacity:1"/>`:''}<title>Imagen · doble clic para escribir el pie de imagen</title></g>`;});
   // aristas paralelas
   const fsn=fid===MAP&&ui.sel?.t==='node'?D.nodes.find(x=>x.id===ui.sel.id):null;if(fsn?.svcTag)ui.mapFocus=fsn.srcFid;if(fid!==MAP)ui.mapFocus=null;const focusFid=fid===MAP?ui.mapFocus||null:null;
   const pairs={};D.edges.forEach(e=>{const k=[e.from,e.to].sort().join('|');(pairs[k]=pairs[k]||[]).push(e.id);});
@@ -1813,13 +1813,24 @@ async function imgGet(id){try{const db=await idb();return await new Promise(res=
 function imgSrc(n){const v=IMGC.get(n.img);if(v)return v;if(!IMGL.has(n.img)){IMGL.add(n.img);imgLoad(n.img,n.ext||'webp');}return null;}
 async function imgLoad(id,ext){let v=await imgGet(id);
   if(!v&&SY.cfg){try{const j=await gh(`/repos/${SY.cfg.repo}/contents/img/${id}.${ext}?ref=${encodeURIComponent(SY.cfg.branch||'main')}`);let b=j.content;if(!b&&j.sha){b=(await gh(`/repos/${SY.cfg.repo}/git/blobs/${j.sha}`)).content;}
-    if(b){v=`data:image/${ext==='jpg'?'jpeg':ext};base64,`+b.replace(/\n/g,'');imgPut(id,v);}}catch(e){}}
+    if(b){v=`data:image/${ext==='jpg'?'jpeg':ext};base64,`+b.replace(/\n/g,'');imgPut(id,v);imgOk(id);}}catch(e){}}
   if(v){IMGC.set(id,v);rc();}else{IMGC.set(id,'');rc();}}
+function imgOk(id){const a=lsGet('nocout-imgok',[]);if(!a.includes(id)){a.push(id);lsSet('nocout-imgok',a);}}
+// reintenta en cada sincronización las imágenes que no se pudieron bajar (puede que su autor aún no las suba)
+function imgRetry(){[...IMGC].forEach(([id,v])=>{if(v===''){IMGC.delete(id);IMGL.delete(id);}});rc();}
+// sube al repositorio las imágenes que solo existen en este navegador (por ejemplo, pegadas antes de conectar el equipo)
+async function imgBackfill(){if(!SY.cfg||imgBackfill.busy)return;const ids=new Map();Object.values(S.diagrams||{}).forEach(D=>(D.nodes||[]).forEach(n=>{if(n.img)ids.set(n.img,n.ext||'webp');}));
+  const ok=new Set(lsGet('nocout-imgok',[])),pend=[...ids].filter(([id])=>!ok.has(id));if(!pend.length)return;
+  const sig=pend.map(x=>x[0]).join();if(sig===imgBackfill.sig&&Date.now()-imgBackfill.t<600000)return;imgBackfill.sig=sig;imgBackfill.t=Date.now();imgBackfill.busy=true;
+  try{const have=new Set();try{const l=await gh(`/repos/${SY.cfg.repo}/contents/img?ref=${encodeURIComponent(SY.cfg.branch||'main')}`);(Array.isArray(l)?l:[]).forEach(f=>have.add(f.name));}catch(e){if(e.status!==404)throw e;}
+    let up=0;for(const [id,ext] of pend){if(have.has(`${id}.${ext}`)){imgOk(id);continue;}const v=IMGC.get(id)||await imgGet(id);if(v){const q=lsGet('nocout-imgq',[]);if(!q.some(x=>x.id===id)){q.push({id,ext});lsSet('nocout-imgq',q);}up++;}}
+    if(up){toast(`Subiendo ${up} imagen${up===1?'':'es'} que solo estaba${up===1?'':'n'} en este navegador`);imgFlush();}}catch(e){}
+  imgBackfill.busy=false;}
 async function imgUpload(id,ext){if(!SY.cfg)return;const q=lsGet('nocout-imgq',[]);if(!q.some(x=>x.id===id)){q.push({id,ext});lsSet('nocout-imgq',q);}imgFlush();}
 async function imgFlush(){if(!SY.cfg||imgFlush.busy)return;imgFlush.busy=true;let q=lsGet('nocout-imgq',[]);
   for(const it of [...q]){const v=IMGC.get(it.id)||await imgGet(it.id);if(!v){q=q.filter(x=>x.id!==it.id);continue;}
-    try{await gh(`/repos/${SY.cfg.repo}/contents/img/${it.id}.${it.ext}`,{method:'PUT',body:JSON.stringify({message:`NOCout: imagen ${it.id}`,content:v.split(',')[1],branch:SY.cfg.branch||'main'})});q=q.filter(x=>x.id!==it.id);}
-    catch(e){if(e.status===422){q=q.filter(x=>x.id!==it.id);}else break;}}
+    try{await gh(`/repos/${SY.cfg.repo}/contents/img/${it.id}.${it.ext}`,{method:'PUT',body:JSON.stringify({message:`NOCout: imagen ${it.id}`,content:v.split(',')[1],branch:SY.cfg.branch||'main'})});q=q.filter(x=>x.id!==it.id);imgOk(it.id);}
+    catch(e){if(e.status===422){q=q.filter(x=>x.id!==it.id);imgOk(it.id);}else break;}}
   lsSet('nocout-imgq',q);imgFlush.busy=false;}
 async function compressImage(blob){const bmp=await createImageBitmap(blob);const M=1600,k=Math.min(1,M/Math.max(bmp.width,bmp.height));
   const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
