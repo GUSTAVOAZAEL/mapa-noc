@@ -518,6 +518,7 @@ body.viewCards .side,body.viewCards .insp,body.viewCards .stage,body.viewCards .
 .cvHead .grow{flex:1}
 .cvHead .inp{max-width:300px}
 .cvHead #cvQ{width:220px}
+.dSec{cursor:pointer;user-select:none;border-radius:6px;padding:4px 6px;margin-left:-6px}.dSec:hover{background:var(--panel-2)}.dCar{color:var(--accent);width:12px;font-size:12px}.dIco{display:inline-flex;color:var(--accent)}.dSec.closed{opacity:.85}
 .cvSec{margin:18px 0 8px;display:flex;align-items:center;gap:8px;font:600 15px var(--f-cond)}
 .cvSec i{width:12px;height:12px;border-radius:3px;display:inline-block}
 .vipSec{color:#9A7400;border-bottom:1px solid color-mix(in srgb,#C99700 35%,transparent);padding-bottom:6px;margin-top:4px}
@@ -2335,17 +2336,25 @@ function deviceCards(){
   const match=d=>(!q||fold([d.name,d.ip,d.type,d.brand,d.model,d.location,(d.ports||[]).join(' ')].join(' ')).includes(q))&&(!onlyInc||devIncCount(d.id));
   const all=S.devices.filter(match).sort((a,b)=>ncmp(a.name,b.name));
   const inSec=k=>all.filter(d=>k==='none'?!(d.sections||[]).length:(d.sections||[]).includes(k));
-  const sec=(k,label,color)=>{const l=inSec(k);if(!l.length&&!f)return'';
-    return `<div class="cvSec"><i style="background:${color}"></i>${label}<span class="n">${l.length} equipo${l.length===1?'':'s'}</span></div>${l.length?`<div class="cgrid">${l.map(devCard).join('')}</div>`:'<p class="emptyNote">Sin equipos.</p>'}`;};
+  const col=new Set(S.meta.devCol||[]);
+  const block=(key,head,l)=>{const c=col.has(key)&&!q;return `<div class="cvSec dSec${c?' closed':''}" data-dgcol="${esc(key)}" role="button" tabindex="0" title="${c?'Desplegar':'Compactar'}"><span class="dCar">${c?'▸':'▾'}</span>${head}<span class="n">${l.length} equipo${l.length===1?'':'s'}</span></div>${c?'':l.length?`<div class="cgrid">${l.map(devCard).join('')}</div>`:'<p class="emptyNote">Sin equipos.</p>'}`;};
+  const sec=(k,label,color)=>{const l=inSec(k);if(!l.length&&!f)return'';return block('r:'+k,`<i style="background:${color}"></i>${label}`,l);};
+  const byType=()=>{const src=f?(f==='none'?all.filter(d=>!(d.sections||[]).length):all.filter(d=>(d.sections||[]).includes(f))):all,g={};
+    src.forEach(d=>{const t=typeOf(d.type),k=norm(t.name);(g[k]=g[k]||{t,l:[]}).l.push(d);});
+    const gs=Object.values(g).sort((a,b)=>ncmp(a.t.name,b.t.name));ui.devKeys=gs.map(x=>'t:'+norm(x.t.name));
+    return gs.length?gs.map(x=>block('t:'+norm(x.t.name),`<span class="dIco">${iconHTML(x.t,18)}</span>${esc(x.t.name)}`,x.l)).join(''):`<p class="emptyNote">Sin equipos.</p>`;};
+  const grp=S.meta.devGroup||'type';
   const tabs=[['','Todas'],['voz','Voz'],['transporte','Transporte'],['datos','Datos'],['none','Sin red']];
   const asT=S.meta.devLayout==='table';
   let body;
   if(asT)body=deviceTable(f?(f==='none'?all.filter(d=>!(d.sections||[]).length):all.filter(d=>(d.sections||[]).includes(f))):all);
-  else if(!f)body=SEC_ORDER.map(k=>sec(k,'Red de '+SECTIONS[k].l.toLowerCase(),SECTIONS[k].c)).join('')+sec('none','Sin red asignada','var(--muted)');
+  else if(grp==='type')body=byType();
+  else if(!f){ui.devKeys=[...SEC_ORDER,'none'].map(k=>'r:'+k);body=SEC_ORDER.map(k=>sec(k,'Red de '+SECTIONS[k].l.toLowerCase(),SECTIONS[k].c)).join('')+sec('none','Sin red asignada','var(--muted)');}
   else body=f==='none'?sec('none','Sin red asignada','var(--muted)'):sec(f,'Red de '+SECTIONS[f].l.toLowerCase(),SECTIONS[f].c);
   return `<div class="cvHead"><h2>Equipos</h2><span class="grow"></span>
     <input class="inp" id="cvQ" type="search" placeholder="Buscar nombre, IP, puerto…" value="${esc(ui.cvQ||'')}">
     <div class="seg" style="margin:0"><button data-dlay="cards" class="${asT?'':'on'}" title="Ver como tarjetas">▦ Tarjetas</button><button data-dlay="table" class="${asT?'on':''}" title="Ver y editar como tabla">☰ Tabla</button></div>
+    ${asT?'':`<div class="seg" style="margin:0" title="Cómo agrupar las tarjetas"><button data-dgrp="type" class="${grp==='type'?'on':''}">Por tipo</button><button data-dgrp="red" class="${grp!=='type'?'on':''}">Por red</button></div><div class="seg" style="margin:0"><button data-dcolall="1" title="Compactar todas las categorías">⊟</button><button data-dcolall="0" title="Desplegar todas las categorías">⊞</button></div>`}
     <div class="seg" style="margin:0">${tabs.map(([k,l])=>`<button data-dsec="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>
     <label class="chk" style="font-size:13px"><input type="checkbox" id="devIncOnly"${onlyInc?' checked':''}> Solo con incidencia</label>
     <div class="seg" style="margin:0"><button data-act="locAll" title="Ver en qué edificio, piso, sala, gabinete o rack has englobado tus equipos">Ubicaciones</button><button data-act="types" title="Tipos de equipo: icono, color y forma">Tipos</button><button data-act="csv" title="Importar o exportar equipos en CSV">CSV</button></div>
@@ -3242,6 +3251,9 @@ document.addEventListener('click',e=>{
   const dtp=t.closest('[data-dtplace]');if(dtp){placePicker(dtp.dataset.dtplace);return;}
   const dtc=t.closest('[data-dtcopy]');if(dtc){copyIp(devById(dtc.dataset.dtcopy));return;}
   const dtd=t.closest('[data-dtdel]');if(dtd){delDevModal(dtd.dataset.dtdel);return;}
+  const dg=t.closest('[data-dgrp]');if(dg){S.meta.devGroup=dg.dataset.dgrp;save(false);renderView();return;}
+  const dca=t.closest('[data-dcolall]');if(dca){S.meta.devCol=dca.dataset.dcolall==='1'?[...(ui.devKeys||[])]:[];save(false);renderView();return;}
+  const dgc=t.closest('[data-dgcol]');if(dgc){const k=dgc.dataset.dgcol,c=new Set(S.meta.devCol||[]);c.has(k)?c.delete(k):c.add(k);S.meta.devCol=[...c];save(false);renderView();return;}
   const dsc2=t.closest('[data-dsec]');if(dsc2){ui.devCardSec=dsc2.dataset.dsec;renderView();return;}
   const dcl=t.closest('[data-dcol]');if(dcl&&ui.sheetDev){const d=devById(ui.sheetDev);if(d){d.color=dcl.dataset.dcol;save();renderAll();deviceSheet(d.id);}return;}
   const asite=t.closest('[data-addsite]');if(asite){folderModal(null,asite.dataset.addsite,'sitio');return;}

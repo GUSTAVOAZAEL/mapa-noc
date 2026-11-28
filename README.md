@@ -16,6 +16,8 @@ Herramienta web para documentar la infraestructura de red de cada cliente y diag
 
 Arriba a la izquierda cambias entre **Clientes** (vista principal al abrir), **Equipos** y **Diagramas**. **Equipos** concentra todo el inventario (tarjetas o tabla, filtros, **Ubicaciones**, **Tipos**, **CSV** y **+ Equipo**). En **Diagramas**, el panel izquierdo tiene solo **Árbol** (clientes › sitios › servicios), **Impacto** e **Incidencias**.
 
+**Equipos agrupados:** en la vista de tarjetas eliges **Por tipo** (una categoría por cada tipo: CIENA, Telco, MSW…, con su ícono y conteo) o **Por red** (voz, transporte, datos). Clic en el título de una categoría la compacta o despliega; **⊟ / ⊞** compactan o despliegan todas. Al buscar, las categorías se abren solas para mostrar los resultados. El filtro de red (Todas / Voz / …) también aplica al agrupar por tipo.
+
 **Ubicarte en el árbol:** el servicio abierto se marca con fondo de color sólido y su cliente y sitio en negritas con una línea de color. Al abrir un diagrama desde cualquier lado (buscador, favoritos, mapa, impacto) el árbol abre su cliente y sitio y se desplaza hasta él. **◎** (junto a ⊟ ⊞) te regresa al diagrama abierto; mantenlo presionado para cerrar todo lo demás y dejar solo ese camino. También puedes hacer clic en el cliente, sitio o servicio del título del diagrama para ubicarlo en el árbol.
 
 **Clientes**
