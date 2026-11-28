@@ -267,3 +267,10 @@ En `prueba.html` (https://gustavoazael.github.io/mapa-noc/prueba.html) está a p
 - **👁** marca el dato para verse en el diagrama: con **ⓘ Detalles** (barra del diagrama) aparece como chip en el equipo; sin Detalles, solo al seleccionarlo.
 - En una **conexión**: **Datos de la conexión** (Endpoint, Prioridad, Ruta…). Los valores de las tablas de los equipos de cada punta salen como sugerencia; con 👁 se muestran como chip sobre la línea (con Detalles, o al pasar el mouse / seleccionarla).
 - El buscador de arriba también encuentra valores de estos campos y tablas.
+
+## 🕘 Historial de cambios
+
+- **General:** botón del reloj arriba a la derecha (junto a ajustes). Lista todos los cambios por día con hora y quién lo hizo (@usuario de GitHub cuando estás conectado al equipo); se puede buscar y filtrar por Diagramas, Equipos, Clientes y servicios, Incidencias, Tipos o Ubicaciones. Clic en la ruta abre el diagrama; *ver equipo* abre su ficha.
+- **Por diagrama:** con un servicio abierto y nada seleccionado, el panel derecho muestra **Últimos cambios** de ese diagrama; **Ver todo** abre su historial completo.
+- Se anotan altas, bajas y cambios de equipos (nombre, IP, puertos, redes, ubicación…), clientes/sitios/servicios, objetos y conexiones de los diagramas (puertos, etiqueta, tipo de línea), grupos y versiones, incidencias, tipos y ubicaciones. Mover cosas de lugar no se anota. Los cambios masivos (por ejemplo una importación) quedan como un solo registro con detalle.
+- Se guardan los últimos 2000 cambios dentro de los datos y se comparten con el equipo al sincronizar.
