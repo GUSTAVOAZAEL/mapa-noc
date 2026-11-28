@@ -1553,7 +1553,7 @@ function fit(){
   const pad=50,k=Math.max(.1,Math.min(1.4,Math.min((r.width-pad*2)/(x1-x0||1),(r.height-pad*2-40)/(y1-y0||1))));
   vp.k=k;vp.x=(r.width-(x1-x0)*k)/2-x0*k;vp.y=(r.height-(y1-y0)*k)/2-y0*k+16;rc();
 }
-function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.08,Math.min(2.5,vp.k*f));vp.x=cx-(cx-vp.x)*k/vp.k;vp.y=cy-(cy-vp.y)*k/vp.k;vp.k=k;rc();}
+function zoomAt(f,cx,cy){const vp=getVp(),k=Math.max(.05,Math.min(8,vp.k*f));vp.x=cx-(cx-vp.x)*k/vp.k;vp.y=cy-(cy-vp.y)*k/vp.k;vp.k=k;rc();}
 
 svg.addEventListener('pointerdown',e=>{
   if(!ui.folder||e.button>0)return;
@@ -1671,7 +1671,7 @@ svg.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;TP.set(
     try{svg.setPointerCapture(e.pointerId);}catch(err){}rc();}},true);
 svg.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!TP.has(e.pointerId))return;TP.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(!ui.pinch||TP.size<2)return;e.stopImmediatePropagation();const P=ui.pinch,[a,b]=[...TP.values()],r=svg.getBoundingClientRect(),vp=getVp();
-  const k=Math.max(.08,Math.min(2.5,P.k*(Math.hypot(a.x-b.x,a.y-b.y)/P.d))),mx=(a.x+b.x)/2-r.left,my=(a.y+b.y)/2-r.top;
+  const k=Math.max(.05,Math.min(8,P.k*(Math.hypot(a.x-b.x,a.y-b.y)/P.d))),mx=(a.x+b.x)/2-r.left,my=(a.y+b.y)/2-r.top;
   vp.k=k;vp.x=mx-(P.mx-P.vx)*k/P.k;vp.y=my-(P.my-P.vy)*k/P.k;rc();},true);
 const tpEnd=e=>{if(e.pointerType!=='touch')return;TP.delete(e.pointerId);if(ui.pinch){e.stopImmediatePropagation();if(TP.size<2){ui.pinch=null;ui.drag=null;ui.pinchEnd=Date.now();}}};
 svg.addEventListener('pointerup',tpEnd,true);svg.addEventListener('pointercancel',tpEnd,true);
@@ -2123,6 +2123,23 @@ function layoutMap(N,E,LOC){
   N.forEach(n=>{P[n.pk]={x:n.x,y:n.y};});
   try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}
 }
+// acomoda el mapa en columnas por tipo de equipo; el orden de columnas respeta cómo estaba (izquierda→derecha) y dentro de cada columna se ordena para cruzar menos líneas
+function mapByType(){const D=getDiag(MAP);if(!D?.nodes?.length)return;const N=D.nodes,E=D.edges;
+  const cat=n=>n.deviceId?'t:'+norm(typeOf(devById(n.deviceId)?.type).name):n.svcTag?'svc':'el:'+(n.icon||'Elemento');
+  const cols={};N.forEach(n=>{const k=cat(n);(cols[k]=cols[k]||[]).push(n);});
+  const mean=a=>a.reduce((s,n)=>s+n.x,0)/a.length;
+  const order=Object.entries(cols).sort((a,b)=>(a[0]==='svc')-(b[0]==='svc')||mean(a[1])-mean(b[1]));
+  if(order.length&&order[order.length-1][0]==='svc')order.unshift(order.pop());// usuarios/servicio a la izquierda
+  const nb={};N.forEach(n=>nb[n.id]=[]);E.forEach(e=>{if(nb[e.from]&&nb[e.to]){nb[e.from].push(e.to);nb[e.to].push(e.from);}});
+  const byId={};N.forEach(n=>byId[n.id]=n);
+  order.forEach(([,l])=>l.sort((a,b)=>a.y-b.y));
+  const place=()=>{let x=0;order.forEach(([,l])=>{const w=Math.max(...l.map(n=>dims(n).w));let H=l.reduce((s,n)=>s+dims(n).h,0)+(l.length-1)*44,y=-H/2;
+    l.forEach(n=>{const d=dims(n);n.x=Math.round((x+(w-d.w)/2)/8)*8;n.y=Math.round(y/8)*8;y+=d.h+44;});x+=w+150;});};
+  place();
+  for(let it=0;it<4;it++){order.forEach(([,l])=>{const bc=n=>{const ys=nb[n.id].map(i=>byId[i]).filter(m=>m&&cat(m)!==cat(n)).map(m=>m.y+dims(m).h/2);return ys.length?ys.reduce((a,b)=>a+b,0)/ys.length:n.y;};
+    const m=new Map(l.map(n=>[n,bc(n)]));l.sort((a,b)=>m.get(a)-m.get(b)||ncmp(a.deviceId?devById(a.deviceId)?.name:a.label,b.deviceId?devById(b.deviceId)?.name:b.label));});place();}
+  S.mapPos=S.mapPos||{};N.forEach(n=>S.mapPos[n.pk]={x:n.x,y:n.y});save();refreshMap(true);
+  toast(`Mapa ordenado en ${order.length} columna${order.length===1?'':'s'} por tipo · Ctrl+Z para deshacer`+(ui.mapD.groups.length?' · tip: oculta 📍 Ubicaciones para verlo más limpio':''));}
 function refreshMap(fitAfter){ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(fitAfter)requestAnimationFrame(fit);}
 function openMap(){ui.view='diagram';const first=ui.folder!==MAP;if(first&&ui.folder)ui.prevFolder=ui.folder;ui.folder=MAP;ui.tab='clientes';document.body.classList.remove('showSide');
   ui.mapD=buildMap();ui.sel=null;ui.multi=new Set();renderAll();if(first&&!ui.vps[MAP+'_seen']){ui.vps[MAP+'_seen']=1;requestAnimationFrame(fit);}}
@@ -2139,7 +2156,8 @@ function mapPanelHTML(){const all=diagFids(),sel=new Set(mapSel());
     ${box}
     <label class="chk" style="font-size:13px"><input type="checkbox" id="mapShared"${S.meta.mapShared?' checked':''}> Resaltar solo lo compartido</label>
     <label class="chk" style="font-size:13px"><input type="checkbox" id="mapGeo"${S.meta.geoBg?' checked':''}> 🌎 Mapa de México y EUA de fondo</label>
-    ${S.meta.geoBg?`<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)">Tamaño <input type="range" id="mapGeoK" min="0.5" max="6" step="0.25" value="${+S.meta.geoScale||3}" style="flex:1"></label>`:''}</div>`;}
+    ${S.meta.geoBg?`<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)">Tamaño <input type="range" id="mapGeoK" min="0.5" max="6" step="0.25" value="${+S.meta.geoScale||3}" style="flex:1"></label>`:''}
+    <button class="btn sm" data-act="mapByType" title="Acomoda el mapa en columnas, una por tipo de equipo, ordenadas para que se crucen menos líneas. Se puede deshacer con Ctrl+Z.">▦ Ordenar por tipo de equipo</button></div>`;}
 function sideMap(){
   const all=diagFids(),sel=new Set(mapSel());
   if(!all.length)return `<p class="sub" style="color:var(--muted)">Todavía no hay diagramas con equipos. Cuando tengas servicios dibujados, aquí podrás verlos juntos.</p>`;
@@ -3446,6 +3464,7 @@ document.addEventListener('click',e=>{
     case 'incFromSheet':incModal(null,[{dev:a.dataset.devid,port:''}]);break;
     case 'mapAll':S.meta.mapSel=null;save(false);refreshMap(true);break;
     case 'mapNone':S.meta.mapSel=[];save(false);refreshMap(false);break;
+    case 'mapByType':mapByType();break;
     case 'mapRelayout':{const D=getDiag(MAP);S.mapPos=S.mapPos||{};D.nodes.forEach(n=>delete S.mapPos[n.pk]);save(false);refreshMap(true);break;}
     case 'addDev':ui.addFrom=null;ui.dropAt=null;pickDevModal();break;
     case 'blankDev':$('#plusMenu').hidden=true;ui.addFrom=null;ui.dropAt=ui.blankAt;pickDevModal();break;
