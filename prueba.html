@@ -1599,10 +1599,8 @@ svg.addEventListener('pointerdown',e=>{
     ui.drag={kind:'node',sx:pt.x,sy:pt.y,orig:[...nodes,...grps],moved:false};svg.setPointerCapture(e.pointerId);renderInsp();rc();return;}
   if(e.shiftKey){ui.multi=new Set();ui.drag={kind:'box',x0:pt.x,y0:pt.y,x:pt.x,y:pt.y};svg.setPointerCapture(e.pointerId);return;}
   if(ui.impact&&!ui.impMin){ui.impMin=true;rc();}
-  if(ui.mapFocus){ui.mapFocus=null;rc();}
-  if(ui.sel||ui.multi?.size){ui.sel=null;ui.multi=new Set();renderInsp();rc();}
   {const now=Date.now(),lb=ui.lastBlank;if(ui.folder!==MAP&&lb&&now-lb.t<450&&Math.hypot(e.clientX-lb.x,e.clientY-lb.y)<8){ui.lastBlank=null;blankMenu(e,pt);return;}ui.lastBlank={t:now,x:e.clientX,y:e.clientY};}
-  const vp=getVp();ui.drag={kind:'pan',sx:e.clientX,sy:e.clientY,vx:vp.x,vy:vp.y};svg.classList.add('panning');svg.setPointerCapture(e.pointerId);
+  const vp=getVp();ui.drag={kind:'pan',sx:e.clientX,sy:e.clientY,vx:vp.x,vy:vp.y,desel:true};svg.classList.add('panning');svg.setPointerCapture(e.pointerId);
 });
 svg.addEventListener('pointermove',e=>{
   try{ui.lastPt=toWorld(e);}catch(err){}
@@ -1635,6 +1633,8 @@ function nodeAtPoint(e,skip){const D=getDiag(ui.folder);if(!D)return null;const 
   return best;}
 function endDrag(e){
   const g=ui.drag;if(!g)return;ui.drag=null;svg.classList.remove('panning');
+  // clic sin arrastrar en el fondo: quita la selección; si arrastraste para mover la vista, la selección se queda
+  if(g.kind==='pan'&&g.desel&&Math.hypot((e.clientX??g.sx)-g.sx,(e.clientY??g.sy)-g.sy)<5){let ch=false;if(ui.mapFocus){ui.mapFocus=null;ch=true;}if(ui.sel||ui.multi?.size){ui.sel=null;ui.multi=new Set();renderInsp();ch=true;}if(ch)rc();}
   if(ui.folder===MAP&&g.kind==='node'&&!g.moved&&g.mapG){const G=g.mapG;locState={dev:null,q:G.label};modal('Ubicación física','<div id="locBody"></div>',[{l:'Cerrar'}],{wide:true});drawLoc();}
   if(ui.folder===MAP&&g.kind==='node'&&g.moved){S.mapPos=S.mapPos||{};const mv=new Set(g.orig.map(([o])=>o));const MN=getDiag(MAP).nodes;resolveOverlap(MN,n=>mv.has(n));MN.forEach(o=>{S.mapPos[o.pk]={x:o.x,y:o.y};});save(false);}
   else if(g.kind==='iresize'&&g.moved){save();renderInsp();}
